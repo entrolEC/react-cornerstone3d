@@ -473,6 +473,40 @@ describe('useViewportState', () => {
       expect(result.current).toBe(first);
     });
 
+    // The cost the hand-rolled memo accepts (ADR 0004): a selector that builds
+    // a value re-renders on every Engine event, because Object.is can never
+    // call two freshly built objects equal. It must not loop, though — the
+    // selector is part of the memo key, so reads within one render agree.
+    test('a selector that builds a value re-renders per Engine event but never loops', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-sel-derived');
+      let renders = 0;
+      const { result } = renderHook(() => {
+        renders++;
+        return useViewportState('vp-sel-derived', (s) => ({ index: s.sliceIndex }));
+      });
+      const rendersBefore = renders;
+
+      engineState.camera.parallelScale = 50; // the selected value is unaffected
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(renders).toBe(rendersBefore + 1);
+      expect(result.current).toEqual({ index: 0 });
+    });
+
+    test('a selector reading a changing closure is re-applied on re-render', () => {
+      createFakeStackViewport('vp-sel-closure');
+      let axis = 0;
+      const { result, rerender } = renderHook(() =>
+        useViewportState('vp-sel-closure', (s) => s.camera.position?.[axis]),
+      );
+      expect(result.current).toBe(0);
+
+      axis = 2;
+      rerender();
+
+      expect(result.current).toBe(100);
+    });
+
     test('selector sees undefined again after the viewport is disabled', () => {
       const { disable } = createFakeStackViewport('vp-sel-gone');
       const { result } = renderHook(() => useViewportState('vp-sel-gone', selectStackIndex));

@@ -329,11 +329,12 @@ export function useViewportState<T>(
 
   // useSyncExternalStore has no native selector support: it re-renders
   // whenever getSnapshot's result changes by Object.is. So getSnapshot here
-  // returns the *selected* value, memoized per (Snapshot, selector) and kept
-  // referentially stable while Object.is-equal.
-  // ponytail: equality is Object.is only — a selector deriving a fresh object
-  // per call still re-renders on every Engine event (no loop; the memo keeps
-  // within-render reads consistent). Add an isEqual param if that bites.
+  // returns the *selected* value, memoized per (Snapshot, selector). The
+  // selector belongs in the key: an inline selector is a new function every
+  // render, and without it the reads React makes within one render could
+  // disagree. Kept hand-rolled rather than taken from
+  // use-sync-external-store/shim/with-selector — ADR 0004, which is also
+  // where an isEqual option would go (one comparison, right here).
   const memo = useRef<{
     snapshot: ViewportState | undefined;
     selector: typeof selector;
@@ -344,9 +345,8 @@ export function useViewportState<T>(
     const snapshot = getSnapshot();
     const prev = memo.current;
     if (prev && prev.snapshot === snapshot && prev.selector === selector) return prev.selected;
-    let selected =
+    const selected =
       snapshot === undefined ? undefined : selector ? selector(snapshot) : snapshot;
-    if (prev && Object.is(prev.selected, selected)) selected = prev.selected;
     memo.current = { snapshot, selector, selected };
     return selected;
   });

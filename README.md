@@ -93,7 +93,7 @@ function useViewportState<T>(viewportId: string, selector: (state: ViewportState
 ```
 
 - **`viewportId`** — resolved through Cornerstone3D's global registry. Returns `undefined` while no viewport with that id is enabled.
-- **`selector`** — the component re-renders only when the selected value changes by `Object.is`. Never called while the viewport is absent.
+- **`selector`** — the component re-renders only when the selected value changes by `Object.is`. Never called while the viewport is absent. Select a primitive or an existing field (`s => s.voiRange` is referentially stable across unrelated changes); a selector that *builds* a value — `s => ({ index: s.sliceIndex })` — can never be `Object.is`-equal to its last result, so it re-renders on every Engine event ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)).
 - **`options.batch`** (default `true`) — coalesce Engine events to at most one update per animation frame, so a drag produces one render per frame instead of one per event. Set `false` for event-exact updates.
 
 `ViewportState` is a discriminated union. `sliceIndex` / `numberOfSlices` (the Slice Position) are common to every kind, so one slider serves Stack and MPR screens; narrow on `kind` for the rest:
@@ -105,7 +105,7 @@ interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
-Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
+Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. A rebuild shares structure with the Snapshot it replaces, so a field that did not move keeps its reference — a zoom never hands `s => s.voiRange` a new object. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
 
 ### `<CornerstoneViewport />`
 

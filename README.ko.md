@@ -91,7 +91,7 @@ function useViewportState<T>(viewportId: string, selector: (state: ViewportState
 ```
 
 - **`viewportId`** — Cornerstone3D 전역 레지스트리로 뷰포트를 찾습니다. 해당 id의 뷰포트가 enable되어 있지 않으면 `undefined`를 반환합니다.
-- **`selector`** — 선택한 값이 `Object.is` 기준으로 바뀔 때만 컴포넌트가 리렌더됩니다. 뷰포트 부재 중에는 호출되지 않습니다.
+- **`selector`** — 선택한 값이 `Object.is` 기준으로 바뀔 때만 컴포넌트가 리렌더됩니다. 뷰포트 부재 중에는 호출되지 않습니다. 원시값이나 이미 존재하는 필드를 고르세요(`s => s.voiRange`는 무관한 변경에도 참조가 유지됩니다). 값을 *만들어* 돌려주는 셀렉터 — `s => ({ index: s.sliceIndex })` — 는 직전 결과와 `Object.is`로 같을 수 없으므로 Engine 이벤트마다 리렌더됩니다 ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)).
 - **`options.batch`** (기본 `true`) — Engine 이벤트를 애니메이션 프레임당 최대 한 번의 업데이트로 합칩니다. 드래그 중 이벤트마다가 아니라 프레임마다 한 번 렌더됩니다. 이벤트 단위 정확도가 필요하면 `false`.
 
 `ViewportState`는 판별 유니온입니다. `sliceIndex` / `numberOfSlices`(Slice Position)는 모든 kind 공통이라 하나의 슬라이더가 Stack과 MPR 화면을 모두 담당합니다. 나머지 kind별 필드는 `kind`로 좁혀 읽으세요:
@@ -103,7 +103,7 @@ interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
-모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
+모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. 재구축은 직전 Snapshot과 구조를 공유하므로 움직이지 않은 필드는 참조가 그대로 유지됩니다 — 줌을 해도 `s => s.voiRange`에 새 객체가 가지 않습니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
 
 ### `<CornerstoneViewport />`
 
