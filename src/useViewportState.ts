@@ -78,14 +78,51 @@ function camerasEqual(a: Types.ICamera, b: Types.ICamera): boolean {
   return true;
 }
 
+function voiRangesEqual(
+  a: Types.VOIRange | undefined,
+  b: Types.VOIRange | undefined,
+): boolean {
+  return a?.lower === b?.lower && a?.upper === b?.upper;
+}
+
 function statesEqual(a: ViewportState, b: ViewportState): boolean {
   if (a.kind !== b.kind) return false;
   if (a.sliceIndex !== b.sliceIndex || a.numberOfSlices !== b.numberOfSlices) return false;
-  return (
-    a.voiRange?.lower === b.voiRange?.lower &&
-    a.voiRange?.upper === b.voiRange?.upper &&
-    camerasEqual(a.camera, b.camera)
-  );
+  return voiRangesEqual(a.voiRange, b.voiRange) && camerasEqual(a.camera, b.camera);
+}
+
+// Structural sharing. A Snapshot is replaced whenever *any* field moves, so
+// without this a zoom would hand `s => s.voiRange` a brand-new object and
+// re-render a consumer whose value never changed. Unchanged parts keep the
+// previous Snapshot's references — those are objects we already cloned and
+// froze, so sharing them cannot expose the Engine's own mutable state.
+function shareCamera(next: Types.ICamera, prev: Types.ICamera | undefined): Types.ICamera {
+  if (prev === undefined) return next;
+  if (camerasEqual(next, prev)) return prev;
+  // The camera moved, but rarely in every axis: a zoom leaves `position`
+  // alone, a pan leaves `viewUp` alone. Share the arrays that held still.
+  const mutable = next as unknown as Record<string, unknown>;
+  for (const key of Object.keys(next)) {
+    const nv = mutable[key];
+    const pv = (prev as unknown as Record<string, unknown>)[key];
+    if (
+      Array.isArray(nv) &&
+      Array.isArray(pv) &&
+      nv.length === pv.length &&
+      nv.every((v, i) => v === pv[i])
+    ) {
+      mutable[key] = pv;
+    }
+  }
+  return next;
+}
+
+function shareVoiRange(
+  next: Types.VOIRange | undefined,
+  prev: Types.VOIRange | undefined,
+): Types.VOIRange | undefined {
+  if (next === undefined || prev === undefined) return next;
+  return voiRangesEqual(next, prev) ? prev : next;
 }
 
 export interface UseViewportStateOptions {
@@ -108,20 +145,25 @@ function createBinding(viewportId: string): Binding {
   const listeners = new Set<() => void>();
   let element: HTMLDivElement | undefined;
 
-  const buildSnapshot = (): ViewportState | undefined => {
+  // `prev` is the Snapshot being replaced: whatever did not move is taken
+  // from it rather than rebuilt (structural sharing).
+  const buildSnapshot = (prev: ViewportState | undefined): ViewportState | undefined => {
     const enabled = getEnabledElementByViewportId(viewportId);
     if (!enabled) return undefined;
     const { viewport } = enabled;
     // structuredClone: getter output may share nested arrays with the Engine;
     // freezing those in place would break Engine-side mutation.
-    const camera = structuredClone(viewport.getCamera());
+    const camera = shareCamera(structuredClone(viewport.getCamera()), prev?.camera);
     if (viewport.type === Enums.ViewportType.STACK) {
       const stack = viewport as Types.IStackViewport;
       return deepFreeze<ViewportState>({
         kind: 'stack',
         camera,
         // Engine holds null between setStack and image arrival; our contract is undefined.
-        voiRange: structuredClone(stack.getProperties().voiRange) ?? undefined,
+        voiRange: shareVoiRange(
+          structuredClone(stack.getProperties().voiRange) ?? undefined,
+          prev?.voiRange,
+        ),
         sliceIndex: stack.getSliceIndex(),
         numberOfSlices: stack.getNumberOfSlices(),
       });
@@ -133,19 +175,22 @@ function createBinding(viewportId: string): Binding {
     return deepFreeze<ViewportState>({
       kind: 'volume',
       camera,
-      voiRange: structuredClone(volume.getProperties()?.voiRange) ?? undefined,
+      voiRange: shareVoiRange(
+        structuredClone(volume.getProperties()?.voiRange) ?? undefined,
+        prev?.voiRange,
+      ),
       // Engine reports undefined before setVolumes; our contract is undefined too.
       sliceIndex: sliced ? (volume.getSliceIndex() ?? undefined) : undefined,
       numberOfSlices: sliced ? (volume.getNumberOfSlices() ?? undefined) : undefined,
     });
   };
 
-  let snapshot = buildSnapshot();
+  let snapshot = buildSnapshot(undefined);
 
   const notify = () => listeners.forEach((listener) => listener());
 
   const update = () => {
-    const next = buildSnapshot();
+    const next = buildSnapshot(snapshot);
     if (next === snapshot) return;
     if (next && snapshot && statesEqual(next, snapshot)) return;
     snapshot = next;

@@ -432,6 +432,35 @@ describe('useViewportState', () => {
       expect(selector).not.toHaveBeenCalled();
     });
 
+    test('a sub-object selector survives a change to an unrelated field', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-sel-sub-object');
+      let renders = 0;
+      const { result } = renderHook(() => {
+        renders++;
+        return useViewportState('vp-sel-sub-object', (s) => s.voiRange);
+      });
+      const rendersBefore = renders;
+      const first = result.current;
+
+      engineState.camera.parallelScale = 50; // zoom only — the VOI is untouched
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current).toBe(first);
+      expect(renders).toBe(rendersBefore);
+    });
+
+    test('a sub-object selector sees a new reference when that field really changes', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-sel-sub-changed');
+      const { result } = renderHook(() => useViewportState('vp-sel-sub-changed', (s) => s.voiRange));
+      const first = result.current;
+
+      engineState.voiRange = { lower: -100, upper: 300 };
+      fire(Enums.Events.VOI_MODIFIED);
+
+      expect(result.current).not.toBe(first);
+      expect(result.current).toEqual({ lower: -100, upper: 300 });
+    });
+
     test('inline selector returning an object stays referentially stable across re-renders', () => {
       createFakeStackViewport('vp-sel-inline');
       const { result, rerender } = renderHook(() =>
@@ -452,6 +481,97 @@ describe('useViewportState', () => {
       disable();
 
       expect(result.current).toBeUndefined();
+    });
+  });
+
+  // A Snapshot is replaced whenever any field moves. Structural sharing keeps
+  // the parts that did not move at their previous references, so a selector
+  // reading one of them does not re-render.
+  describe('structural sharing', () => {
+    test('a camera-only change keeps the previous voiRange reference', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-share-voi');
+      const { result } = renderHook(() => useViewportState('vp-share-voi'));
+      const before = result.current;
+
+      engineState.camera.parallelScale = 50;
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current).not.toBe(before); // the Snapshot did change
+      expect(result.current?.voiRange).toBe(before?.voiRange);
+    });
+
+    test('a VOI-only change keeps the previous camera reference', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-share-camera');
+      const { result } = renderHook(() => useViewportState('vp-share-camera'));
+      const before = result.current;
+
+      engineState.voiRange = { lower: -100, upper: 300 };
+      fire(Enums.Events.VOI_MODIFIED);
+
+      expect(result.current).not.toBe(before);
+      expect(result.current?.camera).toBe(before?.camera);
+    });
+
+    test('a slice change keeps both the camera and the voiRange references', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-share-slice');
+      const { result } = renderHook(() => useViewportState('vp-share-slice'));
+      const before = result.current;
+
+      engineState.sliceIndex = 2;
+      fire(Enums.Events.PRE_STACK_NEW_IMAGE);
+
+      expect(asStack(result.current)?.sliceIndex).toBe(2);
+      expect(result.current?.camera).toBe(before?.camera);
+      expect(result.current?.voiRange).toBe(before?.voiRange);
+    });
+
+    test('a zoom keeps the camera arrays it did not touch', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-share-camera-fields');
+      const { result } = renderHook(() => useViewportState('vp-share-camera-fields'));
+      const before = result.current;
+
+      engineState.camera.parallelScale = 50; // position and focalPoint hold still
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current?.camera).not.toBe(before?.camera);
+      expect(result.current?.camera.position).toBe(before?.camera.position);
+      expect(result.current?.camera.focalPoint).toBe(before?.camera.focalPoint);
+    });
+
+    test('a pan gives a new position array and keeps the untouched ones', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-share-camera-moved');
+      const { result } = renderHook(() => useViewportState('vp-share-camera-moved'));
+      const before = result.current;
+
+      engineState.camera.position = [10, 0, 100];
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current?.camera.position).not.toBe(before?.camera.position);
+      expect(result.current?.camera.position).toEqual([10, 0, 100]);
+      expect(result.current?.camera.focalPoint).toBe(before?.camera.focalPoint);
+    });
+
+    test('a shared sub-object is still frozen', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-share-frozen');
+      const { result } = renderHook(() => useViewportState('vp-share-frozen'));
+
+      engineState.camera.parallelScale = 50;
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(Object.isFrozen(result.current?.voiRange)).toBe(true);
+      expect(Object.isFrozen(result.current?.camera.position)).toBe(true);
+    });
+
+    test('a Volume viewport shares its voiRange across camera events too', () => {
+      const { engineState, fire } = createFakeVolumeViewport('vp-share-vol');
+      const { result } = renderHook(() => useViewportState('vp-share-vol'));
+      const before = result.current;
+
+      engineState.camera.parallelScale = 50;
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current).not.toBe(before);
+      expect(result.current?.voiRange).toBe(before?.voiRange);
     });
   });
 
