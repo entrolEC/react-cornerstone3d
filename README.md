@@ -61,7 +61,7 @@ And after all 27 lines, you still have: the mount-order race (a viewport enabled
 
 ## Why this exists
 
-Cornerstone3D is not badly built — it is an **engine**, not a store. Like three.js, it manages its own mutable state and fires events when things change; React needs immutable snapshots compared by `Object.is`. `useViewportState` is the adapter that bridges the two: subscribe to engine events, cache an immutable snapshot, rebuild it only when the data actually changed. The same shape of answer react-three-fiber gives three.js.
+Cornerstone3D is not badly built — it is an **engine**, not a store. It manages its own mutable state and fires events when things change; React needs immutable snapshots compared by `Object.is`. `useViewportState` is the adapter that bridges the two: subscribe to engine events, cache an immutable snapshot, rebuild it only when the data actually changed.
 
 Without that adapter, every React viewer hand-rolls the same event plumbing, and with it the same bug layer:
 
