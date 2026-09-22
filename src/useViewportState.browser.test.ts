@@ -116,6 +116,43 @@ afterEach(() => {
   for (const element of elements.splice(0)) element.remove();
 });
 
+// Resolves after the next frame's rAF callbacks *and* the microtasks and
+// React work queued behind them — the moment a consumer would observe.
+const afterNextFrame = () =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
+test('viewports dirtied in one frame notify in one pass: a component reading all of them renders once', async () => {
+  // A camera-synced MPR set: one scroll moves every viewport's camera in the
+  // same task. CS3D fires CAMERA_MODIFIED synchronously inside setCamera, so
+  // three Bindings go dirty in one frame. The frame is the unit of
+  // consistency (ADR 0006): all three rebuilds land in one synchronous pass
+  // and React renders the component once — never with a mix of frames.
+  const ids = ['mpr-a', 'mpr-b', 'mpr-c'];
+  engine = new RenderingEngine('smoke-engine');
+  for (const viewportId of ids) {
+    engine.enableElement({ viewportId, type: Enums.ViewportType.STACK, element: makeElement() });
+  }
+  const viewports = ids.map((id) => engine.getViewport(id) as Types.IStackViewport);
+  await Promise.all(viewports.map((vp) => vp.setStack(imageIds, 0)));
+  engine.render();
+
+  let renders = 0;
+  const { result } = renderHook(() => {
+    renders++;
+    return ids.map((id) => useViewportState(id, (s) => s.camera.parallelScale));
+  });
+  await waitFor(() => expect(result.current.every((scale) => scale !== undefined)).toBe(true));
+  await afterNextFrame(); // let subscribe-time updates settle
+  const rendersBefore = renders;
+
+  const scales = result.current as number[];
+  viewports.forEach((vp, i) => vp.setCamera({ parallelScale: scales[i] * 2 }));
+  await afterNextFrame();
+
+  expect(result.current.map((s, i) => s! / scales[i])).toEqual([2, 2, 2]);
+  expect(renders - rendersBefore).toBe(1);
+});
+
 test('Stack viewport: real Engine state changes reach the hook', async () => {
   engine = new RenderingEngine('smoke-engine');
   engine.enableElement({

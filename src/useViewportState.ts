@@ -1,6 +1,7 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
 import { useRef, useSyncExternalStore } from 'react';
+import { scheduler } from './scheduler';
 
 /** State shared by every viewport kind. */
 interface ViewportStateCommon {
@@ -192,25 +193,11 @@ function createBinding(viewportId: string): Binding {
     notify();
   };
 
-  // Engine events during a drag arrive tens of times per second; batch them
-  // to one Snapshot rebuild per frame. There is no opt-out: the frame is the
+  // Engine events during a drag arrive tens of times per second; the shared
+  // scheduler coalesces them to one Snapshot rebuild per frame, in the same
+  // pass as every other Binding's. There is no opt-out: the frame is the
   // unit of consistency (ADR 0006).
-  let rafId: number | undefined;
-
-  const cancelPending = () => {
-    if (rafId !== undefined) {
-      cancelAnimationFrame(rafId);
-      rafId = undefined;
-    }
-  };
-
-  const onEngineEvent = () => {
-    if (rafId !== undefined) return;
-    rafId = requestAnimationFrame(() => {
-      rafId = undefined;
-      update();
-    });
-  };
+  const onEngineEvent = () => scheduler.schedule(update);
 
   const attachElement = () => {
     element = getEnabledElementByViewportId(viewportId)?.viewport.element;
@@ -220,9 +207,9 @@ function createBinding(viewportId: string): Binding {
   const detachElement = () => {
     for (const type of ELEMENT_EVENTS) element?.removeEventListener(type, onEngineEvent);
     element = undefined;
-    // A pending rAF would rebuild from a registry this Binding no longer
-    // watches (or resurrect a cleared Snapshot after disable) — drop it.
-    cancelPending();
+    // A queued rebuild would read a registry this Binding no longer watches
+    // (or resurrect a cleared Snapshot after disable) — drop it.
+    scheduler.unschedule(update);
   };
 
   const onEnabled = (evt: Event) => {

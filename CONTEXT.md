@@ -17,7 +17,7 @@ The current slice index and the number of slices of a viewport, as the Engine re
 _Avoid_: current/total, slice info, slider state
 
 **Snapshot**:
-An immutable, referentially-stable copy of a piece of Engine state, rebuilt only when a relevant Engine event fires. What `getSnapshot` returns. React compares what it gets back by `Object.is` and the Engine's getters return a fresh object on every call, so the Snapshot is what makes *unchanged* expressible at all. A rebuild shares structure with the Snapshot it replaces: the parts that did not move keep their previous references, so a selector reading one of them does not re-render because something else did.
+An immutable, referentially-stable copy of a piece of Engine state, rebuilt, at most once per frame, when a relevant Engine event fires. What `getSnapshot` returns. React compares what it gets back by `Object.is` and the Engine's getters return a fresh object on every call, so the Snapshot is what makes *unchanged* expressible at all. A rebuild shares structure with the Snapshot it replaces: the parts that did not move keep their previous references, so a selector reading one of them does not re-render because something else did.
 _Avoid_: state copy, cache object
 
 **Command**:
@@ -25,5 +25,5 @@ A write from React to the Engine — always a Cornerstone3D API call. Its effect
 _Avoid_: setter, dispatch, mutation
 
 **Binding**:
-A subscription connecting one Engine event source to Snapshot rebuilding, keyed by viewportId.
+A subscription connecting one Engine event source to Snapshot rebuilding, keyed by viewportId. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
 _Avoid_: sync, connector

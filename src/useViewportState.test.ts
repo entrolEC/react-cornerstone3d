@@ -1,6 +1,6 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
-import { act, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook } from '@testing-library/react';
 import { createElement, StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
@@ -29,6 +29,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount first: Bindings share one scheduler, and a rebuild left queued
+  // under this test's fake clock would block every later test's frame.
+  cleanup();
   vi.useRealTimers();
   registry.clear();
   vi.mocked(getEnabledElementByViewportId).mockReset();
