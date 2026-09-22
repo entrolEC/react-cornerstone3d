@@ -633,25 +633,6 @@ describe('useViewportState', () => {
       expect(result.current?.camera.parallelScale).toBe(10); // last event wins
     });
 
-    test('batch: false updates on every Engine event, no frame needed', () => {
-      const { engineState, fireRaw } = createFakeStackViewport('vp-nobatch');
-      let renders = 0;
-      const { result } = renderHook(() => {
-        renders++;
-        return useViewportState('vp-nobatch', undefined, { batch: false });
-      });
-      const rendersBefore = renders;
-
-      engineState.camera.parallelScale = 50;
-      fireRaw(Enums.Events.CAMERA_MODIFIED);
-      expect(result.current?.camera.parallelScale).toBe(50);
-      engineState.camera.parallelScale = 25;
-      fireRaw(Enums.Events.CAMERA_MODIFIED);
-      expect(result.current?.camera.parallelScale).toBe(25);
-
-      expect(renders).toBe(rendersBefore + 2);
-    });
-
     test('unmount cancels the scheduled rAF callback', () => {
       const { fireRaw } = createFakeStackViewport('vp-raf-cleanup');
       const cancelSpy = vi.spyOn(window, 'cancelAnimationFrame');

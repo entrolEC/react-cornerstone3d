@@ -87,16 +87,17 @@ On top of that, the Snapshot layer guarantees **referential stability** (unchang
 
 ## API
 
-### `useViewportState(viewportId, selector?, options?)`
+### `useViewportState(viewportId, selector?)`
 
 ```ts
-function useViewportState(viewportId: string, selector?: undefined, options?: UseViewportStateOptions): ViewportState | undefined;
-function useViewportState<T>(viewportId: string, selector: (state: ViewportState) => T, options?: UseViewportStateOptions): T | undefined;
+function useViewportState(viewportId: string, selector?: undefined): ViewportState | undefined;
+function useViewportState<T>(viewportId: string, selector: (state: ViewportState) => T): T | undefined;
 ```
 
 - **`viewportId`** — resolved through Cornerstone3D's global registry. Returns `undefined` while no viewport with that id is enabled.
 - **`selector`** — the component re-renders only when the selected value changes by `Object.is`. Never called while the viewport is absent. Select a primitive or an existing field (`s => s.voiRange` is referentially stable across unrelated changes); a selector that *builds* a value — `s => ({ index: s.sliceIndex })` — can never be `Object.is`-equal to its last result, so it re-renders on every Engine event ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)).
-- **`options.batch`** (default `true`) — coalesce Engine events to at most one update per animation frame, so a drag produces one render per frame instead of one per event. Set `false` for event-exact updates.
+
+Engine events are coalesced to at most one update per animation frame, so a drag produces one render per frame instead of one per event. There is no opt-out: the Snapshot is *state*, not an event stream, and a component that needs every event belongs on a Cornerstone3D listener ([ADR 0006](./docs/adr/0006-the-frame-is-the-unit-of-consistency.md)).
 
 `ViewportState` is a discriminated union. `sliceIndex` / `numberOfSlices` (the Slice Position) are common to every kind, so one slider serves Stack and MPR screens; narrow on `kind` for the rest:
 

@@ -1,6 +1,6 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
-import { useCallback, useRef, useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 
 /** State shared by every viewport kind. */
 interface ViewportStateCommon {
@@ -125,13 +125,8 @@ function shareVoiRange(
   return voiRangesEqual(next, prev) ? prev : next;
 }
 
-export interface UseViewportStateOptions {
-  /** Batch Engine events to at most one update per animation frame. Default true. */
-  batch?: boolean;
-}
-
 interface Binding {
-  subscribe: (onChange: () => void, batch: boolean) => () => void;
+  subscribe: (onChange: () => void) => () => void;
   getSnapshot: () => ViewportState | undefined;
 }
 
@@ -198,9 +193,9 @@ function createBinding(viewportId: string): Binding {
   };
 
   // Engine events during a drag arrive tens of times per second; batch them
-  // to one Snapshot rebuild per frame unless a consumer opted out.
+  // to one Snapshot rebuild per frame. There is no opt-out: the frame is the
+  // unit of consistency (ADR 0006).
   let rafId: number | undefined;
-  let unbatchedCount = 0;
 
   const cancelPending = () => {
     if (rafId !== undefined) {
@@ -210,14 +205,6 @@ function createBinding(viewportId: string): Binding {
   };
 
   const onEngineEvent = () => {
-    if (unbatchedCount > 0) {
-      // ponytail: one unbatched consumer makes every consumer of this
-      // viewport update synchronously — the Snapshot is shared. Split
-      // per-mode if it bites.
-      cancelPending();
-      update();
-      return;
-    }
     if (rafId !== undefined) return;
     rafId = requestAnimationFrame(() => {
       rafId = undefined;
@@ -274,13 +261,11 @@ function createBinding(viewportId: string): Binding {
   };
 
   return {
-    subscribe: (onChange, batch) => {
+    subscribe: (onChange) => {
       if (listeners.size === 0) attach();
       listeners.add(onChange);
-      if (!batch) unbatchedCount++;
       return () => {
         listeners.delete(onChange);
-        if (!batch) unbatchedCount--;
         if (listeners.size === 0) detach();
       };
     },
@@ -304,28 +289,21 @@ const bindings = new Map<string, Binding>();
 export function useViewportState(
   viewportId: string,
   selector?: undefined,
-  options?: UseViewportStateOptions,
 ): ViewportState | undefined;
 export function useViewportState<T>(
   viewportId: string,
   selector: (state: ViewportState) => T,
-  options?: UseViewportStateOptions,
 ): T | undefined;
 export function useViewportState<T>(
   viewportId: string,
   selector?: (state: ViewportState) => T,
-  { batch = true }: UseViewportStateOptions = {},
 ): T | ViewportState | undefined {
   let binding = bindings.get(viewportId);
   if (!binding) {
     binding = createBinding(viewportId);
     bindings.set(viewportId, binding);
   }
-  const { subscribe: bindingSubscribe, getSnapshot } = binding;
-  const subscribe = useCallback(
-    (onChange: () => void) => bindingSubscribe(onChange, batch),
-    [bindingSubscribe, batch],
-  );
+  const { subscribe, getSnapshot } = binding;
 
   // useSyncExternalStore has no native selector support: it re-renders
   // whenever getSnapshot's result changes by Object.is. So getSnapshot here
