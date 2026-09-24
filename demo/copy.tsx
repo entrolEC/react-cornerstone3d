@@ -106,6 +106,31 @@ export interface Copy {
     eyebrow: string;
     title: string;
     lead: ReactNode;
+    captions: ReactNode[];
+    verdict: ReactNode;
+    dragNote: ReactNode;
+    holdNote: ReactNode;
+    identity: {
+      hookTitle: string;
+      holdTitle: string;
+      hold: string;
+      objects: (n: number) => string;
+      empty: string;
+      engineNote: (events: number) => ReactNode;
+      hookVerdict: ReactNode;
+    };
+    cost: {
+      withSelector: string;
+      withoutSelector: string;
+      renders: (n: number) => string;
+      nudge: string;
+      nudgeHint: string;
+    };
+  };
+  panel6: {
+    eyebrow: string;
+    title: string;
+    lead: ReactNode;
     withSelector: string;
     withoutSelector: string;
     renders: (n: number) => string;
@@ -327,6 +352,71 @@ export const COPY: Record<Lang, Copy> = {
       ),
     },
     panel4: {
+      eyebrow: '4',
+      title: '값이 실제로 바뀔 때만 새 객체를 만들면 됩니다',
+      lead: (
+        <>
+          <code>useViewportState</code>가 하는 일이 정확히 그것입니다. 엔진 이벤트가 올 때만
+          Snapshot을 다시 만들고, <b>다시 만든 결과가 이전과 같으면 아무에게도 알리지
+          않습니다.</b> 3단계와 같은 로그를 훅으로 다시 돌려 보겠습니다.
+        </>
+      ),
+      captions: [
+        <>
+          <b>같은 표, 다른 결과.</b> 슬라이스를 옮기는 동안 기록했습니다. 값이 바뀌니 객체도
+          바뀝니다 — 여기까지는 패널 3과 같아 보입니다.
+        </>,
+        <>
+          <b>이번엔 가만히 두고.</b> 「지금부터 기록」을 누르고 아무것도 만지지 마세요.
+          엔진은 계속 이벤트를 내는데 <b>객체는 하나</b>입니다. 패널 3에서는 여기서{' '}
+          <code>#1 #2 #3</code>이 나왔습니다.
+        </>,
+        <>
+          <b>그리고 selector.</b> Snapshot을 통째로 읽으면 카메라가 움직여도 리렌더됩니다.
+          한 값만 읽으면 그 값이 바뀔 때만 리렌더됩니다. <b>카메라를 흔들어 보세요.</b>
+        </>,
+      ],
+      dragNote: <>영상을 스크롤하거나 끌어 보세요. 옆의 로그가 실시간으로 쌓입니다.</>,
+      holdNote: <>손대지 마세요. 엔진은 계속 이벤트를 냅니다.</>,
+      verdict: (
+        <>
+          패널 3의 <code>#1 #2 #3</code>과 위 <code>#1 #1 #1</code>이 같은 표입니다. 차이는
+          중간에 <b>Snapshot</b>이 있느냐뿐입니다 — 엔진 이벤트에 맞춰 다시 만들고, 안 바뀐
+          부분은 이전 참조를 그대로 두고, 같으면 알리지 않습니다.
+          <br />
+          여기까지가 <b>어떻게 읽는가</b>였습니다. 남은 질문은 <b>무엇을 언제 읽는가</b>입니다 —
+          그리고 그게 훨씬 어렵습니다. ↓
+        </>
+      ),
+      identity: {
+        hookTitle: '옮기는 중 — 값이 바뀌니 객체도 새것입니다',
+        holdTitle: '가만히 둘 때 — 엔진은 계속 떠드는데 객체는 그대로입니다',
+        hold: '지금부터 기록',
+        objects: (n) => `서로 다른 객체 ${n}개`,
+        empty: '아직 없음',
+        engineNote: (events) => (
+          <>
+            그동안 엔진이 낸 이벤트: <b>{events}개</b>. 훅이 그걸 위 몇 개의 객체로 줄였습니다.
+          </>
+        ),
+        hookVerdict: (
+          <>
+            <b>엔진은 조용하지 않습니다.</b> 한 번의 슬라이스 이동이 이벤트 여러 개입니다.
+            그런데 컴포넌트가 받는 객체는 <b>값이 실제로 달라졌을 때만</b> 새것입니다.
+          </>
+        ),
+      },
+      cost: {
+        withSelector: 'selector로 한 값만',
+        withoutSelector: 'Snapshot 통째로',
+        renders: (n) => `렌더 ${n}회`,
+        nudge: '카메라 흔들기',
+        nudgeHint: (
+          'Snapshot의 camera가 바뀌니 통째로 읽는 쪽은 리렌더됩니다. selector 쪽 숫자는 그대로입니다.'
+        ),
+      },
+    },
+    panel6: {
       eyebrow: '4',
       title: '그래서, 어떻게 쓰면 되는지 보겠습니다',
       lead: (
@@ -690,6 +780,72 @@ if (state?.kind === 'stack') { /* ... */ }`,
       ),
     },
     panel4: {
+      eyebrow: '4',
+      title: 'Build a new object only when the values actually change',
+      lead: (
+        <>
+          That is what <code>useViewportState</code> does. It rebuilds the Snapshot when an
+          Engine event says to, and <b>if the rebuild says the same thing, nobody is told.</b>{' '}
+          Here is panel 3's log again, with the hook.
+        </>
+      ),
+      captions: [
+        <>
+          <b>Same table, different ending.</b> Recorded while the slice moves. The value
+          changes, so the object does — so far this looks like panel 3.
+        </>,
+        <>
+          <b>Now touch nothing.</b> Press "record from here" and leave it alone. The Engine keeps
+          firing events and <b>there is one object.</b> In panel 3 this is where{' '}
+          <code>#1 #2 #3</code> came from.
+        </>,
+        <>
+          <b>And the selector.</b> Read the whole Snapshot and a camera move re-renders you. Read
+          one value and only that value re-renders you. <b>Nudge the camera.</b>
+        </>,
+      ],
+      dragNote: <>Scroll or drag the image. The log beside it fills as it happens.</>,
+      holdNote: <>Hands off. The Engine keeps firing events.</>,
+      verdict: (
+        <>
+          Panel 3's <code>#1 #2 #3</code> and the <code>#1 #1 #1</code> above are the same table.
+          The only difference is a <b>Snapshot</b> in the middle — rebuilt on Engine events,
+          keeping the references of whatever did not move, and silent when nothing did.
+          <br />
+          That was <b>how to read</b>. What is left is <b>what to read, and when</b> — and that
+          one is much harder. ↓
+        </>
+      ),
+      identity: {
+        hookTitle: 'While it moves — the value changes, so the object does',
+        holdTitle: 'While nothing is touched — the Engine keeps talking, the object does not change',
+        hold: 'record from here',
+        objects: (n) => `${n} distinct objects`,
+        empty: 'nothing yet',
+        engineNote: (events) => (
+          <>
+            Engine events in that time: <b>{events}</b>. The hook turned them into the handful of
+            objects above.
+          </>
+        ),
+        hookVerdict: (
+          <>
+            <b>The Engine is not quiet.</b> One slice change is a burst of events. The object the
+            component receives is new <b>only when the values actually differ.</b>
+          </>
+        ),
+      },
+      cost: {
+        withSelector: 'one value, via selector',
+        withoutSelector: 'the whole Snapshot',
+        renders: (n) => `${n} renders`,
+        nudge: 'nudge the camera',
+        nudgeHint: (
+          "The Snapshot's camera changes, so the whole-Snapshot reader re-renders. The selector's count stays put."
+        ),
+      },
+    },
+    panel6: {
       eyebrow: '4',
       title: 'So how do you use it?',
       lead: (
