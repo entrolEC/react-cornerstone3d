@@ -35,15 +35,17 @@ element.addEventListener(eventId, updateIndex);
 return <ImageScrollbar value={imageSliceData.imageIndex || 0} ... />;`;
 
 /**
- * Three places where the same files fight the platform, quoted from OHIF's own
- * comments. This is the evidence that the problem is hard, not that OHIF is bad.
+ * Four places where the same files fight the platform, quoted from OHIF's own
+ * comments and code. This is the evidence that the problem is hard, not that
+ * OHIF is bad.
  */
 export const OHIF_SCARS: { code: string; quote: string; where: string; href: string }[] = [
   {
     code: "'use no memo'",
     quote:
       "The compiler's memoization assumes referential purity, so compiling it silently drops updates.",
-    where: 'hooks.ts:1',
+    // Eight files under Viewport/ carry this opt-out at 41c03bcfd8ac, not one.
+    where: 'hooks.ts:1 — and 7 more',
     href: ohif(HOOKS, 'L1-L5'),
   },
   {
@@ -58,6 +60,15 @@ export const OHIF_SCARS: { code: string; quote: string; where: string; href: str
     quote: '\u2026 leaving the scrollbar unseeded (or stale, with a now-wrong slice count).',
     where: 'hooks.ts:161',
     href: ohif(HOOKS, 'L161-L167'),
+  },
+  {
+    // The getter returns a fresh array every call, so a reference check says
+    // "changed" on every camera event. The fix is a hand-kept copy of the
+    // previous read plus an explicit value compare — the work a Snapshot does.
+    code: 'utilities.isEqual(next, lastViewPlaneNormalRef.current)',
+    quote: '\u2026 Ignore camera updates that keep the same orientation (pan/zoom/scroll).',
+    where: 'hooks.ts:63',
+    href: ohif(HOOKS, 'L48-L68'),
   },
 ];
 

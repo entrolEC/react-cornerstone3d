@@ -274,7 +274,7 @@ export const COPY: Record<Lang, Copy> = {
       scarsTitle: '그런데 같은 파일들에 이런 것도 같이 남아 있습니다 — OHIF가 직접 써놓은 주석입니다.',
       scarsEnd: (
         <>
-          <b>모르고 있는 게 아닙니다.</b> 셋 다 같은 지점에서 실패한 기록입니다. 그러고도 손잡이는
+          <b>모르고 있는 게 아닙니다.</b> 넷 다 같은 지점에서 실패한 기록입니다. 그러고도 손잡이는
           여전히 로드 완료 이벤트에 연결돼 있습니다. <b>이 분야에서 가장 크고 오래된 뷰어도 아직
           풀지 못했습니다</b> — 플랫폼이 상태를 React 밖에 두기 때문입니다.
         </>
@@ -665,7 +665,7 @@ if (state?.kind === 'stack') { /* ... */ }`,
       scarsTitle: 'And the same files carry these, too — OHIF’s own comments.',
       scarsEnd: (
         <>
-          <b>They know.</b> All three mark the same spot. And after all that, the thumb is still
+          <b>They know.</b> All four mark the same spot. And after all that, the thumb is still
           bound to a successful load. <b>The largest and oldest viewer in this field hasn’t solved
           it either</b> — the platform keeps its state outside React.
         </>
