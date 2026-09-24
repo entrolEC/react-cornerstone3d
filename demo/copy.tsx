@@ -87,37 +87,20 @@ export interface Copy {
     eyebrow: string;
     title: string;
     lead: ReactNode;
-    bookTitle: string;
-    bookBadge: string;
-    hookTitle: string;
-    hookBadge: string;
-    seeSource: string;
+    captions: ReactNode[];
+    /** One line under the image, per step. */
+    notes: ReactNode[];
+    verdict: ReactNode;
+    /** The fact, at the moment it happens. */
+    fact: ReactNode;
+    decode: string;
     identity: {
       naiveTitle: (renders: number) => string;
       noRun: string;
-      replay: string;
-      ran: string;
-      hookTitle: string;
-      /** total renders, distinct snapshot objects */
-      holdTitle: string;
-      hold: string;
-      /** Header of the console: how many distinct objects the run produced. */
       objects: (n: number) => string;
       empty: string;
-      /** Engine events counted live, beside the objects they turned into. */
-      engineNote: (events: number) => ReactNode;
       naiveVerdict: ReactNode;
-      hookVerdict: ReactNode;
     };
-    netNote: ReactNode;
-    purge: string;
-    purged: string;
-    slowNote: string;
-    cite: { ohif: string; cs3d: string };
-    scarsTitle: string;
-    scarsEnd: ReactNode;
-    captions: ReactNode[];
-    verdict: ReactNode;
   };
   panel4: {
     eyebrow: string;
@@ -287,110 +270,59 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel3: {
       eyebrow: '3',
-      title: '무한 루프와 버벅이는 슬라이더, 원인은 하나입니다',
+      title: '복사를 없앴더니, 이번엔 화면이 아예 안 그려집니다',
       lead: (
         <>
-          패널 2에서 에러가 났고, 슬라이더가 버벅였습니다. 이번 패널은 <b>그 둘이 왜 생겼는지</b>,
-          그리고 왜 <b>원인이 하나인지</b>를 봅니다.
+          React 18에는 밖에 있는 상태를 <b>복사하지 않고 구독해서 읽는</b> 공식 훅이 있습니다 —{' '}
+          <code>useSyncExternalStore</code>. 패널 2의 세 가지가 한 번에 없어집니다. 그런데 값이
+          하나에서 둘이 되는 순간 막힙니다.
         </>
       ),
-      bookTitle: '직접 배선한 슬라이더',
-      bookBadge: '정석',
-      hookTitle: 'useViewportState 슬라이더',
-      hookBadge: 'react-cornerstone3d',
-      seeSource: '엔진 소스에서 확인하기',
-      netNote: (
-        <>
-          슬라이더는 <b>사용자 조작에 반응해야 합니다.</b> 로드 완료 이벤트에 연결하는 순간,
-          손잡이는 사용자가 아니라 네트워크 사정에 따라 움직입니다. <b>조작에 반응하지 않는 컨트롤은 어떤 값을 표시하든
-          잘못된 컨트롤입니다.</b> 위 슬라이더를 직접 끌어보셨다면 더 설명이 필요하지 않습니다.
-        </>
-      ),
-      slowNote: '이 패널의 뷰포트도 슬라이스 도착을 450ms 의도적으로 늦춥니다. 엔진 동작은 그대로입니다.',
-      purge: '엔진 캐시 비우기',
-      purged: '비웠습니다. 이제 다시 끌어보세요.',
-      cite: {
-        ohif: 'OHIF/Viewers, 41c03bcf에서 발췌',
-        cs3d: 'cornerstone3D, StackViewport.scroll (264ca707)',
-      },
-      scarsTitle: '그런데 같은 파일들에 이런 것도 같이 남아 있습니다 — OHIF가 직접 써놓은 주석입니다.',
-      scarsEnd: (
-        <>
-          <b>모르고 있는 게 아닙니다.</b> 넷 다 같은 지점에서 실패한 기록입니다. 그러고도 손잡이는
-          여전히 로드 완료 이벤트에 연결돼 있습니다. <b>이 분야에서 가장 크고 오래된 뷰어도 아직
-          풀지 못했습니다</b> — 플랫폼이 상태를 React 밖에 두기 때문입니다.
-        </>
-      ),
-      identity: {
-        naiveTitle: (n) =>
-          `패널 2에서 객체를 돌려줬을 때 React가 이 컴포넌트를 ${n}번 실행했습니다. 그때마다 getSnapshot이 돌려준 값입니다.`,
-        noRun: '패널 2에서 객체를 돌려주는 단계를 아직 지나지 않으셨습니다. 여기서 그 순간을 재현할 수 있습니다.',
-        replay: '그 순간 재현하기',
-        ran: '재현했습니다. 기록이 아래에 남았습니다.',
-        hookTitle: '슬라이더를 움직여 보세요. 렌더될 때마다 훅이 돌려준 객체를 찍습니다.',
-        holdTitle: '이번에는 슬라이더를 건드리지 마세요. 버튼을 누르면 렌더만 다시 일어납니다.',
-        hold: '다시 렌더',
-        objects: (n) => `객체 ${n}개`,
-        empty: '아직 찍힌 것이 없습니다.',
-        engineNote: (events) => (
-          <>
-            같은 시간 동안 <b>엔진 이벤트 {events}회</b>가 지나갔습니다. 훅은 이것을 프레임당 한
-            번으로 모으고, <b>스냅샷 전체를 비교해</b> 달라졌을 때만 새 객체를 만듭니다.
-          </>
-        ),
-        naiveVerdict: (
-          <>
-            값은 처음부터 끝까지 같습니다. 그런데 <b>객체 번호는 한 번도 반복되지 않습니다.</b>{' '}
-            <code>return {'{ slice, total }'}</code> — <b>이 중괄호가 실행될 때마다 객체가 하나씩
-            새로 만들어지기</b> 때문입니다. 담긴 값이 같아도 다른 객체입니다.
-            <br />
-            <br />
-            그리고 <b>React는 값이 아니라 객체를 비교합니다.</b> 그래서 매번 “바뀌었다”고 보고
-            다시 렌더하고, 다시 렌더하면 또 부르고, 또 새 객체가 나옵니다 — 위에서 본 그
-            반복입니다. 그리고 이것은 우리가 객체를 만들었을 때만 생기는 일이 아닙니다.{' '}
-            <code>viewport.getCamera()</code>도 부를 때마다 새 객체를 돌려줍니다.
-          </>
-        ),
-        hookVerdict: (
-          <>
-            객체가 <b>만들어지는 시점</b>이 다릅니다. 직접 배선은 값이 그대로인데도{' '}
-            <b>렌더마다 새 객체</b>를 만들었습니다. 훅은 <b>엔진이 상태가 바뀌었다고 알릴 때만</b>{' '}
-            만들고, 그 사이 렌더에는 보관해 둔 객체를 그대로 돌려줍니다.
-          </>
-        ),
-      },
       captions: [
         <>
-          <b>첫 번째로 무한 루프 이슈부터 살펴보겠습니다.</b> 패널 2의 <b>1번 규칙</b>을 떠올려
-          보세요 — React는 렌더할 때마다 <code>getSnapshot</code>을 부릅니다.
+          <b>값 하나는 잘 됩니다.</b> 슬라이스 번호만 읽었습니다. 복사도, <code>useEffect</code>도,
+          첫 렌더 갭도 없습니다. 그런데 슬라이더에는 <code>max</code>도 필요합니다 — 지금은
+          브라우저 기본값 100이라 손잡이가 엉뚱한 데 있습니다.
         </>,
         <>
-          <b>두 번째로 버벅이는 슬라이더 이슈입니다.</b> 범인은 오른쪽 코드가 고른 이벤트 하나입니다. 인덱스는{' '}
-          <b>동기로</b> 바뀌는데 <code>STACK_NEW_IMAGE</code>는 이미지가 <b>도착한 뒤에</b>{' '}
-          옵니다.
+          <b>전체 장수도 읽어 봅시다.</b> 두 값을 객체 하나로 묶어 돌려주는, 가장 자연스러운
+          방법입니다. <b>눌러 보세요.</b>
         </>,
         <>
-          우리 힘으로는 여기까지입니다. <b>이 분야 최대 커뮤니티인 OHIF</b>는 어떻게 풀었는지
-          궁금하지 않으신가요? 소스를 열어봤더니 <b>같은 이벤트에 연결돼 있습니다.</b>
-        </>,
-        <>
-          <b>원인은 하나</b>입니다 — 엔진에는 상태를 <b>보관해 둔 객체가 없습니다.</b> 훅은 그
-          객체를 만들어 둡니다. 슬라이더를 움직여 보세요 — 값이 바뀌면 새 객체가 쌓입니다.
-        </>,
-        <>
-          여기까지는 당연합니다. <b>값이 바뀌지 않을 때</b>가 문제였습니다. 1번 표에서는 값이
-          그대로인데도 객체가 <b>매번 달랐고</b>, 그게 무한 루프였습니다. 값을 그대로 둔 채
-          렌더만 반복해 보세요.
+          <b>왜 죽었는지.</b> React가 매 렌더에서 받은 것을 그대로 찍었습니다. 값은 전부 같은데{' '}
+          <b>객체는 매번 새것</b>입니다.
         </>,
       ],
+      notes: [
+        <><code>max</code>를 안 읽어서 손잡이 위치가 틀립니다 — 값 하나로는 슬라이더가 안 됩니다.</>,
+        <>오른쪽 카드가 <b>슬라이더가 있어야 할 자리</b>입니다.</>,
+        <>같은 값, 다른 객체. React는 값이 아니라 객체를 비교합니다.</>,
+      ],
+      fact: (
+        <>
+          <b>슬라이더가 없습니다.</b> 컴포넌트가 던졌고, 자기 화면을 들고 같이 사라졌습니다.
+        </>
+      ),
+      decode: '이 코드가 무슨 뜻인지',
+      identity: {
+        naiveTitle: (renders) => `React가 포기하기까지 ${renders}번 렌더했습니다`,
+        noRun: '아직 실행되지 않았습니다 — 2단계에서 버튼을 눌러 주세요.',
+        objects: (n) => `서로 다른 객체 ${n}개`,
+        empty: '아직 없음',
+        naiveVerdict: (
+          <>
+            <code>getSnapshot</code>이 <b>매번 새 객체</b>를 돌려줍니다. React는{' '}
+            <code>Object.is</code>로 비교하니 매번 "바뀌었다"가 되고, 바뀌었으니 다시 렌더하고,
+            다시 렌더하니 또 새 객체가 나옵니다. React가 루프를 알아채고 끊습니다.
+          </>
+        ),
+      },
       verdict: (
         <>
-          Redux나 Zustand에서 <code>getSnapshot</code>이{' '}
-          <code>() =&gt; store.getState()</code> 한 줄로 끝나는 것은{' '}
-          <b>그 라이브러리들이 안정된 상태 객체를 이미 보유하고 있기 때문</b>입니다.
-          Cornerstone3D에 없는 것이 그 <b>스토어</b>이고,{' '}
-          <code>useViewportState</code>가 <b>엔진 이벤트로 그것을 만들어 뷰포트당 하나씩
-          공유합니다.</b>
+          엔진의 getter는 부를 때마다 새 객체를 줍니다 — 우리가 객체로 묶어서가 아니라,
+          <code>getCamera()</code>도 두 번 부르면 서로 다른 객체입니다. 그러니{' '}
+          <b>값이 실제로 바뀌었을 때만 새 객체를 만드는 무언가</b>가 중간에 있어야 합니다.
+          다음 패널이 그것입니다. ↓
         </>
       ),
     },
@@ -701,111 +633,59 @@ if (state?.kind === 'stack') { /* ... */ }`,
     },
     panel3: {
       eyebrow: '3',
-      title: 'An infinite loop and a stuttering slider, one cause',
+      title: 'The copy is gone. Now nothing renders at all',
       lead: (
         <>
-          In panel 2 you hit an error, and the slider stuttered. This panel works out{' '}
-          <b>why both happened</b>, and why they have <b>one cause</b>.
+          React 18 ships a hook for state that lives outside React:{' '}
+          <code>useSyncExternalStore</code> <b>subscribes and reads</b> instead of copying, and
+          all three of panel 2's problems go with it. Then you need a second value.
         </>
       ),
-      bookTitle: 'Hand-wired slider',
-      bookBadge: 'by the book',
-      hookTitle: 'useViewportState slider',
-      hookBadge: 'react-cornerstone3d',
-      seeSource: 'See it in the engine’s source',
-      netNote: (
-        <>
-          A slider has to be bound to <b>the input</b>. Bind it to the load instead and the thumb
-          moves at the network’s convenience rather than the user’s. <b>A control that locks up is
-          the wrong control, whatever number it is showing.</b> If you dragged the slider above,
-          there is nothing left to explain.
-        </>
-      ),
-      slowNote: 'This panel’s viewport also holds each slice back by 450ms on purpose. Engine behaviour is untouched.',
-      purge: 'Empty the engine cache',
-      purged: 'Emptied. Now drag it again.',
-      cite: {
-        ohif: 'OHIF/Viewers, abridged from 41c03bcf',
-        cs3d: 'cornerstone3D, StackViewport.scroll (264ca707)',
-      },
-      scarsTitle: 'And the same files carry these, too — OHIF’s own comments.',
-      scarsEnd: (
-        <>
-          <b>They know.</b> All four mark the same spot. And after all that, the thumb is still
-          bound to a successful load. <b>The largest and oldest viewer in this field hasn’t solved
-          it either</b> — the platform keeps its state outside React.
-        </>
-      ),
-      identity: {
-        naiveTitle: (n) =>
-          `When panel 2 returned an object, React ran this component ${n} times before it stopped. Here is what getSnapshot returned each time.`,
-        noRun: 'You haven’t reached the step in panel 2 that returns the object. You can replay that moment here.',
-        replay: 'Replay that moment',
-        ran: 'Done — the log is recorded. Step forward and back and it will be here.',
-        hookTitle: 'Drag the slider. Every render prints the object the hook handed back.',
-        holdTitle: 'Now leave the slider alone. The button re-renders this component, nothing else.',
-        hold: 'Render again',
-        objects: (n) => `${n} object${n === 1 ? '' : 's'}`,
-        empty: 'Nothing printed yet.',
-        engineNote: (events) => (
-          <>
-            <b>{events} engine events</b> went by in the same time. The hook coalesces them to one
-            update per frame and <b>compares the whole snapshot</b>, building a new object only
-            when it actually changed.
-          </>
-        ),
-        naiveVerdict: (
-          <>
-            The value never changes. But <b>the object number never repeats</b>.{' '}
-            <code>return {'{ slice, total }'}</code> — <b>those braces build a new object every
-            time the line runs</b>. Same contents, different object.
-            <br />
-            <br />
-            And <b>React compares the object, not the value.</b> So every time it reads “this
-            changed”, re-renders, calls again, and gets another new object — the loop above. And
-            it isn’t only because you composed the object:{' '}
-            <code>viewport.getCamera()</code> hands back a new one on every call too.
-          </>
-        ),
-        hookVerdict: (
-          <>
-            What differs is <b>when an object gets built</b>. The hand-wired version built{' '}
-            <b>a new one every render</b>, value unchanged. The hook builds one{' '}
-            <b>only when the engine reports a change</b>, and hands back that same one in between.
-          </>
-        ),
-      },
       captions: [
         <>
-          <b>First, the infinite loop.</b> Remember <b>line 1</b> from panel 2 — React calls{' '}
-          <code>getSnapshot</code> on every render.
+          <b>One value works.</b> Just the slice index. No copy, no <code>useEffect</code>, no
+          first-render gap. But a slider also needs <code>max</code> — right now it is the
+          browser's default 100, so the thumb is in the wrong place.
         </>,
         <>
-          <b>Second, the stuttering slider.</b> The culprit is the one event picked in the code on the
-          right. The index changes <b>synchronously</b>, but <code>STACK_NEW_IMAGE</code> only
-          arrives <b>after the image does</b>.
+          <b>So read the total too.</b> Hand both back as one object: the obvious way to do it.{' '}
+          <b>Press it.</b>
         </>,
         <>
-          That is as far as we get on our own. How did <b>OHIF</b>, the largest community in this
-          field, solve it? We opened their source — and found the <b>same event</b>.
-        </>,
-        <>
-          <b>One cause</b> — the engine has <b>no object holding the state</b>. The hook keeps
-          one. Drag the slider — each change in the value adds an object.
-        </>,
-        <>
-          So far, so obvious. The problem was <b>when the value does not change</b>. In the first
-          table the value stayed the same and the object was <b>different every time</b> — that
-          was the loop. Leave the value alone and re-render.
+          <b>Why it died.</b> This is what React was handed on each render. The values are all
+          the same — and <b>every object is a new one.</b>
         </>,
       ],
+      notes: [
+        <><code>max</code> is unread, so the thumb is wrong — one value is not a slider.</>,
+        <>The card on the right is <b>where the slider should be.</b></>,
+        <>Same value, different object. React compares objects, not values.</>,
+      ],
+      fact: (
+        <>
+          <b>There is no slider.</b> The component threw, and took its surface with it.
+        </>
+      ),
+      decode: 'what this code means',
+      identity: {
+        naiveTitle: (renders) => `React rendered ${renders} times before giving up`,
+        noRun: 'Nothing has run yet — press the button back on step 2.',
+        objects: (n) => `${n} distinct objects`,
+        empty: 'nothing yet',
+        naiveVerdict: (
+          <>
+            <code>getSnapshot</code> returns <b>a new object every call</b>. React compares with{' '}
+            <code>Object.is</code>, so every call reads as "changed"; changed means render again,
+            and rendering again produces another new object. React spots the loop and cuts it.
+          </>
+        ),
+      },
       verdict: (
         <>
-          With Redux or Zustand <code>getSnapshot</code> is one line,{' '}
-          <code>() =&gt; store.getState()</code> — <b>because those libraries already hold a
-          stable state object</b>. Cornerstone3D has no such <b>store</b>;{' '}
-          <code>useViewportState</code> <b>builds one out of engine events and shares it per
-          viewport</b>.
+          The Engine's getters hand back a fresh object every call — not because we wrapped two
+          values in one, but because <code>getCamera()</code> twice is already two objects. So
+          something in the middle has to <b>build a new object only when the values actually
+          change</b>. That is the next panel. ↓
         </>
       ),
     },

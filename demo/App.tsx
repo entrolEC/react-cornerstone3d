@@ -1,7 +1,7 @@
 import { getRenderingEngine } from '@cornerstonejs/core';
 import { useEffect, useState } from 'react';
 import { setup, renderingEngineId } from './cornerstone';
-import { Breakdown } from './Breakdown';
+import { Panel3 } from './Panel3';
 import { Panel2 } from './Panel2';
 import { Panel1 } from './Panel1';
 import { Practices } from './Practices';
@@ -148,7 +148,7 @@ function Page({ lang, onLang }: { lang: 'ko' | 'en'; onLang: (next: 'ko' | 'en')
           <>
             <Panel1 imageIds={imageIds} theme={theme} />
             <Panel2 imageIds={imageIds} theme={theme} />
-            <Breakdown imageIds={imageIds} theme={theme} />
+            <Panel3 imageIds={imageIds} theme={theme} />
             <Practices imageIds={imageIds} theme={theme} />
           </>
         )}
