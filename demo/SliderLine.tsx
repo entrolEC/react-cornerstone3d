@@ -13,11 +13,12 @@ export function SliderLine({
   value: number;
   /** Undefined while the second value has not been read yet. */
   max?: number;
-  children: ReactNode;
+  /** Omitted before there is anything to read: the track holds its place, inert. */
+  children?: ReactNode;
 }) {
   return (
     <div className="sliderline">
-      {children}
+      {children ?? <input className="slider" type="range" value={0} disabled readOnly />}
       <dl className="sliderline__read">
         <div>
           <dt>value</dt>

@@ -2309,3 +2309,39 @@ code {
 .log {
   min-width: 0;
 }
+
+/* ---------- code: named lines, and the part that is the same on both sides ---------- */
+/* A comparison should count what differs. The shared tail stays visible — the
+   claim is "this part does not shrink", not "this part does not exist". */
+.code__dim {
+  opacity: 0.38;
+}
+.code__note {
+  float: right;
+  margin-left: 1.25rem;
+  padding: 0 0.4rem;
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 13%, transparent);
+  white-space: nowrap;
+}
+.code__note--same {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 13%, transparent);
+}
+/* The dimmed tail carries its label at full strength, or nobody reads it. */
+.code__dim .code__note {
+  opacity: 2.6;
+}
+
+/* Panel 1 prints two files of different lengths in one slot. A fixed height
+   keeps the panel from jumping on a tab switch, and is tall enough that four
+   of the five named lines are in view without scrolling the block. */
+.split__code .code pre {
+  height: 34.5rem;
+  max-height: none;
+}

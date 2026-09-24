@@ -1,5 +1,5 @@
 import { Enums, getEnabledElementByViewportId, type Types } from '@cornerstonejs/core';
-import { CornerstoneViewport, useImageLoadStates, useViewportState } from 'react-cornerstone3d';
+import { CornerstoneViewport, useViewportState } from 'react-cornerstone3d';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { renderingEngineId } from './cornerstone';
 
@@ -87,59 +87,6 @@ function Overlay({ viewportId }: { viewportId: string }) {
       <span>
         {voi ? `W:${Math.round(voi.upper - voi.lower)} L:${Math.round((voi.upper + voi.lower) / 2)}` : ''}
       </span>
-    </div>
-  );
-}
-
-/** A write path bound to read state: the slider position *is* Engine state. */
-export function SliceSlider({ viewportId }: { viewportId: string }) {
-  const slice = useViewportState(viewportId, (s) => s.sliceIndex);
-  const total = useViewportState(viewportId, (s) => s.numberOfSlices);
-  if (slice === undefined || !total) return null;
-
-  return (
-    <input
-      className="slider"
-      type="range"
-      min={0}
-      max={total - 1}
-      value={slice}
-      onChange={(event) => void stackOf(viewportId)?.setImageIdIndex(Number(event.target.value))}
-    />
-  );
-}
-
-/**
- * The load state of the whole stack, one cell per slice. `imageIds` and
- * `currentImageId` come from the viewport; whether each is in the cache comes
- * from the cache module, one Binding per image (ADR 0007). The join is the
- * app's — the library never combines the two. Drawing N cells is also the
- * app's: this one is a plain row of spans, fine for a few hundred slices.
- */
-export function LoadTrack({ viewportId }: { viewportId: string }) {
-  const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
-  const current = useViewportState(viewportId, (s) => s.currentImageId);
-  const loaded = useImageLoadStates(imageIds);
-  if (!imageIds || !loaded) return null;
-
-  const count = loaded.filter(Boolean).length;
-  return (
-    <div className="track" aria-label="슬라이스별 로드 상태">
-      <div className="track__cells">
-        {imageIds.map((id, i) => (
-          <span
-            key={id}
-            className={
-              'track__cell' +
-              (loaded[i] ? ' track__cell--loaded' : '') +
-              (id === current ? ' track__cell--current' : '')
-            }
-          />
-        ))}
-      </div>
-      <div className="track__caption">
-        <code>useImageLoadStates(imageIds)</code> — 캐시에 들어온 슬라이스 {count}/{imageIds.length}
-      </div>
     </div>
   );
 }

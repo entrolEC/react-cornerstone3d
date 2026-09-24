@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { setup, renderingEngineId } from './cornerstone';
 import { Breakdown } from './Breakdown';
 import { ByTheBook } from './ByTheBook';
-import { Hero } from './Hero';
+import { Panel1 } from './Panel1';
 import { Practices } from './Practices';
 import { HeroViewer } from './HeroViewer';
 import { LangProvider, LangSwitch, useCopy, useLang, useScrolled, useTheme } from './ui';
-import { BY_HAND_SOURCE, HOOK_SOURCE, lineCount } from './widgets';
+import { BY_HAND_WIRING } from './slider-by-hand';
+import { HOOK_WIRING } from './slider-by-snapshot';
 
 const REPO = 'https://github.com/entrolEC/react-cornerstone3d';
 const NPM = 'https://www.npmjs.com/package/react-cornerstone3d';
@@ -22,14 +23,18 @@ export function App() {
   );
 }
 
+const lineCount = (code: string) => code.split('\n').length;
+
 /**
  * Three numbers before any prose, so the first screen answers "why do I need
- * this". The line counts are measured from the file the page actually renders.
+ * this". The counts are the wiring regions of the two sliders panel 1 runs —
+ * measured from the files, so the headline can never claim a number the code
+ * no longer has, and never a different number from the panel below it.
  */
 function Proof() {
   const t = useCopy().hero.proof;
   const facts = [
-    { value: t.lines(lineCount(BY_HAND_SOURCE), lineCount(HOOK_SOURCE)), label: t.linesLabel },
+    { value: t.lines(lineCount(BY_HAND_WIRING), lineCount(HOOK_WIRING)), label: t.linesLabel },
     { value: t.effects, label: t.effectsLabel },
     { value: t.provider, label: t.providerLabel },
   ];
@@ -141,7 +146,7 @@ function Page({ lang, onLang }: { lang: 'ko' | 'en'; onLang: (next: 'ko' | 'en')
         )}
         {imageIds && (
           <>
-            <Hero imageIds={imageIds} theme={theme} />
+            <Panel1 imageIds={imageIds} theme={theme} />
             <ByTheBook imageIds={imageIds} theme={theme} />
             <Breakdown imageIds={imageIds} theme={theme} />
             <Practices imageIds={imageIds} theme={theme} />

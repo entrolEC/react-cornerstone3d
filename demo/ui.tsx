@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ErrorInfo,
@@ -193,23 +194,62 @@ export function region(source: string, name: string): string {
   return body.map((line) => line.slice(indent)).join('\n');
 }
 
+/** A line worth naming, and the one word that names it. */
+export interface CodeNote {
+  /** Substring of the line. The first line that contains it wins. */
+  readonly at: string;
+  /** One word, printed at the end of that line. */
+  readonly label: string;
+}
+
 export function Code({
   code,
   title,
   theme,
   mark,
+  notes,
+  dimFrom,
+  dimLabel,
 }: {
   code: string;
   title: string;
   theme: Theme;
   /** Substring of the one line that matters: it is highlighted and scrolled to. */
   mark?: string;
+  /** Lines to name. Each gets its label at the end of the line. */
+  notes?: readonly CodeNote[];
+  /**
+   * Substring of the first line that is the same in the version beside this
+   * one. From there down the block is dimmed: what a comparison counts is what
+   * differs, and saying so is more honest than quietly leaving it in the total.
+   */
+  dimFrom?: string;
+  /** Printed on the first dimmed line — e.g. "identical on both sides". */
+  dimLabel?: string;
 }) {
   const t = useCopy().common;
   const [copied, setCopied] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const markRef = useRef<HTMLDivElement>(null);
   const [clip, setClip] = useState('');
+
+  // Line numbers are resolved once per (code, notes, dimFrom) rather than per
+  // line: a note names the *first* line that matches, and asking that question
+  // inside the map would give every `addEventListener` the same label.
+  const lines = useMemo(() => code.split('\n'), [code]);
+  const labels = useMemo(() => {
+    const found = new Map<number, string>();
+    for (const note of notes ?? []) {
+      const i = lines.findIndex((line, n) => line.includes(note.at) && !found.has(n));
+      if (i >= 0) found.set(i, note.label);
+    }
+    return found;
+  }, [lines, notes]);
+  const dimAt = useMemo(() => {
+    if (dimFrom === undefined) return undefined;
+    const i = lines.findIndex((line) => line.includes(dimFrom));
+    return i < 0 ? undefined : i;
+  }, [lines, dimFrom]);
 
   useEffect(() => {
     const pre = preRef.current;
@@ -272,17 +312,25 @@ export function Code({
               const props = getLineProps({ line });
               const marked =
                 mark !== undefined && line.map((token) => token.content).join('').includes(mark);
+              const label = labels.get(i);
+              const dim = dimAt !== undefined && i >= dimAt;
               return (
                 <div
                   key={i}
                   {...props}
                   ref={marked ? markRef : undefined}
-                  className={`${props.className ?? ''}${marked ? ' code__mark' : ''}`}
+                  className={`${props.className ?? ''}${marked ? ' code__mark' : ''}${
+                    label ? ' code__named' : ''
+                  }${dim ? ' code__dim' : ''}`}
                 >
                   <span className="line-no">{i + 1}</span>
                   {line.map((token, j) => (
                     <span key={j} {...getTokenProps({ token })} />
                   ))}
+                  {label && <span className="code__note">{label}</span>}
+                  {dim && i === dimAt && dimLabel && (
+                    <span className="code__note code__note--same">{dimLabel}</span>
+                  )}
                 </div>
               );
             })}

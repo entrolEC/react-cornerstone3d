@@ -42,9 +42,12 @@ export interface Copy {
     lead: ReactNode;
     tabHook: string;
     tabByHand: string;
+    /** The wiring line count on a tab. */
     lines: (n: number) => string;
-    viewportHint: string;
-    running: string;
+    /** Printed on the first line the two versions share. */
+    same: string;
+    /** One word per line that the hand-rolled version has to get right. */
+    marks: { mount: string; first: string; pick: string; leak: string; resub: string };
     note: ReactNode;
   };
   panel2: {
@@ -147,32 +150,38 @@ export const COPY: Record<Lang, Copy> = {
     failed: 'DICOM 데이터를 불러오지 못했습니다',
     panel1: {
       eyebrow: '1',
-      title: '읽을 값마다 훅 한 줄, 배선은 그걸로 끝입니다',
+      title: '슬라이더 하나의 배선이 24줄에서 2줄이 됩니다',
       lead: (
         <>
-          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤하거나 슬라이더를 움직이면 옆의 위젯이
-          그 값을 화면에 반영합니다. 탭을 바꾸면{' '}
-          <b>지금 실행 중인 구현</b>이 바뀝니다.
+          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤하거나 슬라이더를 끌면 슬라이스가
+          바뀝니다. 탭을 바꾸면 <b>지금 화면 아래에서 실제로 돌고 있는 슬라이더</b>가 바뀝니다 —
+          코드 패널만 바뀌는 게 아닙니다.
         </>
       ),
       tabHook: 'useViewportState',
-      tabByHand: '직접 배선',
-      lines: (n) => `${n}줄`,
-      viewportHint: '스크롤하거나 슬라이더를 끌어 슬라이스를 옮기세요',
-      running: '실행 중인 위젯',
+      tabByHand: 'useState + useEffect',
+      lines: (n) => `배선 ${n}줄`,
+      same: '여기부터 양쪽 동일',
+      marks: {
+        mount: '마운트 순서',
+        first: '첫 렌더',
+        pick: '이벤트 선택',
+        leak: '누수',
+        resub: '재구독',
+      },
       note: (
         <>
-          <strong>오른쪽 코드는 설명용으로 새로 쓴 것이 아닙니다.</strong>
+          <strong>두 슬라이더 다 지금 잘 동작합니다.</strong>
           <p>
-            이 페이지가 실제로 렌더링하는 <code>demo/widgets.tsx</code>에서 그대로 읽어 온 것이고,
-            직접 배선한 쪽은 Cornerstone3D + React 프로젝트가 위젯마다 반복하는 패턴입니다.
+            차이는 <code>&lt;input&gt;</code> 위쪽, 값을 읽어 오는 부분뿐입니다. 그 아래
+            마크업과 <code>setImageIdIndex</code> 쓰기는 양쪽이 한 글자도 다르지 않아서 흐리게
+            해 뒀습니다 — 쓰기는 평범한 Cornerstone3D 호출이고, 이 라이브러리에는 쓰기 API가
+            없습니다.
           </p>
           <p>
-            그런데 줄 수는 작은 문제입니다. 저 코드는 결국{' '}
-            <b>엔진이 이미 갖고 있는 상태를 <code>setState</code>로 한 번 더 복사</b>합니다.
-            사본은 다음 렌더에야 반영되고, 이벤트를 놓치면 갱신되지 않습니다. 옆 위젯이 들고 있는
-            사본과 값이 달라집니다. 다음 패널에서는
-            복사하지 않고 읽어 보겠습니다. ↓
+            그런데 줄 수는 작은 문제입니다. 직접 배선한 24줄에 붙은 <b>이름 다섯 개</b>를 보세요.
+            길어서 문제가 아니라, <b>저 다섯 군데를 전부 맞게 써야</b> 합니다. 다음 패널에서
+            하나씩 틀려 보겠습니다. ↓
           </p>
         </>
       ),
@@ -535,33 +544,38 @@ if (state?.kind === 'stack') { /* ... */ }`,
     failed: 'Could not load the DICOM data',
     panel1: {
       eyebrow: '1',
-      title: 'One hook line per value — that is the whole wiring',
+      title: 'One slider: 24 lines of wiring become 2',
       lead: (
         <>
-          The CT below is a real Cornerstone3D engine. Scroll it or drag the slider and the widget
-          beside it follows. Switching tabs swaps{' '}
-          <b>the implementation actually running on this page</b>.
+          The CT below is a real Cornerstone3D engine. Scroll it, or drag the slider, and the
+          slice changes. Switching tabs switches <b>the slider actually running under the
+          image</b> — not just the listing beside it.
         </>
       ),
       tabHook: 'useViewportState',
-      tabByHand: 'Hand-rolled',
-      lines: (n) => `${n} lines`,
-      viewportHint: 'Scroll or drag the slider to change slice',
-      running: 'Currently running',
+      tabByHand: 'useState + useEffect',
+      lines: (n) => `${n} lines of wiring`,
+      same: 'identical below',
+      marks: {
+        mount: 'mount order',
+        first: 'first render',
+        pick: 'which event',
+        leak: 'leak',
+        resub: 're-subscribe',
+      },
       note: (
         <>
-          <strong>The code on the right isn’t an illustration.</strong>
+          <strong>Both sliders work, right now.</strong>
           <p>
-            It is read from the file this page imports and renders
-            (<code>demo/widgets.tsx</code>), and the hand-rolled side is the pattern every
-            Cornerstone3D + React project repeats per widget.
+            They differ only above the <code>&lt;input&gt;</code>, in how the values are read.
+            Everything below it — the markup and the <code>setImageIdIndex</code> write — is
+            identical, which is why it is dimmed. Writes are plain Cornerstone3D calls; this
+            library has no write API.
           </p>
           <p>
-            But the line count is the smaller half of it. That code{' '}
-            <b>keeps a second copy of state the engine already owns</b>, pushed across by{' '}
-            <code>setState</code>. A copy lands a render late, stops updating when an event is
-            missed, and disagrees with the widget next to it. The next panel reads instead of
-            copying. ↓
+            And the line count is the small problem. Look at the <b>five names</b> on the
+            hand-rolled version. It is not that it is long — it is that all five have to be
+            right. The next panel gets each of them wrong. ↓
           </p>
         </>
       ),
