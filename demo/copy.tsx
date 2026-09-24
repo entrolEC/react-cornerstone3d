@@ -184,11 +184,6 @@ export interface Copy {
     eyebrow: string;
     title: string;
     lead: ReactNode;
-    withSelector: string;
-    withoutSelector: string;
-    renders: (n: number) => string;
-    nudge: string;
-    nudgeHint: string;
     items: { title: string; label: string; code: string; mark?: string; body: ReactNode }[];
     shorts: { title: string; body: ReactNode }[];
   };
@@ -595,20 +590,15 @@ export const COPY: Record<Lang, Copy> = {
       },
     },
     panel6: {
-      eyebrow: '4',
+      eyebrow: '6',
       title: '그래서, 어떻게 쓰면 되는지 보겠습니다',
       lead: (
         <>
           훅이 돌려주는 그 상태 객체를 <b>스냅샷</b>, 스냅샷에서 필요한 값만 골라 읽는 함수를{' '}
-          <b>셀렉터</b>라고 부릅니다. 알아둘 규칙은 몇 가지 안 되고, 대부분 앞의 세 패널에서 이미
+          <b>셀렉터</b>라고 부릅니다. 알아둘 규칙은 몇 가지 안 되고, 대부분 앞의 다섯 패널에서 이미
           본 것들입니다. 순서대로 훑어보세요.
         </>
       ),
-      withSelector: '셀렉터로 읽기',
-      withoutSelector: '스냅샷 전체 읽기',
-      renders: (n) => `리렌더 ${n}회`,
-      nudge: '카메라 움직이기',
-      nudgeHint: '줌만 바꿉니다. 영상은 움직이는데 슬라이스 번호는 그대로입니다 — 리렌더 횟수가 어느 쪽에서만 올라가는지 보세요.',
       items: [
         {
           title: '셀렉터 안에서 새 객체를 만들지 마세요',
@@ -728,11 +718,23 @@ if (state?.kind === 'stack') { /* ... */ }`,
           ),
         },
         {
-          title: '{ batch: false }는 정말 필요할 때만 쓰세요',
+          title: 'cleanup을 안 써서 새는 일이 없습니다',
           body: (
             <>
-              이 옵션을 주면 엔진 이벤트가 올 때마다 리렌더합니다. 기본값은 프레임당 한 번으로
-              모읍니다 — 드래그 중에는 엔진 이벤트가 초당 수십 번 오기 때문입니다.
+              StrictMode는 마운트를 두 번 합니다. 직접 배선한 위젯에서{' '}
+              <code>removeEventListener</code> 세 줄을 빠뜨리면 리스너가 그대로 쌓입니다 —
+              패널 1에서 「누수」라고 이름 붙인 그 줄들입니다. 훅에서는 그 세 줄이 라이브러리
+              안에 있습니다.
+            </>
+          ),
+        },
+        {
+          title: '프레임당 한 번으로 모입니다 — 끌 수 없습니다',
+          body: (
+            <>
+              드래그 중에는 엔진 이벤트가 초당 수십 번 옵니다. 한 프레임에 더러워진 바인딩은 한
+              번에 처리되고, 이건 옵션이 아닙니다 — 훅 둘이 서로 다른 프레임을 읽으면 그게 바로
+              tearing이기 때문입니다 (<code>docs/adr/0006</code>).
             </>
           ),
         },
@@ -1151,20 +1153,15 @@ if (state?.kind === 'stack') { /* ... */ }`,
       },
     },
     panel6: {
-      eyebrow: '4',
+      eyebrow: '6',
       title: 'So how do you use it?',
       lead: (
         <>
           The state object the hook returns is the <b>snapshot</b>; a function that picks just the
           values you need out of it is a <b>selector</b>. There aren’t many rules, and most of them
-          you have already seen in the three panels above. Here they are in order.
+          you have already seen in the five panels above. Here they are in order.
         </>
       ),
-      withSelector: 'with a selector',
-      withoutSelector: 'whole snapshot',
-      renders: (n) => `${n} renders`,
-      nudge: 'Nudge the camera',
-      nudgeHint: 'This changes the zoom only. The image moves, the slice number does not — watch which render count climbs.',
       items: [
         {
           title: 'A selector picks; it must not build',
@@ -1285,11 +1282,22 @@ if (state?.kind === 'stack') { /* ... */ }`,
           ),
         },
         {
-          title: '{ batch: false } only when you truly need it',
+          title: 'Nothing leaks because you forgot a cleanup',
           body: (
             <>
-              Pass it and every engine event re-renders. The default coalesces them to one update
-              per frame — during a drag, engine events arrive dozens of times a second.
+              StrictMode mounts twice. In a hand-rolled widget, missing the three{' '}
+              <code>removeEventListener</code> lines piles listeners up — the lines panel 1
+              labelled “leak”. With the hook those three lines are inside the library.
+            </>
+          ),
+        },
+        {
+          title: 'One update per frame, and you cannot turn it off',
+          body: (
+            <>
+              During a drag, engine events arrive dozens of times a second. Every binding dirtied
+              in a frame is handled in one pass, and that is not an option — two hooks reading
+              different frames is exactly what tearing is (<code>docs/adr/0006</code>).
             </>
           ),
         },

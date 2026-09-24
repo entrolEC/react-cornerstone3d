@@ -1,12 +1,15 @@
 import { Code, Panel, useCopy } from './ui';
 
 /**
- * A reference panel, not a walkthrough: the three before it are stepped and
- * hands-on, so this one lays the recommendations out flat and lets the reader
- * scan. Only the first one needs a demo, because "it re-renders less" is the
- * one claim you cannot see by reading.
+ * A reference panel, not a walkthrough. The five before it are stepped and
+ * hands-on; this one lays the rules out flat and lets the reader scan. A flat
+ * last panel is the right shape — what must not be flat is the middle, and
+ * panel 5 opens on a wall for exactly that reason.
+ *
+ * The live render meters that used to sit in item 1 moved to panel 4, where
+ * "it re-renders less" is the claim being made.
  */
-export function Practices({ theme }: { theme: 'light' | 'dark' }) {
+export function Panel6({ theme }: { theme: 'light' | 'dark' }) {
   const t = useCopy().panel6;
 
   return (

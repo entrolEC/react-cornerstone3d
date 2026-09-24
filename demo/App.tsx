@@ -6,7 +6,7 @@ import { Panel2 } from './Panel2';
 import { Panel1 } from './Panel1';
 import { Panel4 } from './Panel4';
 import { Panel5 } from './Panel5';
-import { Practices } from './Practices';
+import { Panel6 } from './Panel6';
 import { HeroViewer } from './HeroViewer';
 import { LangProvider, LangSwitch, useCopy, useLang, useScrolled, useTheme } from './ui';
 import { BY_HAND_WIRING } from './slider-by-hand';
@@ -153,7 +153,7 @@ function Page({ lang, onLang }: { lang: 'ko' | 'en'; onLang: (next: 'ko' | 'en')
             <Panel3 imageIds={imageIds} theme={theme} />
             <Panel4 imageIds={imageIds} theme={theme} />
             <Panel5 imageIds={imageIds} theme={theme} />
-            <Practices theme={theme} />
+            <Panel6 theme={theme} />
           </>
         )}
       </main>
