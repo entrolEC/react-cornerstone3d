@@ -9,7 +9,7 @@ The running Cornerstone3D instance (rendering engine, viewports, tools). The sin
 _Avoid_: store, backend
 
 **Viewport State**:
-The observable state of one viewport: camera, VOI (window/level), Slice Position, and similar per-viewport values. Values are what the Engine *reports*, not what is painted on the canvas: the slice index is the slice the Engine has been told to show, which may run ahead of the pixels.
+The observable state of one viewport: camera, VOI (window/level), Slice Position, what it points at (the current image and, for a Stack, its image list), and similar per-viewport values. Values are what the Engine *reports*, not what is painted on the canvas: the slice index is the slice the Engine has been told to show, which may run ahead of the pixels.
 _Avoid_: viewport data, view state
 
 **Slice Position**:
@@ -24,6 +24,10 @@ _Avoid_: state copy, cache object
 A write from React to the Engine — always a Cornerstone3D API call. Its effect reaches React only by coming back as an Engine event; the library never writes to Snapshots directly.
 _Avoid_: setter, dispatch, mutation
 
+**Image Load State**:
+Whether one image is in the cache, as the cache module reports it. It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas. An image the cache does not know is not loaded — the same answer whether it was never requested or failed.
+_Avoid_: loading status, ready, rendered, cached flag
+
 **Binding**:
-A subscription connecting one Engine event source to Snapshot rebuilding, keyed by viewportId. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
-_Avoid_: sync, connector
+A subscription connecting one Engine event source to Snapshot rebuilding, keyed by what its getters take — a viewportId, or an imageId. Exactly one Binding exists per key while it has consumers; hooks are surfaces over Bindings and one hook may read several. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
+_Avoid_: sync, connector, store
