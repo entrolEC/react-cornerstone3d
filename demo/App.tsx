@@ -29,7 +29,7 @@ export function App() {
           <a className="navbar__brand" href={REPO}>
             react-cornerstone3d
           </a>
-          <span className="navbar__version">v0.2</span>
+          <span className="navbar__version">v0.4</span>
           <span className="navbar__spacer" />
           <a className="navbar__link" href="https://www.cornerstonejs.org/">
             Cornerstone3D

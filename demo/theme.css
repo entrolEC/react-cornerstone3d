@@ -212,6 +212,19 @@ h1, h2, h3 { line-height: 1.25; margin: 0 0 0.6rem; font-weight: 700; }
 
 .slider { width: 100%; margin-top: 0.75rem; accent-color: var(--primary); }
 
+/* ---------- load track (one cell per slice) ---------- */
+.track { margin-top: 0.35rem; }
+.track__cells {
+  display: flex; gap: 1px; height: 7px;
+  border-radius: 4px; overflow: hidden;
+  background: var(--surface-alt);
+}
+.track__cell { flex: 1; background: var(--border); transition: background 120ms; }
+.track__cell--loaded { background: var(--primary); opacity: 0.55; }
+.track__cell--current { opacity: 1; box-shadow: inset 0 0 0 1px var(--text); }
+.track__caption { margin-top: 0.35rem; font-size: 0.78rem; color: var(--text-muted); }
+.track__caption code { font-size: 0.78rem; }
+
 /* ---------- indicator ---------- */
 .ind {
   font-family: var(--mono);

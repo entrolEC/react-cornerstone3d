@@ -83,7 +83,7 @@ Three decisions shape everything (full rationale in [`docs/adr/`](./docs/adr/)):
 
 3. **Absence is a normal state.** A viewport that isn't enabled yet returns `undefined`; the value fills in automatically when it appears and empties when it's destroyed. What to render meanwhile is entirely your app's decision.
 
-On top of that, the Snapshot layer guarantees **referential stability** (unchanged state ⇒ identical reference, no wasted renders, no loops) and **immutability** (deep-frozen — nothing you receive can drift under you).
+On top of that, the Snapshot layer guarantees **referential stability** (unchanged state ⇒ identical reference, no wasted renders, no loops) and **immutability** (deep-frozen — nothing you receive can drift under you). And a field earns its place only when the Engine has both a getter for it and an event that says it moved ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)) — which is why there is a `loaded` and no `loading`.
 
 ## API
 
@@ -102,13 +102,42 @@ Engine events are coalesced to at most one update per animation frame, so a drag
 `ViewportState` is a discriminated union. `sliceIndex` / `numberOfSlices` (the Slice Position) are common to every kind, so one slider serves Stack and MPR screens; narrow on `kind` for the rest:
 
 ```ts
-interface ViewportStateCommon { camera: Types.ICamera; voiRange: Types.VOIRange | undefined; sliceIndex: number | undefined; numberOfSlices: number | undefined }
-interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number }
+interface ViewportStateCommon { camera: Types.ICamera; voiRange: Types.VOIRange | undefined; sliceIndex: number | undefined; numberOfSlices: number | undefined; currentImageId: string | undefined }
+interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number; currentImageId: string; imageIds: readonly string[] }
 interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
-Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. A rebuild shares structure with the Snapshot it replaces, so a field that did not move keeps its reference — a zoom never hands `s => s.voiRange` a new object. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
+Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. A rebuild shares structure with the Snapshot it replaces, so a field that did not move keeps its reference — a zoom never hands `s => s.voiRange` a new object, and a scroll never hands `s => s.imageIds` a new array. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
+
+`currentImageId` is the image the viewport points at: on a Stack the requested slice's id, on a Volume the image closest to the camera, `undefined` when it points at nothing (3D, or before data). `imageIds` is the Stack's list, replaced only when `setStack` changes its content. Together they are the key into the image hooks below.
+
+### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
+
+```ts
+function useImageLoadState(imageId: string | undefined): boolean | undefined;
+function useImageLoadStates(imageIds: readonly string[] | undefined): readonly boolean[] | undefined;
+```
+
+Whether an image is in the cache, as the cache module reports it (`cache.isLoaded`). It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas. Two absences are distinct — `undefined` means there was no image to ask about (`imageId` was `undefined`), `false` means the cache was asked and does not have it, whether the image was never requested or failed and was dropped.
+
+The array hook is `useImageLoadState` for a whole list: same answer per entry, one frozen array, replaced only when some entry changed. `undefined` in, `undefined` out; an empty list is one stable empty array. It owns no state of its own — a tick component reading `useImageLoadState(imageIds[i])` and a track reading `useImageLoadStates(imageIds)` share one Binding per image.
+
+The library never joins viewport and image state; the join is yours, and it is two lines:
+
+```tsx
+function LoadTrack({ viewportId }: { viewportId: string }) {
+  const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
+  const current  = useViewportState(viewportId, (s) => s.currentImageId);
+  const loaded   = useImageLoadStates(imageIds); // readonly boolean[] | undefined
+  if (!imageIds || !loaded) return null;
+  return <div className="track">{imageIds.map((id, i) => <span key={id} data-loaded={loaded[i]} data-current={id === current} />)}</div>;
+}
+```
+
+What you will not find: *loading* and *failed*. The cache has no getter for either — an entry appears silently when a load is requested and is deleted silently when it fails — so a Snapshot cannot carry them without the library keeping records the Engine does not ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). For those, listen to `IMAGE_LOAD_FAILED` / `IMAGE_LOAD_ERROR` on Cornerstone3D's `eventTarget` yourself. Drawing N ticks is also yours: memo the row or paint a canvas if N is large.
+
+Under the hood, Cornerstone3D's `eventTarget` keeps listeners in a plain array, so the library attaches one listener pair for all observed images and routes by id — a thousand observed slices cost two listeners, not a thousand.
 
 ### `<CornerstoneViewport />`
 
@@ -133,19 +162,22 @@ A missing Engine at mount is a mount-ordering bug, so the component throws inste
 
 ## Status
 
-v0.2 — sync only. The library's sole responsibility is state synchronization.
+v0.4 — sync only. The library's sole responsibility is state synchronization.
 
 | Capability | Status |
 |---|---|
 | Stack viewport state (camera, VOI, slice index) | ✅ |
 | Volume viewport state + per-kind types | ✅ |
 | Slice Position (`sliceIndex`, `numberOfSlices`) common to both kinds | ✅ |
+| What a viewport points at (`currentImageId`; Stack `imageIds`) | ✅ |
+| Image Load State (`useImageLoadState`, `useImageLoadStates`) | ✅ |
 | Absent-viewport contract (`undefined`) | ✅ |
 | Shared per-viewport Binding, StrictMode-safe | ✅ |
 | Auto fill-in / empty-out on viewport enable/destroy | ✅ |
 | Selectors (re-render only when *your* value changes) | ✅ |
 | rAF batching for interaction-rate events | ✅ |
 | Optional `<CornerstoneViewport />` component | ✅ |
+| Cache totals (`useCacheState`), Volume `volumeIds` | roadmap |
 | Annotation / tool / segmentation state | roadmap |
 
 **Requires:** React 18+, `@cornerstonejs/core` 5.x. Ships ESM only.
@@ -162,4 +194,4 @@ npm test                          # unit (jsdom + fake CS3D registry) and browse
 npm run build                     # tsc → dist/
 ```
 
-Unit tests observe only the public hook API — return values, referential stability, re-render counts. Browser tests drive a real Engine to verify the assumptions the fake makes. Domain vocabulary (Engine, Viewport State, Snapshot, Command, Binding) lives in [`CONTEXT.md`](./CONTEXT.md).
+Unit tests observe only the public hook API — return values, referential stability, re-render counts. Browser tests drive a real Engine and a real cache to verify the assumptions the fakes make. Domain vocabulary (Engine, Viewport State, Snapshot, Command, Image Load State, Binding) lives in [`CONTEXT.md`](./CONTEXT.md).

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Code, Panel } from './ui';
-import { CtViewport, SliceSlider } from './CtViewport';
+import { CtViewport, LoadTrack, SliceSlider } from './CtViewport';
 import {
   BY_HAND_SOURCE,
   HOOK_SOURCE,
@@ -31,6 +31,7 @@ export function Hero({ imageIds, theme }: { imageIds: string[]; theme: 'light' |
         <div>
           <CtViewport viewportId={VIEWPORT_ID} imageIds={imageIds} />
           <SliceSlider viewportId={VIEWPORT_ID} />
+          <LoadTrack viewportId={VIEWPORT_ID} />
           <div className="card" style={{ marginTop: '1rem' }}>
             <div className="card__head">
               실행 중인 위젯

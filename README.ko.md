@@ -81,7 +81,7 @@ Cornerstone3D가 잘못 만들어진 게 아닙니다 — **엔진**이지 스�
 
 3. **부재는 정상 상태입니다.** 아직 enable되지 않은 뷰포트는 `undefined`를 반환하고, 뷰포트가 생기면 값이 자동으로 채워지며, destroy되면 다시 비워집니다. 그동안 무엇을 렌더링할지는 전적으로 앱의 결정입니다.
 
-그 위에서 Snapshot 계층이 **참조 안정성**(상태 무변경 ⇒ 동일 참조, 낭비 리렌더 없음, 루프 없음)과 **불변성**(deep-frozen — 받은 객체가 나중에 변하지 않음)을 보장합니다.
+그 위에서 Snapshot 계층이 **참조 안정성**(상태 무변경 ⇒ 동일 참조, 낭비 리렌더 없음, 루프 없음)과 **불변성**(deep-frozen — 받은 객체가 나중에 변하지 않음)을 보장합니다. 그리고 필드는 Engine에 그것을 읽는 getter와 그것이 바뀌었다고 알리는 이벤트가 **둘 다** 있을 때만 들어옵니다 ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)) — `loaded`는 있고 `loading`은 없는 이유입니다.
 
 ## API
 
@@ -100,13 +100,42 @@ Engine 이벤트는 애니메이션 프레임당 최대 한 번의 업데이트�
 `ViewportState`는 판별 유니온입니다. `sliceIndex` / `numberOfSlices`(Slice Position)는 모든 kind 공통이라 하나의 슬라이더가 Stack과 MPR 화면을 모두 담당합니다. 나머지 kind별 필드는 `kind`로 좁혀 읽으세요:
 
 ```ts
-interface ViewportStateCommon { camera: Types.ICamera; voiRange: Types.VOIRange | undefined; sliceIndex: number | undefined; numberOfSlices: number | undefined }
-interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number }
+interface ViewportStateCommon { camera: Types.ICamera; voiRange: Types.VOIRange | undefined; sliceIndex: number | undefined; numberOfSlices: number | undefined; currentImageId: string | undefined }
+interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number; currentImageId: string; imageIds: readonly string[] }
 interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
-모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. 재구축은 직전 Snapshot과 구조를 공유하므로 움직이지 않은 필드는 참조가 그대로 유지됩니다 — 줌을 해도 `s => s.voiRange`에 새 객체가 가지 않습니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
+모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. 재구축은 직전 Snapshot과 구조를 공유하므로 움직이지 않은 필드는 참조가 그대로 유지됩니다 — 줌을 해도 `s => s.voiRange`에 새 객체가 가지 않고, 스크롤을 해도 `s => s.imageIds`에 새 배열이 가지 않습니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
+
+`currentImageId`는 뷰포트가 가리키는 이미지입니다: Stack에서는 요청된 슬라이스의 id, Volume에서는 카메라에 가장 가까운 이미지, 가리키는 것이 없으면(3D, 데이터 전) `undefined`. `imageIds`는 Stack의 이미지 목록으로, `setStack`이 내용을 바꿀 때만 교체됩니다. 이 둘이 아래 이미지 훅의 키가 됩니다.
+
+### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
+
+```ts
+function useImageLoadState(imageId: string | undefined): boolean | undefined;
+function useImageLoadStates(imageIds: readonly string[] | undefined): readonly boolean[] | undefined;
+```
+
+이미지가 캐시에 있는지를, 캐시 모듈이 말하는 대로(`cache.isLoaded`) 돌려줍니다. 뷰포트가 아니라 캐시의 말입니다: 로드는 됐지만 아직 어느 캔버스에도 그려지지 않은 이미지가 있을 수 있습니다. 두 가지 부재는 구분됩니다 — `undefined`는 물어볼 이미지가 없었다는 뜻(`imageId`가 `undefined`), `false`는 캐시에 물었는데 없다는 뜻입니다. 요청한 적이 없든, 실패해서 지워졌든 같은 답입니다.
+
+배열 훅은 목록 전체에 대한 `useImageLoadState`입니다: 항목마다 같은 답, frozen 배열 하나, 어떤 항목이든 바뀌었을 때만 교체. `undefined`를 주면 `undefined`, 빈 목록은 늘 같은 빈 배열입니다. 자기 상태는 없습니다 — `useImageLoadState(imageIds[i])`를 읽는 눈금 컴포넌트와 `useImageLoadStates(imageIds)`를 읽는 트랙은 이미지당 하나의 Binding을 공유합니다.
+
+라이브러리는 뷰포트 상태와 이미지 상태를 조인하지 않습니다. 조인은 앱의 몫이고, 두 줄입니다:
+
+```tsx
+function LoadTrack({ viewportId }: { viewportId: string }) {
+  const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
+  const current  = useViewportState(viewportId, (s) => s.currentImageId);
+  const loaded   = useImageLoadStates(imageIds); // readonly boolean[] | undefined
+  if (!imageIds || !loaded) return null;
+  return <div className="track">{imageIds.map((id, i) => <span key={id} data-loaded={loaded[i]} data-current={id === current} />)}</div>;
+}
+```
+
+없는 것: *로딩 중*과 *실패*. 캐시에는 둘 다 getter가 없습니다 — 로드를 요청하면 항목이 조용히 생기고, 실패하면 조용히 지워집니다 — 그래서 라이브러리가 Engine에 없는 기록을 따로 들고 있지 않는 한 Snapshot에 실을 수 없습니다 ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). 그 둘이 필요하면 Cornerstone3D `eventTarget`의 `IMAGE_LOAD_FAILED` / `IMAGE_LOAD_ERROR`를 직접 들으세요. 눈금 N개를 그리는 것도 앱의 몫입니다: N이 크면 행을 memo하거나 canvas에 그리세요.
+
+내부적으로 Cornerstone3D의 `eventTarget`은 리스너를 평범한 배열로 들고 있어서, 라이브러리는 관찰 중인 모든 이미지에 대해 리스너 한 쌍만 붙이고 id로 라우팅합니다 — 슬라이스 천 장을 관찰해도 리스너는 천 개가 아니라 둘입니다.
 
 ### `<CornerstoneViewport />`
 
@@ -131,19 +160,22 @@ import { CornerstoneViewport } from 'react-cornerstone3d';
 
 ## 현재 상태
 
-v0.2 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기화입니다.
+v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기화입니다.
 
 | 기능 | 상태 |
 |---|---|
 | Stack 뷰포트 상태 (카메라, VOI, 슬라이스 인덱스) | ✅ |
 | Volume 뷰포트 상태 + kind별 타입 | ✅ |
 | Slice Position(`sliceIndex`, `numberOfSlices`) 두 kind 공통 | ✅ |
+| 뷰포트가 가리키는 것 (`currentImageId`; Stack `imageIds`) | ✅ |
+| Image Load State (`useImageLoadState`, `useImageLoadStates`) | ✅ |
 | 뷰포트 부재 계약 (`undefined`) | ✅ |
 | viewportId당 공유 Binding, StrictMode 안전 | ✅ |
 | 뷰포트 enable/destroy 시 자동 채움/비움 | ✅ |
 | 셀렉터 (내가 쓰는 값이 바뀔 때만 리렌더) | ✅ |
 | 고빈도 이벤트 rAF 배칭 | ✅ |
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
+| 캐시 총량(`useCacheState`), Volume `volumeIds` | 로드맵 |
 | 어노테이션 / 툴 / 세그멘테이션 상태 | 로드맵 |
 
 **요구사항:** React 18+, `@cornerstonejs/core` 5.x. ESM만 제공합니다.
@@ -160,4 +192,4 @@ npm test                          # unit(jsdom + 가짜 CS3D 레지스트리)과
 npm run build                     # tsc → dist/
 ```
 
-유닛 테스트는 공개 훅 API만 관찰합니다 — 반환값, 참조 안정성, 리렌더 횟수. 브라우저 테스트는 실제 Engine을 구동해 가짜가 세운 가정을 검증합니다. 도메인 용어(Engine, Viewport State, Snapshot, Command, Binding)는 [`CONTEXT.md`](./CONTEXT.md)에 있습니다.
+유닛 테스트는 공개 훅 API만 관찰합니다 — 반환값, 참조 안정성, 리렌더 횟수. 브라우저 테스트는 실제 Engine과 실제 캐시를 구동해 가짜가 세운 가정을 검증합니다. 도메인 용어(Engine, Viewport State, Snapshot, Command, Image Load State, Binding)는 [`CONTEXT.md`](./CONTEXT.md)에 있습니다.
