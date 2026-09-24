@@ -1,8 +1,17 @@
-import { Enums, cache, eventTarget } from '@cornerstonejs/core';
-import { act, cleanup, renderHook } from '@testing-library/react';
+import { cache } from '@cornerstonejs/core';
+import { cleanup, renderHook } from '@testing-library/react';
 import { createElement, StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { useImageLoadState } from './index';
+import {
+  added,
+  fireRawAdded,
+  fireRawRemoved,
+  endFrame,
+  loaded,
+  removed,
+  spyCacheListeners,
+} from './testing/imageCache';
 import { imageBindings } from './useImageLoadState';
 
 // Real module loads; only the cache module's `isLoaded` is replaced so tests
@@ -12,8 +21,6 @@ vi.mock('@cornerstonejs/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@cornerstonejs/core')>();
   return { ...actual, cache: { ...actual.cache, isLoaded: vi.fn() } };
 });
-
-const loaded = new Set<string>();
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
@@ -27,53 +34,8 @@ afterEach(() => {
   vi.mocked(cache.isLoaded).mockReset();
 });
 
-// Mirrors CS3D 5.10.7 payloads: ADDED carries the cached image (`detail.image.imageId`),
-// REMOVED carries the id (`detail.imageId`). Both fire on eventTarget.
-const fireRawAdded = (imageId: string) =>
-  act(() => {
-    loaded.add(imageId);
-    eventTarget.dispatchEvent(
-      new CustomEvent(Enums.Events.IMAGE_CACHE_IMAGE_ADDED, { detail: { image: { imageId } } }),
-    );
-  });
-const fireRawRemoved = (imageId: string) =>
-  act(() => {
-    loaded.delete(imageId);
-    eventTarget.dispatchEvent(
-      new CustomEvent(Enums.Events.IMAGE_CACHE_IMAGE_REMOVED, { detail: { imageId } }),
-    );
-  });
-const endFrame = () => act(() => vi.advanceTimersToNextFrame());
-const added = (imageId: string) => {
-  fireRawAdded(imageId);
-  endFrame();
-};
-const removed = (imageId: string) => {
-  fireRawRemoved(imageId);
-  endFrame();
-};
-
 const strictModeWrapper = ({ children }: { children: ReactNode }) =>
   createElement(StrictMode, null, children);
-
-// Only the dispatcher's own listeners, not the viewport Binding's lifecycle ones.
-const CACHE_EVENTS = new Set<string>([
-  Enums.Events.IMAGE_CACHE_IMAGE_ADDED,
-  Enums.Events.IMAGE_CACHE_IMAGE_REMOVED,
-]);
-function spyCacheListeners() {
-  const add = vi.spyOn(eventTarget, 'addEventListener');
-  const remove = vi.spyOn(eventTarget, 'removeEventListener');
-  const count = (spy: typeof add) => spy.mock.calls.filter(([type]) => CACHE_EVENTS.has(type)).length;
-  return {
-    added: () => count(add),
-    removed: () => count(remove),
-    restore: () => {
-      add.mockRestore();
-      remove.mockRestore();
-    },
-  };
-}
 
 describe('useImageLoadState', () => {
   test('an image the cache does not know is not loaded: false', () => {

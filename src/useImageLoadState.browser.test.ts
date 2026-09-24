@@ -2,7 +2,7 @@ import type { Types } from '@cornerstonejs/core';
 import { cache, imageLoader, init as csInit } from '@cornerstonejs/core';
 import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, expect, test } from 'vitest';
-import { useImageLoadState } from './index';
+import { useImageLoadState, useImageLoadStates } from './index';
 
 // Smoke tests against the real cache module. They verify what the jsdom fakes
 // assume: which events the cache fires, when, and with what payloads.
@@ -76,4 +76,19 @@ test('an image cached before the hook mounts reads true on the first render', as
     seen.push(useImageLoadState(imageId));
   });
   expect(seen[0]).toBe(true);
+});
+
+test('useImageLoadStates follows the real cache per entry', async () => {
+  const ids = ['cachesmoke:a', 'cachesmoke:b', 'cachesmoke:c'];
+  const { result } = renderHook(() => useImageLoadStates(ids));
+  expect(result.current).toEqual([false, false, false]);
+
+  await imageLoader.loadAndCacheImage('cachesmoke:b');
+  await waitFor(() => expect(result.current).toEqual([false, true, false]));
+
+  await imageLoader.loadAndCacheImage('cachesmoke:c');
+  await waitFor(() => expect(result.current).toEqual([false, true, true]));
+
+  cache.removeImageLoadObject('cachesmoke:b');
+  await waitFor(() => expect(result.current).toEqual([false, false, true]));
 });
