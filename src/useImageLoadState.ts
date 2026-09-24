@@ -9,12 +9,18 @@ import { createRegistry, useBinding, type Binding, type LiveBinding } from './bi
 // dispatchEvent copies the array with slice(). A listener per image Binding
 // would make a setStack of N slices O(N²) in registration alone, and every
 // cache event O(N) to dispatch. So the library listens once and looks the
-// Binding up in a Map. Attached with the first live image Binding, detached
-// with the last. Revisit if a CS3D major changes eventTarget's storage.
-const live = new Map<string, LiveBinding<boolean>>();
+// Bindings up in a Map of the live ones. Attached with the first live image
+// Binding, detached with the last. Revisit if a CS3D major changes
+// eventTarget's storage.
+//
+// A Set per id, not one Binding: the registry keeps one Binding per key,
+// but a Binding evicted and then subscribed again by the same hook instance
+// is live outside the registry while a newer one holds the key. Both must
+// hear the cache, and neither may take the listeners down for the other.
+const live = new Map<string, Set<LiveBinding<boolean>>>();
 
-// The Binding rebuilds next frame with every other dirty Binding (ADR 0006).
-const route = (imageId: string) => live.get(imageId)?.schedule();
+// Each Binding rebuilds next frame with every other dirty Binding (ADR 0006).
+const route = (imageId: string) => live.get(imageId)?.forEach((binding) => binding.schedule());
 const onAdded = (evt: Event) =>
   route((evt as Types.EventTypes.ImageCacheImageAddedEvent).detail.image.imageId);
 const onRemoved = (evt: Event) =>
@@ -26,10 +32,15 @@ const dispatcher = {
       eventTarget.addEventListener(Enums.Events.IMAGE_CACHE_IMAGE_ADDED, onAdded);
       eventTarget.addEventListener(Enums.Events.IMAGE_CACHE_IMAGE_REMOVED, onRemoved);
     }
-    live.set(imageId, binding);
+    let bindings = live.get(imageId);
+    if (!bindings) live.set(imageId, (bindings = new Set()));
+    bindings.add(binding);
   },
-  remove(imageId: string) {
-    live.delete(imageId);
+  remove(imageId: string, binding: LiveBinding<boolean>) {
+    const bindings = live.get(imageId);
+    if (!bindings) return;
+    bindings.delete(binding);
+    if (bindings.size === 0) live.delete(imageId);
     if (live.size === 0) {
       eventTarget.removeEventListener(Enums.Events.IMAGE_CACHE_IMAGE_ADDED, onAdded);
       eventTarget.removeEventListener(Enums.Events.IMAGE_CACHE_IMAGE_REMOVED, onRemoved);
@@ -53,7 +64,7 @@ export const imageBindings = createRegistry<boolean>((imageId, binding) => ({
   detach: () => {
     // A queued rebuild would run for a Binding nobody reads — drop it.
     binding.unschedule();
-    dispatcher.remove(imageId);
+    dispatcher.remove(imageId, binding);
   },
 }));
 

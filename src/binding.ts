@@ -56,10 +56,13 @@ export function createBinding<S>(define: (self: LiveBinding<S>) => BindingSpec<S
   const self: LiveBinding<S> = {
     getSnapshot: () => snapshot,
     subscribe: (onChange) => {
+      // A fresh identity per subscription: one callback may subscribe twice
+      // (a list with a repeated id) and each subscription must count.
+      const listener = () => onChange();
       if (listeners.size === 0) spec.attach();
-      listeners.add(onChange);
+      listeners.add(listener);
       return () => {
-        listeners.delete(onChange);
+        if (!listeners.delete(listener)) return; // already unsubscribed
         if (listeners.size === 0) spec.detach();
       };
     },
@@ -134,6 +137,11 @@ export function createRegistry<S>(
       return bindings.size;
     },
   };
+}
+
+/** Same length, same strings in the same order — or the very same array. */
+export function sameStrings(a: readonly string[], b: readonly string[]): boolean {
+  return a === b || (a.length === b.length && a.every((s, i) => s === b[i]));
 }
 
 export function deepFreeze<T>(value: T): T {

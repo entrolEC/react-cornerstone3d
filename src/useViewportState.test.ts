@@ -910,18 +910,28 @@ describe('useViewportState', () => {
       expect('currentImageId' in result.current!).toBe(true);
     });
 
-    test('type-level: imageIds is Stack-only, currentImageId is a string on a Stack', () => {
-      const stackOnly = (state: StackViewportState): string => state.currentImageId;
+    test('an enabled Stack with no stack yet points at nothing: currentImageId undefined, imageIds empty', () => {
+      // CS3D constructs a StackViewport with imageIds = [] and index 0, so
+      // between enableElement and setStack getCurrentImageId() is undefined.
+      const { engineState } = createFakeStackViewport('vp-point-empty');
+      engineState.imageIds = [];
+      const { result } = renderHook(() => useViewportState('vp-point-empty'));
+
+      expect(result.current?.kind).toBe('stack');
+      expect(result.current?.currentImageId).toBeUndefined();
+      expect(asStack(result.current)?.imageIds).toEqual([]);
+    });
+
+    test('type-level: imageIds is Stack-only; currentImageId may be absent on any kind', () => {
       const stackIds = (state: StackViewportState): readonly string[] => state.imageIds;
-      const volumeOnly = (state: VolumeViewportState): string =>
-        // @ts-expect-error — a Volume may point at nothing (3D, before data)
+      const stackCurrent = (state: StackViewportState): string =>
+        // @ts-expect-error — a Stack points at nothing until setStack
         state.currentImageId;
       const union = (state: ViewportState): readonly string[] =>
         // @ts-expect-error — narrow by kind first
         state.imageIds;
-      expect(stackOnly).toBeDefined();
       expect(stackIds).toBeDefined();
-      expect(volumeOnly).toBeDefined();
+      expect(stackCurrent).toBeDefined();
       expect(union).toBeDefined();
     });
   });

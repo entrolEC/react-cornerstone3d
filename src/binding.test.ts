@@ -31,6 +31,19 @@ describe('createBinding', () => {
     expect(detach).toHaveBeenCalledTimes(1);
   });
 
+  test('the same callback subscribed twice counts twice, and off is idempotent', () => {
+    const { binding, detach } = cellBinding({ value: 0 });
+    const onChange = vi.fn();
+    const offA = binding.subscribe(onChange);
+    const offB = binding.subscribe(onChange);
+
+    offA();
+    offA(); // a second call must not detach on behalf of B
+    expect(detach).not.toHaveBeenCalled();
+    offB();
+    expect(detach).toHaveBeenCalledTimes(1);
+  });
+
   test('update rebuilds and notifies only when the Snapshot changed', () => {
     const cell = { value: 1 };
     let self!: { update: () => void };

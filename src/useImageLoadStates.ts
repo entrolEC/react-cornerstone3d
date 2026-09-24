@@ -1,13 +1,12 @@
 import { useRef, useSyncExternalStore } from 'react';
-import type { Binding } from './binding';
+import { sameStrings, type Binding } from './binding';
 import { imageBindings } from './useImageLoadState';
 
 const EMPTY: readonly boolean[] = Object.freeze([]);
 
 function sameIds(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
-  if (a === b) return true;
-  if (a === undefined || b === undefined) return false;
-  return a.length === b.length && a.every((id, i) => id === b[i]);
+  if (a === undefined || b === undefined) return a === b;
+  return sameStrings(a, b);
 }
 
 // What one list of ids subscribes to. Rebuilt only when the list's content

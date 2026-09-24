@@ -1,7 +1,5 @@
-import { cache } from '@cornerstonejs/core';
-import { cleanup, renderHook } from '@testing-library/react';
-import { createElement, StrictMode, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { describe, expect, test, vi } from 'vitest';
 import { useImageLoadState } from './index';
 import {
   added,
@@ -10,7 +8,9 @@ import {
   endFrame,
   loaded,
   removed,
+  installFakeCache,
   spyCacheListeners,
+  strictModeWrapper,
 } from './testing/imageCache';
 import { imageBindings } from './useImageLoadState';
 
@@ -22,20 +22,7 @@ vi.mock('@cornerstonejs/core', async (importOriginal) => {
   return { ...actual, cache: { ...actual.cache, isLoaded: vi.fn() } };
 });
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
-  vi.mocked(cache.isLoaded).mockImplementation((imageId) => loaded.has(imageId));
-});
-
-afterEach(() => {
-  cleanup(); // unmount before the fake clock goes away (shared scheduler)
-  vi.useRealTimers();
-  loaded.clear();
-  vi.mocked(cache.isLoaded).mockReset();
-});
-
-const strictModeWrapper = ({ children }: { children: ReactNode }) =>
-  createElement(StrictMode, null, children);
+installFakeCache();
 
 describe('useImageLoadState', () => {
   test('an image the cache does not know is not loaded: false', () => {
@@ -204,6 +191,33 @@ describe('useImageLoadState', () => {
     rerender();
     expect(result.current).toBeUndefined();
     expect(imageBindings.size).toBe(0);
+  });
+
+  // The registry lets a Binding be live but unregistered: it was evicted, a
+  // newer Binding took the key, then the old hook instance subscribed again.
+  // Both must keep hearing the cache, and neither may take the shared
+  // listeners down while the other still has consumers.
+  test('two live Bindings for one imageId both hear the cache, and one leaving does not deafen the other', () => {
+    const spy = spyCacheListeners();
+    const old = imageBindings.acquire('img:orphan');
+    old.subscribe(() => {})(); // subscribed, then evicted
+    const fresh = imageBindings.acquire('img:orphan');
+    expect(fresh).not.toBe(old);
+    const offFresh = fresh.subscribe(() => {});
+    const offOld = old.subscribe(() => {}); // live again, outside the registry
+
+    added('img:orphan');
+    expect(old.getSnapshot()).toBe(true);
+    expect(fresh.getSnapshot()).toBe(true);
+
+    offFresh();
+    expect(spy.added() - spy.removed()).toBe(2); // old still listens
+    removed('img:orphan');
+    expect(old.getSnapshot()).toBe(false);
+
+    offOld();
+    expect(spy.added()).toBe(spy.removed());
+    spy.restore();
   });
 
   test('the value is a bare boolean, referentially trivial', () => {

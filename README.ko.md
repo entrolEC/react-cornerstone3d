@@ -101,14 +101,14 @@ Engine 이벤트는 애니메이션 프레임당 최대 한 번의 업데이트�
 
 ```ts
 interface ViewportStateCommon { camera: Types.ICamera; voiRange: Types.VOIRange | undefined; sliceIndex: number | undefined; numberOfSlices: number | undefined; currentImageId: string | undefined }
-interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number; currentImageId: string; imageIds: readonly string[] }
+interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number; imageIds: readonly string[] }
 interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
 모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. 재구축은 직전 Snapshot과 구조를 공유하므로 움직이지 않은 필드는 참조가 그대로 유지됩니다 — 줌을 해도 `s => s.voiRange`에 새 객체가 가지 않고, 스크롤을 해도 `s => s.imageIds`에 새 배열이 가지 않습니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
 
-`currentImageId`는 뷰포트가 가리키는 이미지입니다: Stack에서는 요청된 슬라이스의 id, Volume에서는 카메라에 가장 가까운 이미지, 가리키는 것이 없으면(3D, 데이터 전) `undefined`. `imageIds`는 Stack의 이미지 목록으로, `setStack`이 내용을 바꿀 때만 교체됩니다. 이 둘이 아래 이미지 훅의 키가 됩니다.
+`currentImageId`는 뷰포트가 가리키는 이미지입니다: Stack에서는 요청된 슬라이스의 id, Volume에서는 카메라에 가장 가까운 이미지, 가리키는 것이 없으면(`setStack` 전의 Stack, 데이터 전의 Volume, 3D) `undefined`. `imageIds`는 Stack의 이미지 목록으로, `setStack`이 내용을 바꿀 때만 교체됩니다. 이 둘이 아래 이미지 훅의 키가 됩니다.
 
 ### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
 

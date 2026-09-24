@@ -1,6 +1,7 @@
-import { Enums, eventTarget } from '@cornerstonejs/core';
-import { act } from '@testing-library/react';
-import { vi } from 'vitest';
+import { Enums, cache, eventTarget } from '@cornerstonejs/core';
+import { act, cleanup } from '@testing-library/react';
+import { createElement, StrictMode, type ReactNode } from 'react';
+import { afterEach, beforeEach, vi } from 'vitest';
 
 // jsdom harness for the image Bindings. The test file mocks
 // `cache.isLoaded` to read `loaded`; events go through the real eventTarget.
@@ -8,6 +9,26 @@ import { vi } from 'vitest';
 // (`detail.image.imageId`), REMOVED carries the id (`detail.imageId`).
 
 export const loaded = new Set<string>();
+
+/**
+ * Per-test setup for a file that has mocked `cache.isLoaded` (the `vi.mock`
+ * itself must stay in the test file — it is hoisted per module).
+ */
+export function installFakeCache() {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
+    vi.mocked(cache.isLoaded).mockImplementation((imageId) => loaded.has(imageId));
+  });
+  afterEach(() => {
+    cleanup(); // unmount before the fake clock goes away (shared scheduler)
+    vi.useRealTimers();
+    loaded.clear();
+    vi.mocked(cache.isLoaded).mockReset();
+  });
+}
+
+export const strictModeWrapper = ({ children }: { children: ReactNode }) =>
+  createElement(StrictMode, null, children);
 
 export const fireRawAdded = (imageId: string) =>
   act(() => {

@@ -1,6 +1,6 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
-import { createRegistry, deepFreeze, useBinding } from './binding';
+import { createRegistry, deepFreeze, sameStrings, useBinding } from './binding';
 
 /** State shared by every viewport kind. */
 interface ViewportStateCommon {
@@ -15,8 +15,9 @@ interface ViewportStateCommon {
   readonly numberOfSlices: number | undefined;
   /**
    * The image the viewport points at, as the Engine reports it: `undefined`
-   * when it points at none (3D, or a Volume before its data arrives). For a
-   * Volume this is the image closest to the camera. Join it with
+   * when it points at none (a Stack before `setStack`, a Volume before its
+   * data arrives, 3D). On a Stack it is the requested slice's id; on a
+   * Volume the image closest to the camera. Join it with
    * `useImageLoadState` to ask whether that image is in the cache.
    */
   readonly currentImageId: string | undefined;
@@ -28,8 +29,6 @@ export interface StackViewportState extends ViewportStateCommon {
   /** The requested slice (ADR 0003); a Stack always reports a number. */
   readonly sliceIndex: number;
   readonly numberOfSlices: number;
-  /** The requested slice's image — `imageIds[sliceIndex]`. */
-  readonly currentImageId: string;
   /**
    * The stack's image list. Replaced only when `setStack` changes its
    * content; a scroll or a zoom keeps the same array reference.
@@ -93,15 +92,11 @@ function voiRangesEqual(
   return a?.lower === b?.lower && a?.upper === b?.upper;
 }
 
-function imageIdsEqual(a: readonly string[], b: readonly string[]): boolean {
-  return a === b || (a.length === b.length && a.every((id, i) => id === b[i]));
-}
-
 function statesEqual(a: ViewportState, b: ViewportState): boolean {
   if (a.kind !== b.kind) return false;
   if (a.sliceIndex !== b.sliceIndex || a.numberOfSlices !== b.numberOfSlices) return false;
   if (a.currentImageId !== b.currentImageId) return false;
-  if (a.kind === 'stack' && b.kind === 'stack' && !imageIdsEqual(a.imageIds, b.imageIds)) {
+  if (a.kind === 'stack' && b.kind === 'stack' && !sameStrings(a.imageIds, b.imageIds)) {
     return false;
   }
   return voiRangesEqual(a.voiRange, b.voiRange) && camerasEqual(a.camera, b.camera);
@@ -145,7 +140,7 @@ function shareVoiRange(
 // `s => s.imageIds` consumer already holds unless its content changed.
 function shareImageIds(next: readonly string[], prev: readonly string[] | undefined) {
   if (prev === undefined) return next;
-  return imageIdsEqual(next, prev) ? prev : next;
+  return sameStrings(next, prev) ? prev : next;
 }
 
 // `prev` is the Snapshot being replaced: whatever did not move is taken
@@ -172,7 +167,9 @@ function buildSnapshot(
       ),
       sliceIndex: stack.getSliceIndex(),
       numberOfSlices: stack.getNumberOfSlices(),
-      currentImageId: stack.getCurrentImageId(),
+      // Before setStack the Engine's list is empty and this reads undefined
+      // (typed string in CS3D); our contract says so.
+      currentImageId: stack.getCurrentImageId() ?? undefined,
       // getImageIds returns the Engine's own array: copy before freezing.
       imageIds: shareImageIds(
         [...stack.getImageIds()],

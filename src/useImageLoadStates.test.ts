@@ -1,7 +1,5 @@
-import { cache } from '@cornerstonejs/core';
-import { cleanup, renderHook } from '@testing-library/react';
-import { createElement, StrictMode, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { describe, expect, test, vi } from 'vitest';
 import { useImageLoadState, useImageLoadStates } from './index';
 import {
   added,
@@ -9,7 +7,9 @@ import {
   endFrame,
   loaded,
   removed,
+  installFakeCache,
   spyCacheListeners,
+  strictModeWrapper,
 } from './testing/imageCache';
 import { imageBindings } from './useImageLoadState';
 
@@ -18,20 +18,7 @@ vi.mock('@cornerstonejs/core', async (importOriginal) => {
   return { ...actual, cache: { ...actual.cache, isLoaded: vi.fn() } };
 });
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
-  vi.mocked(cache.isLoaded).mockImplementation((imageId) => loaded.has(imageId));
-});
-
-afterEach(() => {
-  cleanup();
-  vi.useRealTimers();
-  loaded.clear();
-  vi.mocked(cache.isLoaded).mockReset();
-});
-
-const strictModeWrapper = ({ children }: { children: ReactNode }) =>
-  createElement(StrictMode, null, children);
+installFakeCache();
 
 const ids = ['img:0', 'img:1', 'img:2'];
 
@@ -190,6 +177,21 @@ describe('useImageLoadStates', () => {
     unmount();
     expect(spy.added()).toBe(spy.removed());
     expect(imageBindings.size).toBe(0);
+    spy.restore();
+  });
+
+  test('a list with a repeated id reads the same Binding twice and unmounts cleanly', () => {
+    const spy = spyCacheListeners();
+    const { result, unmount } = renderHook(() => useImageLoadStates(['img:dup', 'img:dup']));
+    expect(result.current).toEqual([false, false]);
+    expect(imageBindings.size).toBe(1);
+
+    added('img:dup');
+    expect(result.current).toEqual([true, true]);
+
+    unmount();
+    expect(imageBindings.size).toBe(0);
+    expect(spy.added()).toBe(spy.removed());
     spy.restore();
   });
 

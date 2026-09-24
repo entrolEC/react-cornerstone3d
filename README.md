@@ -103,14 +103,14 @@ Engine events are coalesced to at most one update per animation frame, so a drag
 
 ```ts
 interface ViewportStateCommon { camera: Types.ICamera; voiRange: Types.VOIRange | undefined; sliceIndex: number | undefined; numberOfSlices: number | undefined; currentImageId: string | undefined }
-interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number; currentImageId: string; imageIds: readonly string[] }
+interface StackViewportState  extends ViewportStateCommon { kind: 'stack';  sliceIndex: number; numberOfSlices: number; imageIds: readonly string[] }
 interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
 Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. A rebuild shares structure with the Snapshot it replaces, so a field that did not move keeps its reference — a zoom never hands `s => s.voiRange` a new object, and a scroll never hands `s => s.imageIds` a new array. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
 
-`currentImageId` is the image the viewport points at: on a Stack the requested slice's id, on a Volume the image closest to the camera, `undefined` when it points at nothing (3D, or before data). `imageIds` is the Stack's list, replaced only when `setStack` changes its content. Together they are the key into the image hooks below.
+`currentImageId` is the image the viewport points at: on a Stack the requested slice's id, on a Volume the image closest to the camera, `undefined` when it points at nothing (a Stack before `setStack`, a Volume before data, 3D). `imageIds` is the Stack's list, replaced only when `setStack` changes its content. Together they are the key into the image hooks below.
 
 ### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
 
