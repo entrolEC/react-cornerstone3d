@@ -14,6 +14,13 @@ interface ViewportStateCommon {
    */
   readonly sliceIndex: number | undefined;
   readonly numberOfSlices: number | undefined;
+  /**
+   * The image the viewport points at, as the Engine reports it: `undefined`
+   * when it points at none (3D, or a Volume before its data arrives). For a
+   * Volume this is the image closest to the camera. Join it with
+   * `useImageLoadState` to ask whether that image is in the cache.
+   */
+  readonly currentImageId: string | undefined;
 }
 
 /** Observable state of one Stack viewport. Immutable Snapshot (deep-frozen). */
@@ -22,6 +29,13 @@ export interface StackViewportState extends ViewportStateCommon {
   /** The requested slice (ADR 0003); a Stack always reports a number. */
   readonly sliceIndex: number;
   readonly numberOfSlices: number;
+  /** The requested slice's image — `imageIds[sliceIndex]`. */
+  readonly currentImageId: string;
+  /**
+   * The stack's image list. Replaced only when `setStack` changes its
+   * content; a scroll or a zoom keeps the same array reference.
+   */
+  readonly imageIds: readonly string[];
 }
 
 /** Observable state of one Volume viewport. Immutable Snapshot (deep-frozen). */
@@ -36,7 +50,9 @@ export type ViewportState = StackViewportState | VolumeViewportState;
 // PRE_STACK_NEW_IMAGE: StackViewport assigns currentImageIdIndex synchronously
 // and fires this before queuing the load; STACK_NEW_IMAGE fires only on load
 // success, so on its own the index lags and a failed load leaves it stale
-// forever. Both stay: display can still change VOI (ADR 0003).
+// forever. Both stay: display can still change VOI (ADR 0003). It also
+// covers imageIds: every setStack path ends in _setImageIdIndex and fires it.
+// (STACK_VIEWPORT_NEW_STACK is declared but never fired in CS3D 5.10.7.)
 // VOLUME_VIEWPORT_NEW_VOLUME: setVolumes() changes numberOfSlices but fires
 // no CAMERA_MODIFIED of its own; without it the count stays stale until the
 // app happens to move the camera. A Volume's slice index derives from the
@@ -86,9 +102,17 @@ function voiRangesEqual(
   return a?.lower === b?.lower && a?.upper === b?.upper;
 }
 
+function imageIdsEqual(a: readonly string[], b: readonly string[]): boolean {
+  return a === b || (a.length === b.length && a.every((id, i) => id === b[i]));
+}
+
 function statesEqual(a: ViewportState, b: ViewportState): boolean {
   if (a.kind !== b.kind) return false;
   if (a.sliceIndex !== b.sliceIndex || a.numberOfSlices !== b.numberOfSlices) return false;
+  if (a.currentImageId !== b.currentImageId) return false;
+  if (a.kind === 'stack' && b.kind === 'stack' && !imageIdsEqual(a.imageIds, b.imageIds)) {
+    return false;
+  }
   return voiRangesEqual(a.voiRange, b.voiRange) && camerasEqual(a.camera, b.camera);
 }
 
@@ -124,6 +148,13 @@ function shareVoiRange(
 ): Types.VOIRange | undefined {
   if (next === undefined || prev === undefined) return next;
   return voiRangesEqual(next, prev) ? prev : next;
+}
+
+// A scroll rebuilds the Snapshot but not the stack: keep the list a
+// `s => s.imageIds` consumer already holds unless its content changed.
+function shareImageIds(next: readonly string[], prev: readonly string[] | undefined) {
+  if (prev === undefined) return next;
+  return imageIdsEqual(next, prev) ? prev : next;
 }
 
 interface Binding {
@@ -162,6 +193,12 @@ function createBinding(viewportId: string): Binding {
         ),
         sliceIndex: stack.getSliceIndex(),
         numberOfSlices: stack.getNumberOfSlices(),
+        currentImageId: stack.getCurrentImageId(),
+        // getImageIds returns the Engine's own array: copy before freezing.
+        imageIds: shareImageIds(
+          [...stack.getImageIds()],
+          prev?.kind === 'stack' ? prev.imageIds : undefined,
+        ),
       });
     }
     // ponytail: every non-Stack kind reads as 'volume' (camera + VOI is the
@@ -178,6 +215,8 @@ function createBinding(viewportId: string): Binding {
       // Engine reports undefined before setVolumes; our contract is undefined too.
       sliceIndex: sliced ? (volume.getSliceIndex() ?? undefined) : undefined,
       numberOfSlices: sliced ? (volume.getNumberOfSlices() ?? undefined) : undefined,
+      // The 3D class returns null (typed as string); ours is undefined either way.
+      currentImageId: volume.getCurrentImageId() ?? undefined,
     });
   };
 

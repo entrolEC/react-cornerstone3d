@@ -97,6 +97,7 @@ function createFakeStackViewport(viewportId: string, { enabled = true } = {}) {
     ...fakeCameraState(),
     voiRange: { lower: 0, upper: 400 },
     sliceIndex: 0,
+    imageIds: ['img:0', 'img:1', 'img:2'],
   };
   const viewport = {
     element: document.createElement('div'),
@@ -104,9 +105,25 @@ function createFakeStackViewport(viewportId: string, { enabled = true } = {}) {
     getCamera: cameraGetter(engineState),
     getProperties: () => ({ voiRange: { ...engineState.voiRange } }),
     getSliceIndex: () => engineState.sliceIndex,
-    getNumberOfSlices: () => 3,
+    getNumberOfSlices: () => engineState.imageIds.length,
+    // Mirrors CS3D: getImageIds hands out the Engine's own array, not a copy.
+    getImageIds: () => engineState.imageIds,
+    getCurrentImageId: () => engineState.imageIds[engineState.sliceIndex],
   };
   return { engineState, ...wireFakeViewport(viewportId, viewport, enabled) };
+}
+
+// The Snapshot a fake Stack viewport should produce from its current Engine state.
+function expectedStackState(engineState: ReturnType<typeof createFakeStackViewport>['engineState']) {
+  return {
+    kind: 'stack',
+    camera: engineState.camera,
+    voiRange: engineState.voiRange,
+    sliceIndex: engineState.sliceIndex,
+    numberOfSlices: engineState.imageIds.length,
+    currentImageId: engineState.imageIds[engineState.sliceIndex],
+    imageIds: engineState.imageIds,
+  };
 }
 
 function createFakeVolumeViewport(
@@ -119,6 +136,7 @@ function createFakeVolumeViewport(
     // Mirrors CS3D: both getters return undefined until setVolumes lands.
     sliceIndex: undefined as number | undefined,
     numberOfSlices: undefined as number | undefined,
+    currentImageId: undefined as string | undefined,
   };
   const viewport = {
     element: document.createElement('div'),
@@ -126,6 +144,10 @@ function createFakeVolumeViewport(
     getCamera: cameraGetter(engineState),
     getProperties: () => ({ voiRange: { ...engineState.voiRange } }),
     getSliceIndex: () => engineState.sliceIndex,
+    // VOLUME_3D's class returns null here (no slices to point at); the sliced
+    // class returns the image closest to the camera, or undefined before data.
+    getCurrentImageId: () =>
+      type === Enums.ViewportType.VOLUME_3D ? null : engineState.currentImageId,
     // VOLUME_3D's class has no getNumberOfSlices at all — mirror that.
     ...(type === Enums.ViewportType.VOLUME_3D
       ? {}
@@ -153,13 +175,7 @@ describe('useViewportState', () => {
 
     const { result } = renderHook(() => useViewportState('vp-exists'));
 
-    expect(result.current).toEqual({
-      kind: 'stack',
-      camera: engineState.camera,
-      voiRange: engineState.voiRange,
-      sliceIndex: engineState.sliceIndex,
-      numberOfSlices: 3,
-    });
+    expect(result.current).toEqual(expectedStackState(engineState));
   });
 
   test('returns updated state when a camera Engine event fires', () => {
@@ -293,13 +309,7 @@ describe('useViewportState', () => {
 
     enable();
 
-    expect(result.current).toEqual({
-      kind: 'stack',
-      camera: engineState.camera,
-      voiRange: engineState.voiRange,
-      sliceIndex: engineState.sliceIndex,
-      numberOfSlices: 3,
-    });
+    expect(result.current).toEqual(expectedStackState(engineState));
   });
 
   test('returns to undefined when the viewport is disabled — no stale value', () => {
@@ -417,13 +427,7 @@ describe('useViewportState', () => {
 
       const { result } = renderHook(() => useViewportState('vp-sel-none'));
 
-      expect(result.current).toEqual({
-        kind: 'stack',
-        camera: engineState.camera,
-        voiRange: engineState.voiRange,
-        sliceIndex: engineState.sliceIndex,
-        numberOfSlices: 3,
-      });
+      expect(result.current).toEqual(expectedStackState(engineState));
     });
 
     test('when the viewport is absent the selector is not called and undefined is returned', () => {
@@ -672,6 +676,7 @@ describe('useViewportState', () => {
         voiRange: engineState.voiRange,
         sliceIndex: undefined,
         numberOfSlices: undefined,
+        currentImageId: undefined,
       });
     });
 
@@ -764,6 +769,112 @@ describe('useViewportState', () => {
         // @ts-expect-error — narrow by kind first
         state.numberOfSlices;
       expect(stackOnly).toBeDefined();
+      expect(volumeOnly).toBeDefined();
+      expect(union).toBeDefined();
+    });
+  });
+
+  // What the viewport points at: the current image and, for a Stack, its
+  // image list. Both ride existing element events — no new subscription.
+  describe('current image and image list', () => {
+    test('a Stack exposes its image list and the current image', () => {
+      const { engineState } = createFakeStackViewport('vp-point-stack');
+      const { result } = renderHook(() => useViewportState('vp-point-stack'));
+
+      expect(asStack(result.current)?.imageIds).toEqual(['img:0', 'img:1', 'img:2']);
+      expect(result.current?.currentImageId).toBe('img:0');
+      expect(engineState.imageIds).toBe(engineState.imageIds); // still the Engine's
+    });
+
+    test('scrolling a Stack moves currentImageId on PRE_STACK_NEW_IMAGE', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-point-scroll');
+      const { result } = renderHook(() => useViewportState('vp-point-scroll'));
+
+      engineState.sliceIndex = 2;
+      fire(Enums.Events.PRE_STACK_NEW_IMAGE);
+
+      expect(result.current?.currentImageId).toBe('img:2');
+    });
+
+    test('a new stack replaces imageIds on PRE_STACK_NEW_IMAGE', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-point-setstack');
+      const { result } = renderHook(() => useViewportState('vp-point-setstack'));
+
+      engineState.imageIds = ['other:0', 'other:1'];
+      engineState.sliceIndex = 1;
+      fire(Enums.Events.PRE_STACK_NEW_IMAGE);
+
+      expect(asStack(result.current)?.imageIds).toEqual(['other:0', 'other:1']);
+      expect(asStack(result.current)?.numberOfSlices).toBe(2);
+      expect(result.current?.currentImageId).toBe('other:1');
+    });
+
+    test('a camera-only change keeps the previous imageIds reference', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-point-share');
+      let renders = 0;
+      const { result } = renderHook(() => {
+        renders++;
+        return useViewportState('vp-point-share', (s) => asStack(s)?.imageIds);
+      });
+      const before = result.current;
+      const rendersBefore = renders;
+
+      engineState.camera.parallelScale = 50;
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current).toBe(before);
+      expect(renders).toBe(rendersBefore);
+    });
+
+    test('setStack with the same ids keeps the previous imageIds reference', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-point-same');
+      const { result } = renderHook(() => useViewportState('vp-point-same'));
+      const before = asStack(result.current)?.imageIds;
+
+      engineState.imageIds = [...engineState.imageIds]; // new array, same content
+      fire(Enums.Events.PRE_STACK_NEW_IMAGE);
+
+      expect(asStack(result.current)?.imageIds).toBe(before);
+    });
+
+    test('imageIds is frozen, and the Engine\'s own array is not', () => {
+      const { engineState } = createFakeStackViewport('vp-point-frozen');
+      const { result } = renderHook(() => useViewportState('vp-point-frozen'));
+
+      expect(Object.isFrozen(asStack(result.current)?.imageIds)).toBe(true);
+      expect(Object.isFrozen(engineState.imageIds)).toBe(false);
+    });
+
+    test('a sliced Volume reports currentImageId and follows the camera', () => {
+      const { engineState, fire } = createFakeVolumeViewport('vp-point-vol');
+      const { result } = renderHook(() => useViewportState('vp-point-vol'));
+      expect(result.current?.currentImageId).toBeUndefined();
+
+      engineState.currentImageId = 'vol:7';
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current?.currentImageId).toBe('vol:7');
+    });
+
+    test('a 3D Volume reports undefined, never the Engine\'s null', () => {
+      createFakeVolumeViewport('vp-point-3d', { type: Enums.ViewportType.VOLUME_3D });
+      const { result } = renderHook(() => useViewportState('vp-point-3d'));
+
+      expect(result.current?.currentImageId).toBeUndefined();
+      expect('currentImageId' in result.current!).toBe(true);
+    });
+
+    test('type-level: imageIds is Stack-only, currentImageId is a string on a Stack', () => {
+      const stackOnly = (state: StackViewportState): string => state.currentImageId;
+      const stackIds = (state: StackViewportState): readonly string[] => state.imageIds;
+      const volumeOnly = (state: VolumeViewportState): string =>
+        // @ts-expect-error — a Volume may point at nothing (3D, before data)
+        state.currentImageId;
+      const union = (state: ViewportState): readonly string[] =>
+        // @ts-expect-error — narrow by kind first
+        state.imageIds;
+      expect(stackOnly).toBeDefined();
+      expect(stackIds).toBeDefined();
       expect(volumeOnly).toBeDefined();
       expect(union).toBeDefined();
     });

@@ -36,6 +36,8 @@ function createFakeEngine(id = 'engine') {
         getProperties: () => ({ voiRange: { lower: 0, upper: 400 } }),
         getSliceIndex: () => 0,
         getNumberOfSlices: () => 1,
+        getImageIds: () => ['img:0'],
+        getCurrentImageId: () => 'img:0',
       };
       registry.set(viewportId, { viewport });
       eventTarget.dispatchEvent(

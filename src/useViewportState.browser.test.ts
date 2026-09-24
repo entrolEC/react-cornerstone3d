@@ -168,14 +168,28 @@ test('Stack viewport: real Engine state changes reach the hook', async () => {
   await waitFor(() => expect(result.current?.kind).toBe('stack'));
   expect((result.current as StackViewportState).sliceIndex).toBe(0);
   expect((result.current as StackViewportState).numberOfSlices).toBe(imageIds.length);
+  // What it points at, straight from the Engine's own getters.
+  expect((result.current as StackViewportState).imageIds).toEqual(viewport.getImageIds());
+  expect(result.current?.currentImageId).toBe(viewport.getCurrentImageId());
+  expect(result.current?.currentImageId).toBe('smoke:0');
 
   viewport.setProperties({ voiRange: { lower: 10, upper: 20 } });
   await waitFor(() => expect(result.current?.voiRange).toEqual({ lower: 10, upper: 20 }));
 
+  const idsBefore = (result.current as StackViewportState).imageIds;
   await viewport.setImageIdIndex(2);
   await waitFor(() =>
     expect((result.current as StackViewportState).sliceIndex).toBe(2),
   );
+  expect(result.current?.currentImageId).toBe('smoke:2');
+  expect((result.current as StackViewportState).imageIds).toBe(idsBefore); // a scroll keeps the list
+
+  // A new stack: PRE_STACK_NEW_IMAGE alone must carry the new list.
+  await viewport.setStack(imageIds.slice(0, 2), 1);
+  await waitFor(() =>
+    expect((result.current as StackViewportState).imageIds).toEqual(['smoke:0', 'smoke:1']),
+  );
+  expect(result.current?.currentImageId).toBe('smoke:1');
 
   const before = result.current!.camera.parallelScale!;
   viewport.setCamera({ parallelScale: before * 2 });
@@ -260,6 +274,8 @@ test('Volume viewport: real Engine state changes reach the hook', async () => {
   await viewport.setVolumes([{ volumeId }]);
   await waitFor(() => expect(result.current?.numberOfSlices).toBe(4));
   viewport.render();
+  // A local volume has no imageIds to point at; the contract is undefined, not null.
+  expect(result.current?.currentImageId).toBe(viewport.getCurrentImageId() ?? undefined);
 
   // Slice index derives from the camera: the focal point's projection onto
   // viewPlaneNormal. Step one slice (spacing 1) along the normal, away from the end.
