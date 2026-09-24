@@ -492,7 +492,7 @@ code {
 .track__cells {
   display: flex; gap: 1px; height: 7px;
   border-radius: 4px; overflow: hidden;
-  background: var(--surface-alt);
+  background: var(--surface-sunken);
 }
 .track__cell { flex: 1; background: var(--border); transition: background 120ms; }
 .track__cell--loaded { background: var(--primary); opacity: 0.55; }
@@ -2354,6 +2354,146 @@ code {
   place-items: center;
   color: var(--text-muted);
   font-size: 0.85rem;
-  background: var(--surface-alt);
+  background: var(--surface-sunken);
   border: 1px dashed var(--border);
+}
+
+/* ---------- panel 5: the diagram ---------- */
+/* Inline SVG, so every colour here is a theme token and the picture follows
+   the light/dark toggle the same way the prose does. The page's first SVG —
+   the classes below are the convention for the next one. */
+.diagram {
+  margin: 0;
+}
+.diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 700px;
+}
+/* Below the min-width the boxes would overlap their own text, so the figure
+   scrolls sideways rather than lying about the layout. */
+.diagram {
+  overflow-x: auto;
+}
+.diagram figcaption {
+  margin-top: 0.9rem;
+  max-width: 78ch;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+.dg-box {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1.2;
+}
+.dg-box--accent {
+  stroke: var(--primary);
+  stroke-width: 1.6;
+  fill: color-mix(in srgb, var(--primary) 7%, var(--surface));
+}
+.dg-box--fill {
+  fill: color-mix(in srgb, var(--primary) 13%, var(--surface));
+  stroke: color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.dg-box--app {
+  fill: var(--surface-sunken);
+  stroke: var(--text);
+  stroke-width: 1.3;
+}
+.dg-col {
+  font: 600 11px var(--sans);
+  fill: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dg-col--accent {
+  fill: var(--primary);
+}
+.dg-h {
+  font: 600 13px var(--sans);
+  fill: var(--text);
+}
+.dg-h--accent {
+  fill: var(--primary);
+}
+.dg-m {
+  font: 12px var(--mono);
+  fill: var(--text);
+}
+.dg-m.sm {
+  font-size: 11px;
+}
+.dg-s {
+  font: 11.5px var(--sans);
+  fill: var(--text-muted);
+}
+.dg-lb {
+  font: 10.5px var(--sans);
+  fill: var(--text-muted);
+}
+.dg-lb--accent {
+  fill: var(--primary);
+}
+.dg-wire {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.3;
+}
+.dg-wire--dash {
+  stroke-dasharray: 5 4;
+}
+.dg-wire--accent {
+  stroke: var(--primary);
+}
+.dg-head {
+  fill: var(--text-muted);
+}
+
+/* ---------- panel 5: what becomes a field ---------- */
+.fields__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 0.88rem;
+}
+.fields__table th,
+.fields__table td {
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.fields__table thead th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.fields__table tbody th {
+  font-weight: 600;
+  color: var(--text);
+}
+.fields__table .yes {
+  color: var(--ok);
+  font-weight: 600;
+}
+.fields__table .no {
+  color: var(--bad);
+}
+.fields__row--in td:last-child {
+  font-weight: 600;
+  color: var(--primary);
+}
+.fields__row--out td:last-child {
+  color: var(--text-muted);
+}
+.fields__note {
+  margin-top: 1rem;
+  max-width: 78ch;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-muted);
 }

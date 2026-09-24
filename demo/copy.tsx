@@ -127,6 +127,59 @@ export interface Copy {
       nudgeHint: string;
     };
   };
+  panel5: {
+    eyebrow: string;
+    title: string;
+    lead: ReactNode;
+    captions: ReactNode[];
+    verdict: ReactNode;
+    wall: {
+      slowNote: ReactNode;
+      drag: ReactNode;
+      purge: string;
+      purged: string;
+      seeSource: string;
+      scarsTitle: string;
+      scarsEnd: ReactNode;
+      cite: { ohif: string; cs3d: string };
+    };
+    diagram: {
+      alt: string;
+      engine: string;
+      getters: string;
+      gettersNote: string;
+      events: string;
+      binding: string;
+      build: string;
+      equal: string;
+      snapshot: string;
+      scheduler: string;
+      schedulerA: string;
+      selector: string;
+      objectIs: string;
+      component: string;
+      componentNote: string;
+      read: string;
+      fire: string;
+      notify: string;
+      caption: ReactNode;
+    };
+    fields: {
+      getter: string;
+      event: string;
+      result: string;
+      rows: {
+        name: string;
+        getter: string;
+        hasGetter: boolean;
+        event: string;
+        hasEvent: boolean;
+        result: string;
+        field: boolean;
+      }[];
+      note: ReactNode;
+    };
+  };
   panel6: {
     eyebrow: string;
     title: string;
@@ -413,6 +466,131 @@ export const COPY: Record<Lang, Copy> = {
         nudge: '카메라 흔들기',
         nudgeHint: (
           'Snapshot의 camera가 바뀌니 통째로 읽는 쪽은 리렌더됩니다. selector 쪽 숫자는 그대로입니다.'
+        ),
+      },
+    },
+    panel5: {
+      eyebrow: '5',
+      title: '어떤 이벤트를 들어야 하는지는 아무도 알려주지 않습니다',
+      lead: (
+        <>
+          여기까지는 <b>어떻게 읽는가</b>였습니다. 남은 질문은 <b>무엇을 언제 읽는가</b>입니다.
+          패널 3의 슬라이더를 원시값 두 개로 완성해 보겠습니다 — 무한 루프는 없습니다.
+          그런데도 손잡이가 손가락을 안 따라옵니다.
+        </>
+      ),
+      captions: [
+        <>
+          <b>이름이 맞는 이벤트를 골랐는데.</b> <code>STACK_NEW_IMAGE</code>는 엔진이{' '}
+          <b>이미지 로드에 성공했을 때만</b> 발사합니다. 캐시를 비우고 슬라이더를 빠르게 끌어
+          보세요 — 손잡이가 뒤에서 따라옵니다.
+        </>,
+        <>
+          <b>그래서 라이브러리가 이걸 집니다.</b> 어떤 getter를 어떤 이벤트에 묶을지, 다시
+          만든 게 정말 달라졌는지, 한 프레임에 몇 번 알릴지.
+        </>,
+        <>
+          <b>대신 아무거나 주지는 않습니다.</b> getter가 있고 이벤트가 있어야 필드가 됩니다.
+          둘 중 하나가 없으면 앱의 몫입니다.
+        </>,
+      ],
+      verdict: (
+        <>
+          <code>useViewportState</code>가 파는 건 훅 한 줄이 아니라 <b>이 결정들</b>입니다 —
+          어떤 이벤트가 어떤 값을 무효화하는가, 무엇이 「안 바뀜」인가, 한 프레임에 몇 번
+          알리는가. 위젯마다 다시 내릴 결정이 아닙니다.
+        </>
+      ),
+      wall: {
+        slowNote: '이 단계의 뷰포트는 슬라이스 도착을 450ms 의도적으로 늦춥니다 — 빠른 회선에서도 보이게 하기 위해서입니다. 엔진 동작은 그대로입니다.',
+        drag: <>캐시를 비우고 <b>슬라이더를 빠르게 끌어</b> 보세요.</>,
+        purge: '캐시 비우기',
+        purged: '비웠습니다 — 이제 끌어 보세요',
+        seeSource: '엔진 소스에서 확인하기',
+        scarsTitle: '우리만의 문제가 아닙니다 — OHIF 코드',
+        scarsEnd: (
+          <>
+            <b>모르고 있는 게 아닙니다.</b> 넷 다 같은 지점에서 싸운 기록입니다. 그러고도
+            손잡이는 여전히 로드 완료 이벤트에 연결돼 있습니다 — 플랫폼이 상태를 React 밖에
+            두기 때문입니다.
+          </>
+        ),
+        cite: {
+          ohif: 'OHIF/Viewers @ 41c03bcfd8ac',
+          cs3d: 'cornerstone3D/StackViewport.ts @ 264ca707f481',
+        },
+      },
+      diagram: {
+        alt: '엔진의 getter와 이벤트를 Binding 하나가 받아 Snapshot을 만들고, 스케줄러가 프레임마다 한 번 알리며, useViewportState가 그것을 컴포넌트에 전달한다.',
+        engine: 'Cornerstone3D 엔진',
+        getters: 'viewport getter',
+        gettersNote: '부를 때마다 새 객체',
+        events: 'element 이벤트',
+        binding: 'Binding — viewportId 하나당 하나',
+        build: '안 바뀐 부분은 이전 참조 그대로',
+        equal: '같으면 아무에게도 안 알린다',
+        snapshot: '불변 · 참조 안정',
+        scheduler: '프레임 큐 하나',
+        schedulerA: '한 프레임 = 한 번의 알림',
+        selector: 'selector 메모',
+        objectIs: 'Object.is가 다를 때만 리렌더',
+        component: '컴포넌트',
+        componentNote: '엔진 상태의 순수 함수',
+        read: 'getter 읽기',
+        fire: '발사',
+        notify: '알림',
+        caption: (
+          <>
+            Binding은 이벤트가 올 때만 Snapshot을 다시 만들고, <b>안 움직인 부분은 이전 참조를
+            그대로 둡니다</b> — 그래서 selector 하나가 다른 필드 때문에 리렌더되지 않습니다.
+            다시 만든 결과가 이전과 같으면 아무에게도 알리지 않습니다. 한 프레임에 더러워진
+            Binding은 한 번에 처리되므로 <b>두 훅이 읽는 값은 항상 같은 프레임</b>입니다.
+            <br />
+            쓰기는 이 그림에 없습니다. 컴포넌트가 Cornerstone3D를 직접 부르고, 그 결과는{' '}
+            <b>엔진 이벤트로 되돌아와서만</b> React에 도착합니다 — 읽기 경로가 하나뿐인 이유이고,
+            패널 1에서 흐리게 처리했던 그 부분입니다.
+          </>
+        ),
+      },
+      fields: {
+        getter: 'getter',
+        event: '이벤트',
+        result: '결과',
+        rows: [
+          {
+            name: '슬라이스 · 장수 · W/L · 카메라',
+            getter: 'getSliceIndex() 등',
+            hasGetter: true,
+            event: 'STACK_NEW_IMAGE 등',
+            hasEvent: true,
+            result: 'Snapshot 필드',
+            field: true,
+          },
+          {
+            name: '이 슬라이스가 로드됐는가',
+            getter: 'cache.isLoaded()',
+            hasGetter: true,
+            event: '로딩 시작 이벤트 없음',
+            hasEvent: false,
+            result: '앱이 직접',
+            field: false,
+          },
+          {
+            name: '캔버스에 그려졌는가',
+            getter: 'getter 없음',
+            hasGetter: false,
+            event: 'IMAGE_RENDERED',
+            hasEvent: true,
+            result: '앱이 직접',
+            field: false,
+          },
+        ],
+        note: (
+          <>
+            둘 다 있어야 하는 이유는 간단합니다. <b>getter가 없으면</b> 물어본 순간의 값을 읽을
+            수 없고, <b>이벤트가 없으면</b> 값이 움직인 걸 영영 모릅니다. 어느 쪽이든 Snapshot에
+            넣으면 거짓말이 됩니다 — 그래서 넣지 않고, 필요하면 앱이 직접 듣습니다.
+          </>
         ),
       },
     },
@@ -842,6 +1020,133 @@ if (state?.kind === 'stack') { /* ... */ }`,
         nudge: 'nudge the camera',
         nudgeHint: (
           "The Snapshot's camera changes, so the whole-Snapshot reader re-renders. The selector's count stays put."
+        ),
+      },
+    },
+    panel5: {
+      eyebrow: '5',
+      title: 'Nobody tells you which event to listen to',
+      lead: (
+        <>
+          So far this was <b>how to read</b>. What is left is <b>what to read, and when</b>.
+          Here is panel 3's slider finished with two primitives — no loop, correct React. And
+          the thumb still does not follow your finger.
+        </>
+      ),
+      captions: [
+        <>
+          <b>The event with the right name.</b> <code>STACK_NEW_IMAGE</code> fires only when the
+          Engine <b>successfully loaded the image</b>. Purge the cache and drag fast — the thumb
+          trails behind.
+        </>,
+        <>
+          <b>So the library carries this.</b> Which getter hangs off which event, whether a
+          rebuild actually says something new, and how often to tell React in one frame.
+        </>,
+        <>
+          <b>It does not hand you everything, though.</b> A value needs a getter and an event to
+          become a field. Missing either one and it stays yours.
+        </>,
+      ],
+      verdict: (
+        <>
+          What <code>useViewportState</code> sells is not one line of hook. It is{' '}
+          <b>these decisions</b> — which event invalidates which value, what counts as
+          unchanged, how often React hears about it. Not a thing to re-decide per widget.
+        </>
+      ),
+      wall: {
+        slowNote: "This step's viewport delays each slice by 450ms on purpose, so the lag shows on a fast connection too. The Engine behaves exactly as it always does.",
+        drag: <>Purge the cache, then <b>drag the slider fast.</b></>,
+        purge: 'purge the cache',
+        purged: 'purged — now drag',
+        seeSource: 'check it in the Engine source',
+        scarsTitle: 'Not just us — OHIF’s code',
+        scarsEnd: (
+          <>
+            <b>They know.</b> All four mark the same fight. And after all of it the thumb is
+            still bound to a successful load — because the platform keeps its state outside
+            React.
+          </>
+        ),
+        cite: {
+          ohif: 'OHIF/Viewers @ 41c03bcfd8ac',
+          cs3d: 'cornerstone3D/StackViewport.ts @ 264ca707f481',
+        },
+      },
+      diagram: {
+        alt: 'One Binding takes the Engine’s getters and events, builds a Snapshot, a single frame queue notifies once per frame, and useViewportState hands it to the component.',
+        engine: 'Cornerstone3D Engine',
+        getters: 'viewport getters',
+        gettersNote: 'a fresh object every call',
+        events: 'element events',
+        binding: 'Binding — one per viewportId',
+        build: 'keep what did not move',
+        equal: 'same? then tell nobody',
+        snapshot: 'immutable · stable reference',
+        scheduler: 'one frame queue',
+        schedulerA: 'one frame = one notification',
+        selector: 'memoised selector',
+        objectIs: 're-render only if Object.is differs',
+        component: 'component',
+        componentNote: 'a pure function of Engine state',
+        read: 'read',
+        fire: 'fire',
+        notify: 'notify',
+        caption: (
+          <>
+            The Binding rebuilds the Snapshot only when an event says to, and{' '}
+            <b>keeps the references of whatever did not move</b> — which is why a selector on one
+            field is not re-rendered by a change to another. If the rebuild says the same thing,
+            nobody is told. Every Binding dirtied in a frame is handled in one pass, so{' '}
+            <b>two hooks always read the same frame</b>.
+            <br />
+            Writes are not on this picture. The component calls Cornerstone3D directly and the
+            effect reaches React <b>only by coming back as an Engine event</b> — which is why
+            there is one read path, and what the dimmed half of panel 1 was.
+          </>
+        ),
+      },
+      fields: {
+        getter: 'getter',
+        event: 'event',
+        result: 'result',
+        rows: [
+          {
+            name: 'slice · count · W/L · camera',
+            getter: 'getSliceIndex(), …',
+            hasGetter: true,
+            event: 'STACK_NEW_IMAGE, …',
+            hasEvent: true,
+            result: 'Snapshot field',
+            field: true,
+          },
+          {
+            name: 'is this slice loaded',
+            getter: 'cache.isLoaded()',
+            hasGetter: true,
+            event: 'no event when loading starts',
+            hasEvent: false,
+            result: 'yours',
+            field: false,
+          },
+          {
+            name: 'is it painted on the canvas',
+            getter: 'no getter',
+            hasGetter: false,
+            event: 'IMAGE_RENDERED',
+            hasEvent: true,
+            result: 'yours',
+            field: false,
+          },
+        ],
+        note: (
+          <>
+            Both halves are needed for a plain reason. <b>Without a getter</b> the value cannot
+            be read at the moment it is asked for; <b>without an event</b> nothing ever says it
+            moved. Either way, putting it in the Snapshot would make the Snapshot lie — so it
+            stays out, and the app listens for it directly when it needs to.
+          </>
         ),
       },
     },
