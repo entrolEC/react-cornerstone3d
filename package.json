@@ -1,6 +1,6 @@
 {
   "name": "react-cornerstone3d",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "React bindings that expose Cornerstone3D's live engine state to React, tearing-free, via useSyncExternalStore",
   "type": "module",
   "main": "dist/index.js",
