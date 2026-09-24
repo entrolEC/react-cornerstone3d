@@ -2345,3 +2345,15 @@ code {
   height: 34.5rem;
   max-height: none;
 }
+
+/* ---------- panel 2: the frame with no image in it ---------- */
+/* The absence has to hold the same space the image did, or the story reads as
+   a layout change rather than a study closing. */
+.vp--off {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  background: var(--surface-alt);
+  border: 1px dashed var(--border);
+}

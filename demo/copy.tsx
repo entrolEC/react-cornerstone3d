@@ -54,17 +54,34 @@ export interface Copy {
     eyebrow: string;
     title: string;
     lead: ReactNode;
-    drag: string;
-    slowNote: string;
-    purge: string;
-    purged: string;
-    crashed: string;
-    /** The fact, at the moment it happens. The mechanism is panel 3's job. */
-    fact: ReactNode;
-    decode: string;
-    rules: { title: string; items: string[] };
     captions: ReactNode[];
     verdict: ReactNode;
+    gap: {
+      withSeed: ReactNode;
+      withoutSeed: ReactNode;
+      remove: string;
+      restore: string;
+      hint: ReactNode;
+    };
+    order: {
+      tabs: string[];
+      /** One line per scene, per story. */
+      scenes: ReactNode[][];
+      settling: string;
+      noImage: string;
+      notYet: string;
+      byHand: string;
+      hook: string;
+      nextScene: string;
+      again: string;
+    };
+    split: {
+      first: string;
+      late: (n: number) => string;
+      add: string;
+      hint: ReactNode;
+      note: ReactNode;
+    };
   };
   panel3: {
     eyebrow: string;
@@ -188,69 +205,85 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel2: {
       eyebrow: '2',
-      title: 'React의 정답으로 슬라이더를 만들어 보겠습니다',
+      title: '길어서가 아닙니다. 저 24줄이 틀릴 수 있어서입니다',
       lead: (
         <>
-          패널 1의 코드는 엔진이 이미 갖고 있는 상태를 React state로 복사했습니다. React 18에는
-          복사하지 않고 <b>구독해서 읽는</b> 공식 훅이 있습니다. 이름은{' '}
-          <code>useSyncExternalStore</code>입니다. 이걸로 <b>실제 화면에 쓸 컨트롤</b>을 만들어
-          보겠습니다. 어디까지 되는지 직접 해보세요.
+          패널 1이 이름 붙인 다섯 군데 중 <b>세 군데를 직접 틀려 보겠습니다.</b> 셋 다 코드가
+          잘못돼서가 아니라, <b>엔진이 이미 갖고 있는 값을 React state로 한 번 더 복사</b>했기
+          때문에 생깁니다.
         </>
       ),
-      drag: '빠르게 끌어보세요.',
-      slowNote: '이 패널의 뷰포트는 슬라이스 도착을 450ms 의도적으로 늦춥니다 — 빠른 회선에서도 슬라이더가 버벅이는 것이 보이게 하기 위해서입니다. 엔진 동작은 그대로입니다.',
-      purge: '엔진 캐시 비우기',
-      purged: '비웠습니다. 이제 다시 끌어보세요.',
-      crashed: '렌더링이 중단됐습니다',
-      fact: (
-        <>
-          바꾼 것은 <code>{'{ slice, total }'}</code> 한 줄뿐입니다.{' '}
-          <b>객체를 만들어 돌려주자 렌더링이 중단됐습니다.</b>
-        </>
-      ),
-      decode: '에러 코드 해설',
-      rules: {
-        title: 'React가 getSnapshot을 쓰는 방법',
-        items: [
-          '렌더할 때마다 getSnapshot()을 호출합니다',
-          '지난번에 받은 값과 Object.is로 비교합니다',
-          '다르면 상태가 바뀐 것으로 보고 다시 렌더합니다',
-        ],
-      },
       captions: [
         <>
-          인자는 두 개입니다. 첫째는 <b>구독 함수</b> — 값이 바뀌면 React에게 알려줄 방법을
-          등록합니다. 둘째가 <b><code>getSnapshot</code></b> — React가 <i>"지금 값 줘"</i> 하고
-          부를 때 실행되는 함수입니다. 여기서는 슬라이스 번호 <b>하나만</b> 돌려줍니다.
+          <b>첫 렌더.</b> <code>update()</code> 한 줄을 빼 보세요. 코드는 여전히 세 이벤트를
+          구독하고 있지만, 다 불러온 검사에서는 <b>아무 이벤트도 오지 않습니다.</b>
         </>,
         <>
-          React는 그 <code>getSnapshot</code>을 이렇게 씁니다. 지금은 <b>2번</b>만 기억해
-          두세요 — 비교가 <code>Object.is</code>라는 점입니다.
+          <b>마운트 순서.</b> 영상과 위젯 중 무엇이 먼저 생기느냐를 앱이 정하지 못합니다 —
+          네트워크와 사용자가 정합니다. 두 순서를 다 해 보세요.
         </>,
         <>
-          그리고 <b>동작합니다.</b> 슬라이스가 바뀔 때마다 숫자가 같이 갱신됩니다.{' '}
-          <code>setState</code> 사본도 필요 없습니다. <b>값 하나는 이걸로 끝입니다.</b> 그런데
-          슬라이더에는 <b>전체 장수</b>도 있어야 합니다. 값을 하나 더 읽어야 합니다.
-        </>,
-        <>
-          값이 둘이니 하나의 객체로 묶어 돌려주는 것이 자연스럽습니다. 오른쪽 코드에서 바뀐
-          것은 <code>return</code> 한 줄뿐입니다. <b>그런데 이 컴포넌트가 렌더 도중 에러를 던집니다.</b>
-        </>,
-        <>
-          객체를 만들지 않고 <b>원시값 두 개를 훅 두 개로 따로 읽는 것</b>으로 해결할 수
-          있습니다. <b>슬라이더가 완성됐습니다.</b> 하지만 슬라이더를 <b>빠르게 끌면 슬라이더가
-          버벅입니다.</b> 직접 해보세요.
+          <b>사본이 여럿.</b> 같은 파일로 만든 위젯을 하나 더 붙여 보세요. 같은 엔진을 보고
+          있는데 <b>서로 다른 답</b>을 합니다.
         </>,
       ],
       verdict: (
         <>
-          <b>두 번 실패했습니다.</b> 한 번은 <b>무한 루프</b>, 한 번은{' '}
-          <b>버벅이는 슬라이더</b>입니다. 값 하나짜리 화면은 없으니 둘 다 실제로 만나게 됩니다.
+          셋 다 <b>사본</b> 때문입니다. 사본은 채워야 하고(1), 언제 생겼는지에 좌우되고(2),
+          여러 개면 서로 맞출 방법이 없습니다(3). 동시성 렌더링에서는 이게 한 프레임 안에서도
+          갈라지는 <b>tearing</b>으로 나타납니다 — 이 데모는 그 모드에 들어가지 않으니 여기서
+          보여드리지는 않고, 이유만 <code>docs/adr/0005</code>에 적어 뒀습니다.
           <br />
-          <br />
-          그런데 이 둘은 <b>같은 원인에서 나옵니다.</b> 다음 패널에서 그것을 봅니다. ↓
+          복사하지 말고 <b>구독해서 읽으면</b> 셋이 한꺼번에 없어집니다. React 18에 그 훅이
+          있습니다 — <code>useSyncExternalStore</code>. 다음 패널에서 그걸로 만들어 보겠습니다. ↓
         </>
       ),
+      gap: {
+        withSeed: <><code>update()</code> 있음 — 붙자마자 맞습니다.</>,
+        withoutSeed: (
+          <>
+            <code>update()</code> 없음 — 슬라이더가 비어 있습니다. 영상을 스크롤하면 그제서야
+            첫 이벤트가 와서 채워집니다.
+          </>
+        ),
+        remove: 'update() 한 줄 빼기',
+        restore: 'update() 되돌리기',
+        hint: <>빼고 나서 <b>영상을 스크롤</b>해 보세요 — 이벤트가 와야만 살아납니다.</>,
+      },
+      order: {
+        tabs: ['상황 1. 영상이 화면보다 늦게 온다', '상황 2. 보던 검사를 닫는다'],
+        scenes: [
+          [
+            <>뷰어 화면이 먼저 열렸습니다. 슬라이더 두 개도 이때 만들어졌고, 읽을 영상이 없습니다.</>,
+            <>
+              영상이 도착했습니다. <b>훅 쪽은 바로 채워졌고</b>, 직접 짠 쪽은 그대로 비어
+              있습니다 — <code>getEnabledElementByViewportId</code>가 그때 <code>undefined</code>를
+              돌려줬고, 다시 시도할 계기가 없습니다.
+            </>,
+          ],
+          [
+            <>영상이 이미 떠 있는 상태에서 슬라이더가 만들어졌습니다. 이 순서에서는 둘 다 정상입니다.</>,
+            <>
+              검사를 닫았습니다. 영상은 사라졌는데 <b>직접 짠 쪽은 방금 전 숫자를 그대로 붙잡고
+              있습니다</b> — 존재하지 않는 영상의 슬라이스 번호입니다. 훅은 비웁니다.
+            </>,
+          ],
+        ],
+        settling: '준비 중…',
+        noImage: '아직 영상이 없음',
+        notYet: '아직 화면에 없음',
+        byHand: '직접 배선',
+        hook: '훅',
+        nextScene: '다음 장면 →',
+        again: '다시',
+      },
+      split: {
+        first: '처음부터 있던 위젯',
+        late: (n) => `${n}번째 위젯 (방금 붙음)`,
+        add: '위젯 하나 더 붙이기',
+        hint: <>지금 붙은 위젯은 <b>자기 사본이 비어 있습니다.</b> 영상을 스크롤하면 그제서야 맞춰집니다.</>,
+        note: <>실제 뷰어는 같은 값을 읽는 위젯을 여럿 답니다 — 툴바, 오버레이, 썸네일, 스크롤바.</>,
+      },
     },
     panel3: {
       eyebrow: '3',
@@ -582,70 +615,89 @@ if (state?.kind === 'stack') { /* ... */ }`,
     },
     panel2: {
       eyebrow: '2',
-      title: 'Let’s build a slider with the answer React ships',
+      title: 'Not because it is long. Because those 24 lines can be wrong',
       lead: (
         <>
-          The code in panel 1 copied state the engine already owns into React state. React 18
-          ships an official hook that doesn’t copy it but{' '}
-          <b>subscribes and reads it on demand</b> — <code>useSyncExternalStore</code>. Let’s use
-          it to build <b>something a real screen needs</b>, and see how far it gets.
+          Panel 1 named five places. <b>Here you get three of them wrong yourself.</b> None of
+          them is a typo: all three come from <b>copying state the Engine already holds</b> into
+          React state.
         </>
       ),
-      drag: 'Try dragging it quickly.',
-      slowNote: 'This panel’s viewport holds each slice back by 450ms on purpose, so the stall shows on a fast connection too. Engine behaviour is untouched.',
-      purge: 'Empty the engine cache',
-      purged: 'Emptied. Drag it again.',
-      crashed: 'The render stopped',
-      fact: (
-        <>
-          The only change was <code>{'{ slice, total }'}</code>.{' '}
-          <b>Returning an object stopped the render.</b>
-        </>
-      ),
-      decode: 'What the code means',
-      rules: {
-        title: 'How React uses getSnapshot',
-        items: [
-          'Call getSnapshot() on every render',
-          'Compare the result with the previous one using Object.is',
-          'If they differ, treat the state as changed and render again',
-        ],
-      },
       captions: [
         <>
-          It takes two arguments. The first is a <b>subscribe function</b> — it registers how
-          React gets told the value changed. The second is{' '}
-          <b><code>getSnapshot</code></b> — what React calls when it wants{' '}
-          <i>“the value, now”</i>. Here it returns <b>one thing</b>: the slice number.
+          <b>First render.</b> Take out the <code>update()</code> line. The code still subscribes
+          to three events — but on a study that has finished loading,{' '}
+          <b>no event ever arrives.</b>
         </>,
         <>
-          Here is how React uses that <code>getSnapshot</code>. For now just remember{' '}
-          <b>line 2</b> — the comparison is <code>Object.is</code>.
+          <b>Mount order.</b> Your app does not decide whether the image or the widget exists
+          first. The network and the user do. Try it both ways.
         </>,
         <>
-          And <b>it works.</b> The number follows every time the image moves. No{' '}
-          <code>setState</code> copy to keep. <b>One value is done.</b> But a slider also needs{' '}
-          <b>the total</b>. That is a second value to read.
-        </>,
-        <>
-          Two values, so returning them together is the natural move. The only thing that
-          changed in the code on the right is the <code>return</code> line.{' '}
-          <b>And this component throws during render.</b>
-        </>,
-        <>
-          Reading <b>two primitives with two hooks</b>, instead of building an object, solves
-          it. <b>The slider is done.</b> But <b>drag it fast and the slider stutters.</b> Try it.
+          <b>More than one copy.</b> Add a second widget built from the same file. Both are
+          watching the same engine, and they <b>give different answers.</b>
         </>,
       ],
       verdict: (
         <>
-          <b>Two failures.</b> One is an <b>infinite loop</b>; the other is a{' '}
-          <b>stuttering slider</b>. No screen shows just one value, so you will meet both.
+          All three are the <b>copy</b>. A copy has to be filled (1), depends on when it was made
+          (2), and once there are several there is no way to keep them in step (3). Under
+          concurrent rendering this shows up as <b>tearing</b> — two components disagreeing inside
+          one frame. The demo never enters that mode, so it is not staged here; the reasoning is
+          in <code>docs/adr/0005</code>.
           <br />
-          <br />
-          And they have <b>the same cause.</b> That is the next panel. ↓
+          Stop copying and <b>subscribe and read</b> instead, and all three go at once. React 18
+          ships the hook for it — <code>useSyncExternalStore</code>. Next panel builds the slider
+          with it. ↓
         </>
       ),
+      gap: {
+        withSeed: <><code>update()</code> present — correct the moment it mounts.</>,
+        withoutSeed: (
+          <>
+            No <code>update()</code> — the slider is empty. Scroll the image and the first event
+            finally fills it.
+          </>
+        ),
+        remove: 'remove the update() line',
+        restore: 'put update() back',
+        hint: <>Then <b>scroll the image</b> — only an event brings it back.</>,
+      },
+      order: {
+        tabs: ['1. The image arrives after the screen', '2. The study gets closed'],
+        scenes: [
+          [
+            <>The viewer opened first. Both sliders were made now, with no image to read.</>,
+            <>
+              The image arrived. <b>The hook filled in immediately</b>; the hand-rolled one is
+              still empty — <code>getEnabledElementByViewportId</code> returned{' '}
+              <code>undefined</code> back then, and nothing gives it a reason to try again.
+            </>,
+          ],
+          [
+            <>The image was already up when the sliders were made. In this order both work.</>,
+            <>
+              The study was closed. The image is gone, and <b>the hand-rolled one is still
+              holding the last number it saw</b> — a slice index of an image that no longer
+              exists. The hook empties.
+            </>,
+          ],
+        ],
+        settling: 'settling…',
+        noImage: 'no image yet',
+        notYet: 'not on screen yet',
+        byHand: 'by hand',
+        hook: 'hook',
+        nextScene: 'next scene →',
+        again: 'again',
+      },
+      split: {
+        first: 'the widget that was here',
+        late: (n) => `widget ${n} (just added)`,
+        add: 'add another widget',
+        hint: <>The new one <b>has an empty copy of its own.</b> Scroll the image and it catches up.</>,
+        note: <>A real viewer hangs several widgets off the same value — toolbar, overlay, thumbnails, scrollbar.</>,
+      },
     },
     panel3: {
       eyebrow: '3',
