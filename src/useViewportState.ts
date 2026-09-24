@@ -1,7 +1,6 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
-import { useRef, useSyncExternalStore } from 'react';
-import { scheduler } from './scheduler';
+import { createRegistry, deepFreeze, useBinding } from './binding';
 
 /** State shared by every viewport kind. */
 interface ViewportStateCommon {
@@ -72,14 +71,6 @@ const SLICED_VOLUME_TYPES: ReadonlySet<string> = new Set([
   Enums.ViewportType.ORTHOGRAPHIC,
   Enums.ViewportType.PERSPECTIVE,
 ]);
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null) {
-    for (const child of Object.values(value)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
 
 function camerasEqual(a: Types.ICamera, b: Types.ICamera): boolean {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -157,86 +148,73 @@ function shareImageIds(next: readonly string[], prev: readonly string[] | undefi
   return imageIdsEqual(next, prev) ? prev : next;
 }
 
-interface Binding {
-  subscribe: (onChange: () => void) => () => void;
-  getSnapshot: () => ViewportState | undefined;
+// `prev` is the Snapshot being replaced: whatever did not move is taken
+// from it rather than rebuilt (structural sharing).
+function buildSnapshot(
+  viewportId: string,
+  prev: ViewportState | undefined,
+): ViewportState | undefined {
+  const enabled = getEnabledElementByViewportId(viewportId);
+  if (!enabled) return undefined;
+  const { viewport } = enabled;
+  // structuredClone: getter output may share nested arrays with the Engine;
+  // freezing those in place would break Engine-side mutation.
+  const camera = shareCamera(structuredClone(viewport.getCamera()), prev?.camera);
+  if (viewport.type === Enums.ViewportType.STACK) {
+    const stack = viewport as Types.IStackViewport;
+    return deepFreeze<ViewportState>({
+      kind: 'stack',
+      camera,
+      // Engine holds null between setStack and image arrival; our contract is undefined.
+      voiRange: shareVoiRange(
+        structuredClone(stack.getProperties().voiRange) ?? undefined,
+        prev?.voiRange,
+      ),
+      sliceIndex: stack.getSliceIndex(),
+      numberOfSlices: stack.getNumberOfSlices(),
+      currentImageId: stack.getCurrentImageId(),
+      // getImageIds returns the Engine's own array: copy before freezing.
+      imageIds: shareImageIds(
+        [...stack.getImageIds()],
+        prev?.kind === 'stack' ? prev.imageIds : undefined,
+      ),
+    });
+  }
+  // ponytail: every non-Stack kind reads as 'volume' (camera + VOI is the
+  // shared surface); split further kinds if video/WSI state is ever needed.
+  const volume = viewport as Types.IVolumeViewport;
+  const sliced = SLICED_VOLUME_TYPES.has(viewport.type);
+  return deepFreeze<ViewportState>({
+    kind: 'volume',
+    camera,
+    voiRange: shareVoiRange(
+      structuredClone(volume.getProperties()?.voiRange) ?? undefined,
+      prev?.voiRange,
+    ),
+    // Engine reports undefined before setVolumes; our contract is undefined too.
+    sliceIndex: sliced ? (volume.getSliceIndex() ?? undefined) : undefined,
+    numberOfSlices: sliced ? (volume.getNumberOfSlices() ?? undefined) : undefined,
+    // The 3D class returns null (typed as string); ours is undefined either way.
+    currentImageId: volume.getCurrentImageId() ?? undefined,
+  });
 }
 
 /**
- * One Binding per viewportId: subscribes to Engine events on the viewport's
- * element while it has consumers, and rebuilds an immutable Snapshot only on
- * those events, so `getSnapshot` is referentially stable (CS3D getters return
- * fresh objects per call; the Snapshot absorbs that).
+ * One Binding per viewportId, alive while it has consumers (ADR 0007):
+ * subscribes to Engine events on the viewport's element and rebuilds an
+ * immutable Snapshot only on those events, so `getSnapshot` is referentially
+ * stable (CS3D getters return fresh objects per call; the Snapshot absorbs that).
+ *
+ * @internal Exported for tests.
  */
-function createBinding(viewportId: string): Binding {
-  const listeners = new Set<() => void>();
+export const viewportBindings = createRegistry<ViewportState | undefined>((viewportId, binding) => {
   let element: HTMLDivElement | undefined;
-
-  // `prev` is the Snapshot being replaced: whatever did not move is taken
-  // from it rather than rebuilt (structural sharing).
-  const buildSnapshot = (prev: ViewportState | undefined): ViewportState | undefined => {
-    const enabled = getEnabledElementByViewportId(viewportId);
-    if (!enabled) return undefined;
-    const { viewport } = enabled;
-    // structuredClone: getter output may share nested arrays with the Engine;
-    // freezing those in place would break Engine-side mutation.
-    const camera = shareCamera(structuredClone(viewport.getCamera()), prev?.camera);
-    if (viewport.type === Enums.ViewportType.STACK) {
-      const stack = viewport as Types.IStackViewport;
-      return deepFreeze<ViewportState>({
-        kind: 'stack',
-        camera,
-        // Engine holds null between setStack and image arrival; our contract is undefined.
-        voiRange: shareVoiRange(
-          structuredClone(stack.getProperties().voiRange) ?? undefined,
-          prev?.voiRange,
-        ),
-        sliceIndex: stack.getSliceIndex(),
-        numberOfSlices: stack.getNumberOfSlices(),
-        currentImageId: stack.getCurrentImageId(),
-        // getImageIds returns the Engine's own array: copy before freezing.
-        imageIds: shareImageIds(
-          [...stack.getImageIds()],
-          prev?.kind === 'stack' ? prev.imageIds : undefined,
-        ),
-      });
-    }
-    // ponytail: every non-Stack kind reads as 'volume' (camera + VOI is the
-    // shared surface); split further kinds if video/WSI state is ever needed.
-    const volume = viewport as Types.IVolumeViewport;
-    const sliced = SLICED_VOLUME_TYPES.has(viewport.type);
-    return deepFreeze<ViewportState>({
-      kind: 'volume',
-      camera,
-      voiRange: shareVoiRange(
-        structuredClone(volume.getProperties()?.voiRange) ?? undefined,
-        prev?.voiRange,
-      ),
-      // Engine reports undefined before setVolumes; our contract is undefined too.
-      sliceIndex: sliced ? (volume.getSliceIndex() ?? undefined) : undefined,
-      numberOfSlices: sliced ? (volume.getNumberOfSlices() ?? undefined) : undefined,
-      // The 3D class returns null (typed as string); ours is undefined either way.
-      currentImageId: volume.getCurrentImageId() ?? undefined,
-    });
-  };
-
-  let snapshot = buildSnapshot(undefined);
-
-  const notify = () => listeners.forEach((listener) => listener());
-
-  const update = () => {
-    const next = buildSnapshot(snapshot);
-    if (next === snapshot) return;
-    if (next && snapshot && statesEqual(next, snapshot)) return;
-    snapshot = next;
-    notify();
-  };
 
   // Engine events during a drag arrive tens of times per second; the shared
   // scheduler coalesces them to one Snapshot rebuild per frame, in the same
   // pass as every other Binding's. There is no opt-out: the frame is the
   // unit of consistency (ADR 0006).
-  const onEngineEvent = () => scheduler.schedule(update);
+  const onEngineEvent = () => binding.schedule();
 
   const attachElement = () => {
     element = getEnabledElementByViewportId(viewportId)?.viewport.element;
@@ -248,14 +226,14 @@ function createBinding(viewportId: string): Binding {
     element = undefined;
     // A queued rebuild would read a registry this Binding no longer watches
     // (or resurrect a cleared Snapshot after disable) — drop it.
-    scheduler.unschedule(update);
+    binding.unschedule();
   };
 
   const onEnabled = (evt: Event) => {
     if ((evt as Types.EventTypes.ElementEnabledEvent).detail.viewportId !== viewportId) return;
     detachElement(); // re-enable may bring a new element for the same id
     attachElement();
-    update();
+    binding.update();
   };
 
   const onDisabled = (evt: Event) => {
@@ -263,45 +241,29 @@ function createBinding(viewportId: string): Binding {
     detachElement();
     // ELEMENT_DISABLED fires before registry removal — clear explicitly
     // instead of rebuilding from a registry that still holds the viewport.
-    if (snapshot !== undefined) {
-      snapshot = undefined;
-      notify();
-    }
-  };
-
-  const attach = () => {
-    eventTarget.addEventListener(Enums.Events.ELEMENT_ENABLED, onEnabled);
-    eventTarget.addEventListener(Enums.Events.ELEMENT_DISABLED, onDisabled);
-    attachElement();
-    update(); // state may have moved between render and subscription
-  };
-
-  const detach = () => {
-    eventTarget.removeEventListener(Enums.Events.ELEMENT_ENABLED, onEnabled);
-    eventTarget.removeEventListener(Enums.Events.ELEMENT_DISABLED, onDisabled);
-    detachElement();
-    // A dormant Binding can't hear disable events; a kept Snapshot could be
-    // served stale to the next consumer's first render. Absence until the
-    // subscribe-time update() is the honest state (ADR 0002).
-    snapshot = undefined;
+    binding.set(undefined);
   };
 
   return {
-    subscribe: (onChange) => {
-      if (listeners.size === 0) attach();
-      listeners.add(onChange);
-      return () => {
-        listeners.delete(onChange);
-        if (listeners.size === 0) detach();
-      };
+    build: (prev) => buildSnapshot(viewportId, prev),
+    equal: (a, b) => a !== undefined && b !== undefined && statesEqual(a, b),
+    attach: () => {
+      eventTarget.addEventListener(Enums.Events.ELEMENT_ENABLED, onEnabled);
+      eventTarget.addEventListener(Enums.Events.ELEMENT_DISABLED, onDisabled);
+      attachElement();
+      binding.update(); // state may have moved between render and subscription
     },
-    getSnapshot: () => snapshot,
+    detach: () => {
+      eventTarget.removeEventListener(Enums.Events.ELEMENT_ENABLED, onEnabled);
+      eventTarget.removeEventListener(Enums.Events.ELEMENT_DISABLED, onDisabled);
+      detachElement();
+      // A dormant Binding can't hear disable events; a kept Snapshot could be
+      // served stale to the next consumer's first render. Absence until the
+      // subscribe-time update() is the honest state (ADR 0002).
+      binding.set(undefined);
+    },
   };
-}
-
-// ponytail: Bindings live for the session once created; evict at zero
-// consumers if viewportId churn ever matters.
-const bindings = new Map<string, Binding>();
+});
 
 /**
  * Reads the Viewport State for a viewport resolved via the CS3D global
@@ -324,34 +286,5 @@ export function useViewportState<T>(
   viewportId: string,
   selector?: (state: ViewportState) => T,
 ): T | ViewportState | undefined {
-  let binding = bindings.get(viewportId);
-  if (!binding) {
-    binding = createBinding(viewportId);
-    bindings.set(viewportId, binding);
-  }
-  const { subscribe, getSnapshot } = binding;
-
-  // useSyncExternalStore has no native selector support: it re-renders
-  // whenever getSnapshot's result changes by Object.is. So getSnapshot here
-  // returns the *selected* value, memoized per (Snapshot, selector). The
-  // selector belongs in the key: an inline selector is a new function every
-  // render, and without it the reads React makes within one render could
-  // disagree. Kept hand-rolled rather than taken from
-  // use-sync-external-store/shim/with-selector — ADR 0004, which is also
-  // where an isEqual option would go (one comparison, right here).
-  const memo = useRef<{
-    snapshot: ViewportState | undefined;
-    selector: typeof selector;
-    selected: T | ViewportState | undefined;
-  }>(undefined);
-
-  return useSyncExternalStore(subscribe, () => {
-    const snapshot = getSnapshot();
-    const prev = memo.current;
-    if (prev && prev.snapshot === snapshot && prev.selector === selector) return prev.selected;
-    const selected =
-      snapshot === undefined ? undefined : selector ? selector(snapshot) : snapshot;
-    memo.current = { snapshot, selector, selected };
-    return selected;
-  });
+  return useBinding(viewportBindings.acquire(viewportId), selector);
 }

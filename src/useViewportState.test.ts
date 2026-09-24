@@ -9,6 +9,7 @@ import {
   type ViewportState,
   type VolumeViewportState,
 } from './index';
+import { viewportBindings } from './useViewportState';
 
 // Real module loads (validates the peer dep under jsdom); only the registry
 // lookup is replaced by a Map so several fake viewports can coexist.
@@ -300,6 +301,51 @@ describe('useViewportState', () => {
 
     unmount();
     expect(addSpy.mock.calls.length).toBe(removeSpy.mock.calls.length);
+  });
+
+  // Rule 3 (ADR 0007): a Binding lives only while it has consumers. 0.3.0 kept
+  // viewport Bindings for the session; now the last unsubscribe evicts.
+  describe('registry lifetime', () => {
+    test('the Binding leaves the registry when the last consumer unmounts', () => {
+      createFakeStackViewport('vp-evict');
+      const first = renderHook(() => useViewportState('vp-evict'));
+      const second = renderHook(() => useViewportState('vp-evict'));
+      expect(viewportBindings.size).toBe(1);
+
+      first.unmount();
+      expect(viewportBindings.size).toBe(1);
+      second.unmount();
+      expect(viewportBindings.size).toBe(0);
+    });
+
+    test('StrictMode double-mount leaves exactly one Binding, shared with a later consumer', () => {
+      const { engineState, fire } = createFakeStackViewport('vp-strict-registry');
+      const strict = renderHook(() => useViewportState('vp-strict-registry'), {
+        wrapper: strictModeWrapper,
+      });
+      expect(viewportBindings.size).toBe(1);
+
+      const later = renderHook(() => useViewportState('vp-strict-registry'));
+      expect(viewportBindings.size).toBe(1);
+      expect(later.result.current).toBe(strict.result.current);
+
+      engineState.sliceIndex = 2;
+      fire(Enums.Events.PRE_STACK_NEW_IMAGE);
+      expect(asStack(strict.result.current)?.sliceIndex).toBe(2);
+      expect(asStack(later.result.current)?.sliceIndex).toBe(2);
+    });
+
+    test('a remount after eviction gets a fresh Binding with the current Engine value', () => {
+      const { engineState } = createFakeStackViewport('vp-evict-remount');
+      const first = renderHook(() => useViewportState('vp-evict-remount'));
+      first.unmount();
+      expect(viewportBindings.size).toBe(0);
+
+      engineState.sliceIndex = 1;
+      const second = renderHook(() => useViewportState('vp-evict-remount'));
+      expect(asStack(second.result.current)?.sliceIndex).toBe(1);
+      expect(viewportBindings.size).toBe(1);
+    });
   });
 
   test('fills automatically when the viewport is enabled after the hook mounted', () => {
