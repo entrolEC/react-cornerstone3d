@@ -1,216 +1,509 @@
-/* Docusaurus/Infima-shaped tokens, so the page reads as part of the
-   Cornerstone3D docs site rather than a stranger. Primary colors are
-   cornerstonejs.org's own: #0151d9 light, #5acce6 dark. */
+/* The reading room, not a docs theme.
+   Paper is the cool light of a viewing box; the ink carries the blue cast of a
+   CT shadow; the accent is the cyan that annotation tools actually draw with,
+   darkened until it holds up on light. The marker is a real highlighter: this
+   page points at one line of code over and over, so that gesture is a token. */
 :root {
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Apple SD Gothic Neo',
-    'Malgun Gothic', sans-serif;
-  --mono: SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font: 'IBM Plex Sans KR', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    'IBM Plex Sans KR', 'Apple SD Gothic Neo', monospace;
 
   --primary: #0151d9;
-  --primary-dark: #0145b8;
+  --primary-hover: #013998;
+  --primary-soft: rgba(1, 81, 217, 0.09);
   --on-primary: #fff;
-  --bg: #fff;
-  --surface: #fff;
-  --surface-alt: #f6f7f8;
-  --text: #1c1e21;
-  --text-muted: #606770;
-  --border: #dadde1;
-  --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 5px 40px rgba(0, 0, 0, 0.1);
-  --ok: #00a400;
-  --ok-bg: #e6f6e6;
-  --bad: #e13238;
-  --bad-bg: #fdefef;
-  --note-bg: #eef9fd;
-  --note-border: #4cb3d4;
+  /* The cyan half of the Cornerstone palette. Reserved for the dark band. */
+  --brand-cyan: #5acce6;
+  --brand-cyan-bright: #8ce0f0;
+  /* Section numerals are a graphical element: this has to clear 3:1 on --bg. */
+  --numeral: rgba(1, 81, 217, 0.72);
+  --bg: #dfe5ee;
+  --bg-alt: #cbd4e3;
+  --surface: #ffffff;
+  --surface-sunken: #f6f8fc;
+  --text: #10141c;
+  --text-muted: #4f5a6d;
+  --border: #c6cedc;
+  --border-strong: #a3adbf;
+
+  /* Drawn over the line that matters, the way you would with a pen. */
+  --marker: rgba(255, 214, 0, 0.38);
+  --marker-edge: rgba(212, 160, 0, 0.55);
+
+  --ok: #0f7a5f;
+  --ok-bg: #e2f3ed;
+  --bad: #c0304a;
+  --bad-bg: #fbe9ec;
+  --note-bg: #e5edfb;
+  --note-line: var(--primary);
+
+  /* The viewport is the one heavy object on the page; nothing else casts. */
+  --shadow-sm: none;
+  --shadow-md: 0 18px 40px -24px rgba(20, 24, 29, 0.45);
+  --frame: 0 0 0 1px rgba(20, 24, 29, 0.08), 0 24px 48px -28px rgba(20, 24, 29, 0.55);
+
+  --nav-h: 3.75rem;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --gutter: 1.5rem;
+  --ease: 160ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
-[data-theme='dark'] {
+:root[data-theme='dark'] {
   --primary: #5acce6;
-  --primary-dark: #3ec3e2;
-  --on-primary: #12232b;
-  --bg: #1b1b1d;
-  --surface: #242526;
-  --surface-alt: #1e1e20;
-  --text: #e3e3e3;
-  --text-muted: #b0b3b8;
-  --border: #444950;
-  --shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 5px 40px rgba(0, 0, 0, 0.4);
-  --ok: #4ddb4d;
-  --ok-bg: #1e2d1e;
-  --bad: #ff6b70;
-  --bad-bg: #2d1e1f;
-  --note-bg: #193c47;
-  --note-border: #4cb3d4;
+  --primary-hover: #8ce0f0;
+  --primary-soft: rgba(90, 204, 230, 0.14);
+  --on-primary: #04202a;
+  --numeral: rgba(90, 204, 230, 0.62);
+  --bg: #121a26;
+  --bg-alt: #060a11;
+  --surface: #222d3d;
+  --surface-sunken: #1e2a3a;
+  --text: #e4ebf3;
+  --text-muted: #9dabbe;
+  --border: #303c4c;
+  --border-strong: #46546a;
+
+  --marker: rgba(255, 214, 0, 0.22);
+  --marker-edge: rgba(255, 214, 0, 0.4);
+
+  --ok: #4fd1a5;
+  --ok-bg: #10291f;
+  --bad: #ff8095;
+  --bad-bg: #2b161c;
+  --note-bg: #10202e;
+
+  --shadow-sm: none;
+  --shadow-md: 0 18px 40px -24px rgba(0, 0, 0, 0.8);
+  --frame: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -28px rgba(0, 0, 0, 0.9);
 }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
-  font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  line-height: 1.65;
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.75;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Korean breaks mid-word without this, which is most of the readability
+     problem on this page. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
-a { color: var(--primary); text-decoration: none; }
-a:hover { text-decoration: underline; }
-code { font-family: var(--mono); font-size: 0.92em; }
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.22;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
 
-h1, h2, h3 { line-height: 1.25; margin: 0 0 0.6rem; font-weight: 700; }
+/* Prose stays inside a comfortable measure wherever it lands. */
+.panel__lead,
+.rec__body,
+.steps__caption,
+.callout,
+.verdict {
+  max-width: 62ch;
+}
 
-.wrap { max-width: 1140px; margin: 0 auto; padding: 0 1.25rem; }
+p {
+  margin: 0;
+}
 
-/* ---------- navbar ---------- */
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* ============ navbar ============ */
 .navbar {
   position: sticky;
   top: 0;
-  z-index: 10;
-  height: 3.75rem;
+  z-index: 20;
+  height: var(--nav-h);
   display: flex;
   align-items: center;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: var(--surface); /* fallback for browsers without color-mix */
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid var(--border);
 }
-.navbar .wrap { display: flex; align-items: center; gap: 0.75rem; width: 100%; }
-.navbar__brand { font-weight: 700; color: var(--text); font-size: 1.05rem; }
-.navbar__brand:hover { text-decoration: none; }
-.navbar__version {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+.navbar__brand {
+  font-weight: 650;
+  font-size: 0.98rem;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.navbar__brand:hover {
+  text-decoration: none;
+  color: var(--primary);
+}
+.navbar__spacer {
+  flex: 1;
+}
+.navbar__link {
   color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color var(--ease);
 }
-.navbar__spacer { flex: 1; }
-.navbar__link { color: var(--text); font-weight: 500; font-size: 0.94rem; }
-.navbar__link:hover { color: var(--primary); text-decoration: none; }
-.navbar__toggle {
+.navbar__link:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+@media (max-width: 720px) {
+  .navbar__link {
+    display: none;
+  }
+}
+
+.iconbutton {
   display: grid;
   place-items: center;
-  width: 2rem; height: 2rem;
-  border: 0; border-radius: 0.4rem;
-  background: transparent; color: var(--text);
-  cursor: pointer; font-size: 1rem;
-}
-.navbar__toggle:hover { background: var(--surface-alt); }
-
-/* ---------- hero ---------- */
-.hero { padding: 4rem 0 2.5rem; text-align: center; }
-.hero h1 { font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -0.02em; }
-.hero p { font-size: 1.15rem; color: var(--text-muted); max-width: 46rem; margin: 0 auto 1.5rem; }
-.hero__buttons { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
-
-.button {
-  display: inline-block;
-  padding: 0.55rem 1.4rem;
-  border-radius: 0.4rem;
-  font-weight: 600;
-  font-size: 0.97rem;
-  border: 2px solid var(--primary);
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
   cursor: pointer;
-  font-family: inherit;
+  transition: background var(--ease), color var(--ease);
 }
-.button:hover { text-decoration: none; }
-.button--primary { background: var(--primary); color: var(--on-primary); }
-.button--primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
-.button--secondary { background: transparent; color: var(--primary); }
-.button--secondary:hover { background: var(--primary); color: var(--on-primary); }
+.iconbutton:hover {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.langswitch {
+  display: flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.langswitch__option {
+  border: 0;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease);
+}
+.langswitch__option[aria-pressed='true'] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ============ hero ============ */
+.hero {
+  position: relative;
+  background: linear-gradient(to bottom, var(--surface), var(--bg) 70%);
+  padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(3rem, 6vw, 4.5rem);
+  overflow: hidden;
+}
+.hero > .wrap {
+  position: relative;
+}
+.hero h1 {
+  font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+  letter-spacing: -0.035em;
+  max-width: 17ch;
+}
+.hero__chips {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+}
+.chip {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  background: var(--surface);
+}
+.hero__sub {
+  margin: 1.1rem 0 2rem;
+  max-width: 42ch;
+  font-size: 1.08rem;
+  color: var(--text-muted);
+}
 
 .install {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  margin: 0 auto 1.5rem;
-  padding: 0.5rem 0.9rem;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  padding: 0.55rem 0.6rem 0.55rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  background: var(--surface-alt);
-  font-family: var(--mono);
-  font-size: 0.9rem;
-}
-.install button {
-  border: 0; background: transparent; cursor: pointer;
-  color: var(--text-muted); font-size: 0.8rem; font-family: inherit;
-}
-
-/* ---------- panels ---------- */
-.panel { padding: 3.5rem 0; border-top: 1px solid var(--border); }
-.panel__eyebrow {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--primary);
-  margin-bottom: 0.35rem;
-}
-.panel__title { font-size: 1.75rem; letter-spacing: -0.01em; }
-.panel__lead { color: var(--text-muted); max-width: 52rem; margin: 0 0 1.75rem; }
-
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
-@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr); } }
-
-.card {
+  border-radius: var(--radius);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--ease), box-shadow var(--ease);
 }
-.card__head {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-alt);
-  font-size: 0.84rem; font-weight: 600; color: var(--text-muted);
+.install:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
 }
-.card__body { padding: 1rem; }
+.install code {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.install__action {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-left: 1px solid var(--border);
+  padding-left: 0.75rem;
+  padding-right: 0.25rem;
+}
 
-/* ---------- admonition ---------- */
-.note {
-  border-left: 5px solid var(--note-border);
-  background: var(--note-bg);
-  border-radius: 0.4rem;
-  padding: 0.85rem 1rem;
-  margin: 1.5rem 0 0;
-  font-size: 0.93rem;
+.hero__buttons {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
-.note strong { display: block; margin-bottom: 0.2rem; }
 
-/* ---------- viewport ---------- */
+/* ============ buttons ============ */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.35rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+.button:hover {
+  text-decoration: none;
+}
+.button--primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+.button--primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.button--secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.button--secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.button--sm {
+  padding: 0.35rem 0.9rem;
+  font-size: 0.87rem;
+}
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ============ panels ============ */
+.panel {
+  padding: 4.5rem 0;
+  border-top: 1px solid var(--border);
+}
+.panel--alt {
+  background: var(--bg-alt);
+}
+.panel__head {
+  max-width: 46rem;
+  margin-bottom: 2rem;
+}
+.panel__eyebrow {
+  font-family: var(--mono);
+  font-size: clamp(2.75rem, 7vw, 4.25rem);
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--border-strong);
+  margin-bottom: 0.4rem;
+  user-select: none;
+}
+.panel__title {
+  font-size: clamp(1.65rem, 3.2vw, 2.2rem);
+  letter-spacing: -0.03em;
+}
+.panel__lead {
+  margin-top: 0.9rem;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+.panel__head {
+  max-width: 48rem;
+  margin-bottom: 2.25rem;
+}
+.panel {
+  padding: 5.5rem 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ============ panel 1 layout ============ */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.split__viewer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ============ viewport ============ */
 .vp {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
   background: #000;
-  border-radius: 0.4rem;
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: var(--frame);
   overflow: hidden;
   touch-action: none;
 }
-.vp--off {
-  display: grid; place-items: center;
-  background: var(--surface-alt);
-  border: 1px dashed var(--border);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
 .vp__overlay {
-  position: absolute; inset: auto 0 0 0;
-  display: flex; justify-content: space-between;
-  padding: 0.5rem 0.7rem;
-  font-family: var(--mono); font-size: 0.8rem;
-  color: #d8f7ff; text-shadow: 0 1px 2px #000;
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.55rem 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  color: rgba(196, 232, 242, 0.85);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
-.vp__hint {
-  position: absolute; top: 0.5rem; right: 0.7rem;
-  font-size: 0.75rem; color: #9fb6bf; pointer-events: none;
+
+.slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--primary);
 }
 
-.slider { width: 100%; margin-top: 0.75rem; accent-color: var(--primary); }
+/* ============ cards ============ */
+.card {
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.card__body {
+  padding: 1.1rem;
+}
+.card__body--center {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+.badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  color: #fff;
+}
+.badge--ok {
+  background: var(--ok);
+}
+.badge--bad {
+  background: var(--bad);
+}
+:root[data-theme='dark'] .badge {
+  color: #16181a;
+}
+/* --ok and --bad are light fills on dark paper, so their labels go dark. The
+   plain badge is not a fill — it keeps body-text colour, and needs the same
+   specificity as the rule above to say so. */
 
 /* ---------- load track (one cell per slice) ---------- */
 .track { margin-top: 0.35rem; }
@@ -228,110 +521,2034 @@ h1, h2, h3 { line-height: 1.25; margin: 0 0 0.6rem; font-weight: 700; }
 /* ---------- indicator ---------- */
 .ind {
   font-family: var(--mono);
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
-.ind--empty { color: var(--text-muted); }
-
-/* ---------- tabs ---------- */
-.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: -1px; }
-.tab {
-  border: 0; background: transparent; cursor: pointer;
-  font: inherit; font-size: 0.9rem; font-weight: 600;
-  color: var(--text-muted);
-  padding: 0.5rem 0.9rem;
-  border-bottom: 3px solid transparent;
+.ind--small {
+  font-size: 1rem;
+  line-height: 1.7;
 }
-.tab[aria-selected='true'] { color: var(--primary); border-bottom-color: var(--primary); }
-.tab span { font-weight: 400; opacity: 0.75; margin-left: 0.35rem; font-size: 0.82rem; }
+.ind--empty {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
 
-/* ---------- code ---------- */
+/* ============ tabs ============ */
+.tabs {
+  display: flex;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.tabs--spaced {
+  margin-bottom: 1.5rem;
+}
+.tab {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.5rem 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  transition: color var(--ease), border-color var(--ease);
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab[aria-selected='true'] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.tab span {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: 0.3rem;
+}
+
+/* ============ code ============ */
 .code {
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
   overflow: hidden;
-  background: var(--surface-alt);
+  background: var(--surface-sunken);
+  margin-top: 1rem;
+  box-shadow: inset 0 1px 2px rgba(20, 24, 29, 0.04);
 }
 .code__head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.4rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.85rem;
   border-bottom: 1px solid var(--border);
-  font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
-.code__copy { border: 0; background: transparent; cursor: pointer; color: var(--text-muted); font: inherit; }
+.code__copy {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  transition: color var(--ease);
+}
+.code__copy:hover {
+  color: var(--primary);
+}
 .code pre {
-  margin: 0; padding: 0.9rem 1rem;
-  overflow: auto; font-family: var(--mono);
-  font-size: 0.82rem; line-height: 1.55;
+  position: relative;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  /* A whole number of rows: a half-sliced line reads as a rendering fault. */
+  max-height: calc(23 * 0.8rem * 1.6 + 2rem);
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  tab-size: 2;
 }
-.code .line-no {
-  display: inline-block; width: 1.8rem;
-  opacity: 0.35; user-select: none;
+.code__mark {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin-left: -0.6rem;
+  padding-left: 0.6rem;
+  /* Drawn on, not filled in: the swipe stops short of the top and bottom the
+     way a marker does, and its ends are soft. */
+  background: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
-/* ---------- mount race ---------- */
-.controls { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
-.controls__label { font-size: 0.85rem; color: var(--text-muted); margin-right: 0.15rem; }
-.button--sm { padding: 0.32rem 0.85rem; font-size: 0.87rem; border-width: 1px; }
+/* The same gesture in prose, where the reader is scanning for the point. */
+.panel__lead b,
+.steps__caption b:not(.steps__n) {
+  font-weight: 650;
+  color: var(--text);
+  background: none;
+  box-shadow: inset 0 -0.13em 0 var(--primary);
+  padding: 0 0.04em;
+}
+
+.ink {
+  background: linear-gradient(
+    to bottom,
+    transparent 12%,
+    var(--marker) 12%,
+    var(--marker) 88%,
+    transparent 88%
+  );
+  padding: 0 0.1em;
+}
+
+.code .line-no {
+  display: inline-block;
+  width: 1.9rem;
+  color: var(--text-muted);
+  opacity: 1;
+  user-select: none;
+}
+
+/* ============ note / verdict / notice ============ */
+.note {
+  margin-top: 2rem;
+  padding: 0.95rem 1.15rem;
+  border-left: 4px solid var(--note-line);
+  border-radius: var(--radius-sm);
+  background: var(--note-bg);
+  font-size: 0.93rem;
+}
+.note strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+.note p + p {
+  margin-top: 0.7rem;
+}
 
 .verdict {
   margin-top: 1.25rem;
-  padding: 0.85rem 1rem;
-  border-radius: 0.4rem;
-  font-size: 0.93rem;
-  border-left: 5px solid var(--border);
-  background: var(--surface-alt);
+  padding: 0.95rem 1.15rem;
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-size: 0.95rem;
 }
-.verdict--bad { border-left-color: var(--bad); background: var(--bad-bg); }
-.verdict--ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.verdict--bad {
+  border-left-color: var(--bad);
+  background: var(--bad-bg);
+}
+.verdict--ok {
+  border-left-color: var(--ok);
+  background: var(--ok-bg);
+}
 
-.badge { font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.45rem; border-radius: 999px; }
-.badge--bad { background: var(--bad); color: #fff; }
-.badge--ok { background: var(--ok); color: #fff; }
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 5rem 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+.spinner {
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
 
-.status { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem; min-height: 1.6em; }
+/* ============ stage + steps ============ */
+.stage {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 1.5rem;
+}
+@media (max-width: 760px) {
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.steps {
+  display: grid;
+  /* The button rides the caption's row so the step keeps its height, but the
+     track is sized to the button — not to the leftover width — so it sits
+     beside the sentence it belongs to instead of floating mid-row or pinned
+     384px away at the margin. */
+  grid-template-columns: minmax(0, 62ch) max-content;
+  column-gap: 2rem;
+  row-gap: 0.9rem;
+  justify-content: start;
+  align-items: start;
+  padding-top: 1.25rem;
+}
+.steps__dots {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+.dot {
+  width: 1.75rem;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: background var(--ease);
+}
+.dot--on {
+  background: var(--primary);
+}
+.steps__n {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+.steps__caption {
+  margin-bottom: 0;
+  /* Reserves the tallest caption's height so stepping never jumps the page. */
+  min-height: 3em;
+  font-size: 1rem;
+}
 
-/* ---------- footer ---------- */
+.steps__buttons {
+  display: flex;
+  gap: 0.6rem;
+}
+@media (max-width: 760px) {
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 1rem;
+  }
+  .steps__buttons {
+    justify-self: start;
+  }
+}
+
+/* ============ footer ============ */
 .footer {
   border-top: 1px solid var(--border);
-  padding: 2.5rem 0 3.5rem;
+  padding: 2.5rem 0 4rem;
   color: var(--text-muted);
   font-size: 0.9rem;
 }
-.footer a { font-weight: 500; }
-
-.loading { padding: 4rem 0; text-align: center; color: var(--text-muted); }
-
-/* ---------- panel 2: one story, one step at a time ---------- */
-.stage {
-  display: grid;
-  grid-template-columns: 18rem minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
+.footer__links {
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 0.5rem;
 }
-@media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.footer__links a {
+  font-weight: 500;
+}
 
-.stage__label {
-  margin-top: 0.4rem;
+/* ---------- panel 2: the wall ---------- */
+.crash {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
   text-align: center;
+  padding: 0.5rem;
+}
+.crash__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bad);
+}
+.crash__loop {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.crash__link {
+  font-size: 0.78rem;
+}
+.crash__message {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 34rem;
+}
+.tabs--top {
+  margin-top: 2rem;
+}
+
+/* ---------- panel 2: the identity probe ---------- */
+.focus {
+  display: grid;
+  /* Where a step's evidence is shorter than the viewer beside it, centring
+     turns the leftover height into balance instead of a hole under the card.
+     On the tall steps there is no free space, so this does nothing. */
+  align-content: center;
+  gap: 1rem;
+}
+.focus__stack {
+  display: grid;
+  gap: 1rem;
+}
+.focus .code {
+  margin-top: 0;
+}
+/* A stacked step shows a result first and its source under it — keep the
+   source from pushing the caption off the screen. A step has to fit on one
+   screen with its caption and its Next button, so long sources scroll in place. */
+.focus .code pre {
+  max-height: calc(12 * 0.8rem * 1.6 + 2rem);
+}
+
+.probe {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem 1.1rem;
+}
+.probe__title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.85rem;
+}
+.probe__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border);
+}
+.probe__label {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.probe__label code {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.rules {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+}
+.rules li::marker {
+  color: var(--primary);
+  font-weight: 700;
+}
+.rules code {
+  font-size: 0.85em;
+}
+.probe__result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+/* ============ panel 3: the slider lab ============ */
+/* Steps 2–4 share this stage; only the caption and the card beside it move. */
+.lab {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.lab__row {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+@media (max-width: 620px) {
+  .lab__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+}
+.lab__name {
+  /* Stacked, not inline: one badge is much wider than the other, and inline
+     wrapping made the two rows different heights. */
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: var(--text);
+}
+.lab__hint {
+  margin: 0;
   font-size: 0.82rem;
   color: var(--text-muted);
 }
-.stage__readouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-@media (max-width: 1000px) { .stage__readouts { grid-template-columns: minmax(0, 1fr); } }
-
-.steps {
-  margin-top: 1.5rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--surface-alt);
+/* The sliders are the experiment, so they get the full row. */
+.lab .slider {
+  width: 100%;
+  margin: 0;
 }
-.steps__dots { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
-.dot { width: 1.6rem; height: 4px; border-radius: 999px; background: var(--border); }
-.dot--on { background: var(--primary); }
-.steps__caption { margin: 0 0 0.9rem; font-size: 1rem; min-height: 3em; }
-.steps__buttons { display: flex; gap: 0.6rem; }
-.button:disabled { opacity: 0.45; cursor: default; }
+
+.callout {
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+/* The lab's controls share one row; the disclosure sits under them. */
+.lab__controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.lab__note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* A folded objection: answered honestly, but kept out of the spine. */
+.fold {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.fold > summary {
+  cursor: pointer;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 550;
+}
+.fold__body--flush {
+  padding: 0 0.6rem 0.6rem;
+}
+.fold__body {
+  padding: 0 1.1rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+
+/* ============ citations ============ */
+/* Claims about other people's code, pinned to a commit so they can be checked. */
+.cite {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cite__body {
+  padding: 0.85rem 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+.cite__body p {
+  margin: 0;
+}
+.cite__body p + p {
+  margin-top: 0.8rem;
+}
+.cite__code {
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  max-height: 10rem;
+  overflow: auto;
+}
+.cite__source {
+  padding: 0.6rem 1.15rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+}
+.cite__source a {
+  color: var(--text-muted);
+}
+.cite__source a:hover {
+  color: var(--text);
+}
+
+/* The purge control lives with the sliders: without a cold cache the lag only
+   reproduces on the very first drag. */
+.lab__foot {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+
+/* ============ panel 3: the loop, traced ============ */
+/* Two booleans never said what React does with them; this shows the reads,
+   then the consequence. */
+.trace {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem 1.1rem;
+}
+.trace__title {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.trace__read {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.3rem 0;
+}
+.trace__tag {
+  min-width: 3.2rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.trace__read code {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.trace__verdicts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.7rem 0 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+.trace__verdicts code {
+  font-size: inherit;
+}
+.trace__so {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.trace__aside {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+/* ============ panel 3: same value, different object ============ */
+/* Printing the values alone reads as "they are the same", which is the trap.
+   The letter column is what the table is actually showing. */
+.ident {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem 1.1rem;
+}
+.ident__title {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.ident__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ident__table th {
+  padding: 0 0.7rem 0.4rem 0;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.ident__table td {
+  padding: 0.3rem 0.7rem 0.3rem 0;
+  vertical-align: middle;
+}
+.ident__table code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.ident__table th:first-child,
+.ident__n {
+  width: 3.5rem;
+  white-space: nowrap;
+}
+.ident__n {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+/* The identity label. Five letters or one — that is the whole finding. */
+.ident__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.ident__tag--bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.ident__tag--ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.ident__more {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.ident__verdict {
+  margin: 0.9rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.ident__aside {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+/* Panel 2: the reader presses the button that breaks it. */
+.try {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+}
+.card__hint {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ============ panel 3: what OHIF's own comments say ============ */
+.scars {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem 1.1rem;
+}
+.scars__title {
+  margin: 0 0 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+/* A detour into another codebase: no viewport, full width. */
+.stage--wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+.scar {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border);
+}
+.scar__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.scar__code {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.scar__quote {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.scar__where {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.scar__where:hover {
+  color: var(--text);
+}
+.scars__end {
+  margin: 0.9rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-strong);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+/* ============ panel 4: the recommendations ============ */
+/* A reference list, not a walkthrough: the reader scans rather than steps. */
+.recs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2.25rem;
+}
+.rec {
+  display: grid;
+  gap: 0.9rem;
+}
+.rec__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.rec__n {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.rec .code {
+  margin-top: 0;
+}
+.rec .code pre {
+  max-height: none;
+}
+.rec__body {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 0.93rem;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+.rec__body b {
+  color: var(--text);
+}
+
+/* The one claim you can't see by reading: that it re-renders less. */
+.cost {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cost__stage {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: center;
+}
+@media (max-width: 620px) {
+  .cost__stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.cost__vp .vp {
+  box-shadow: 0 0 0 1px rgba(20, 24, 29, 0.1);
+}
+.cost__meters {
+  display: grid;
+  gap: 0.6rem;
+}
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.meter__label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.meter__value {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 650;
+}
+.cost__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.cost__hint {
+  margin: 0;
+  flex: 1 1 16rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* The three one-liners that close the panel. */
+.shorts {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 1.5rem 0 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+@media (max-width: 860px) {
+  .shorts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.short {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+}
+.short__title {
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.short__body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+/* ============ hero ============ */
+/* The image leads. The words sit beside it, ranged left at a readable measure
+   rather than centred across the viewport. */
+.hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+}
+@media (max-width: 880px) {
+  .hero__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.hero__say {
+  max-width: 34rem;
+}
+
+.herovp {
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.herovp--awake {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .herovp {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+.herovp__frame {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--frame);
+  background: #000;
+}
+.herovp__frame .vp {
+  box-shadow: none;
+  border-radius: 0;
+}
+.herovp__wait {
+  aspect-ratio: 1;
+  background: #000;
+}
+.herovp__cap {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* Corner text, the way a workstation prints it over the image. */
+.readout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.6rem 0.9rem 0.8rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72), transparent);
+  font-family: var(--mono);
+  color: #e8f6f8;
+  pointer-events: none;
+}
+.readout__slice {
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.readout__slice i {
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.66;
+}
+.readout__voi {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+  padding-bottom: 0.2rem;
+}
+
+/* On dark paper a yellow wash goes muddy over muted text, so the same gesture
+   becomes an underline — which is what you would actually reach for. */
+:root[data-theme='dark'] .panel__lead b:not(.steps__n),
+:root[data-theme='dark'] .steps__caption b:not(.steps__n) {
+  box-shadow: inset 0 -0.13em 0 var(--primary);
+}
+:root[data-theme='dark'] .code__mark {
+  background: rgba(90, 204, 230, 0.13);
+}
+
+/* A package name that wraps is a package name someone mistypes. */
+.install code {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .install {
+    width: 100%;
+  }
+  .install code {
+    font-size: 0.8rem;
+  }
+}
+
+/* ============================================================================
+   The dark band
+   The subject of this page is a CT image, and a CT image is black. So the top
+   of the page is black too: the viewer stops looking pasted onto a document and
+   starts looking lit. Both Cornerstone colours appear here as light sources —
+   the blue from the docs site, the cyan its dark theme uses.
+   ========================================================================== */
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  background: #070b12;
+  color: #e8eefa;
+  margin-top: calc(-1 * var(--nav-h));
+  padding: calc(var(--nav-h) + clamp(2.5rem, 6vw, 4.5rem)) 0 clamp(3.25rem, 6vw, 4.75rem);
+  border-bottom: 1px solid transparent;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -40% -12% -10%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(46rem 30rem at 16% 20%, rgba(1, 81, 217, 0.6), transparent 62%),
+    radial-gradient(32rem 24rem at 86% 80%, rgba(90, 204, 230, 0.28), transparent 66%);
+}
+/* A workstation ruling, barely there — it keeps the band from reading as a void. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(70% 60% at 50% 40%, #000, transparent);
+}
+
+.hero__kicker {
+  margin: 0 0 1rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-cyan);
+}
+.hero h1 {
+  color: #f3f7fe;
+  font-size: clamp(2.2rem, 4.6vw, 3.5rem);
+  letter-spacing: -0.038em;
+  max-width: 19ch;
+}
+.hero__sub {
+  margin: 1.25rem 0 2.1rem;
+  max-width: 43ch;
+  font-size: 1.1rem;
+  color: #b9c7de;
+}
+.hero__sub code {
+  padding: 0.1em 0.36em;
+  border-radius: 4px;
+  background: rgba(90, 204, 230, 0.14);
+  color: #a4e6f6;
+}
+
+.hero .install {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+  backdrop-filter: blur(6px);
+}
+.hero .install:hover {
+  border-color: rgba(90, 204, 230, 0.6);
+  box-shadow: 0 0 0 4px rgba(90, 204, 230, 0.1);
+}
+.hero .install code {
+  color: #eaf1fc;
+}
+.hero .install__action {
+  color: #9fb3cd;
+  border-left-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Against navy the docs-site blue goes muddy, so the call to action takes the
+   cyan instead — the same pair, the other way round. */
+.hero .button--primary {
+  background: var(--brand-cyan);
+  border-color: var(--brand-cyan);
+  color: #04202a;
+}
+.hero .button--primary:hover {
+  background: var(--brand-cyan-bright);
+  border-color: var(--brand-cyan-bright);
+}
+.hero .button--secondary {
+  color: #e8eefa;
+  border-color: rgba(255, 255, 255, 0.26);
+}
+.hero .button--secondary:hover {
+  color: var(--brand-cyan);
+  border-color: var(--brand-cyan);
+}
+
+.hero .herovp__cap {
+  color: #93a6c0;
+}
+.hero .herovp__frame {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09), 0 32px 64px -28px rgba(0, 0, 0, 0.9);
+}
+
+/* ---- three checkable facts, before any prose ---- */
+.proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 2.5rem;
+  margin: 2.5rem 0 0;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+}
+.proof__value {
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #8ae2f4;
+  font-variant-numeric: tabular-nums;
+}
+.proof__label {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #8ea2bd;
+}
+
+/* ---- the navbar belongs to the band until the band scrolls away ---- */
+.navbar {
+  background: transparent;
+  border-bottom-color: transparent;
+  backdrop-filter: none;
+  transition: background var(--ease), border-color var(--ease);
+}
+.navbar:not(.navbar--scrolled) .navbar__brand {
+  color: #f0f5fd;
+}
+.navbar:not(.navbar--scrolled) .navbar__brand:hover,
+.navbar:not(.navbar--scrolled) .navbar__link:hover {
+  color: var(--brand-cyan);
+}
+.navbar:not(.navbar--scrolled) .navbar__link,
+.navbar:not(.navbar--scrolled) .iconbutton {
+  color: #a3b6cf;
+}
+.navbar:not(.navbar--scrolled) .iconbutton:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #f0f5fd;
+}
+.navbar:not(.navbar--scrolled) .langswitch {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.navbar:not(.navbar--scrolled) .langswitch__option {
+  color: #a3b6cf;
+}
+.navbar:not(.navbar--scrolled) .langswitch__option[aria-pressed='true'] {
+  background: var(--brand-cyan);
+  color: #04202a;
+}
+.navbar--scrolled {
+  background: var(--surface);
+  /* Below ~94% the panel text underneath ghosts through the bar on dark paper. */
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border-bottom-color: var(--border);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+
+/* ---- section numbers carry the brand instead of the border grey ---- */
+.panel__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'num title'
+    '.   lead';
+  column-gap: clamp(0.85rem, 2vw, 1.5rem);
+}
+.panel__eyebrow {
+  grid-area: num;
+  margin-bottom: 0;
+  -webkit-text-stroke: 2px var(--numeral);
+  opacity: 1;
+  /* Optically seated on the title's cap height rather than its baseline. */
+  transform: translateY(0.06em);
+}
+.panel__title {
+  grid-area: title;
+}
+.panel__lead {
+  grid-area: lead;
+}
+@media (max-width: 560px) {
+  .panel__head {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'num' 'title' 'lead';
+    row-gap: 0.5rem;
+  }
+  .panel__eyebrow {
+    transform: none;
+    line-height: 1;
+  }
+}
+
+/* #11: how far through the argument the reader is. */
+.navbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--primary), var(--brand-cyan));
+  opacity: 0;
+  transition: opacity var(--ease);
+}
+.navbar--scrolled::after {
+  opacity: 1;
+}
+
+/* #19: macOS hides overlay scrollbars, so a clipped line just looked truncated. */
+.code pre {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.code pre::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.code pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+.code pre::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+
+@media (max-width: 880px) {
+  .hero h1 {
+    max-width: none;
+  }
+  .proof {
+    gap: 1rem 2rem;
+  }
+}
+
+/* Korean carries no monospace face, so Plex Mono's fixed 0.6em space advance
+   lands between every word of a Korean comment — roughly double the body gap at
+   two thirds the size. Comments are prose; give them the prose face. */
+.code .token.comment {
+  font-family: var(--font);
+  font-size: 0.95em;
+}
+
+/* Content that runs past an edge, shown as running past that edge. Overlay
+   scrollbars take no layout on macOS, so without this a clipped block simply
+   looks like it ends there — which is how 15 of 24 lines went missing. */
+.code[data-clip] {
+  position: relative;
+}
+.code[data-clip*='x']::after,
+.code[data-clip*='y']::before,
+.code[data-clip*='u'] .code__head::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+.code[data-clip*='x']::after {
+  top: 2.2rem;
+  right: 0;
+  bottom: 0;
+  width: 2.25rem;
+  background: linear-gradient(to right, transparent, var(--surface-sunken) 82%);
+}
+.code[data-clip*='y']::before {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.5rem;
+  z-index: 1;
+  background: linear-gradient(to bottom, transparent, var(--surface-sunken) 88%);
+}
+
+.crash__raw {
+  margin-top: 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+/* R4: a result card is not a code block — it should be as wide as its content
+   needs, not as wide as the column allows. A two-digit slice number sitting in
+   775px was the clearest case. Code keeps the full width. */
+.focus > .card,
+.focus__stack > .card,
+.focus > .probe,
+.focus__stack > .probe {
+  max-width: 34rem;
+}
+
+/* Fewer things touching each other, now that there is height to spare. */
+.split {
+  gap: clamp(2rem, 4vw, 3rem);
+}
+.note {
+  margin-top: 2.5rem;
+}
+
+/* R4: each recommendation stacked a full-width code block over 62ch of prose,
+   making panel 4 taller than the other three put together. The explanation
+   belongs beside the code it explains, not under it — half the height, and the
+   idle column is spent on text that was already there. */
+@media (min-width: 900px) {
+  .rec {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 23rem);
+    column-gap: clamp(1.5rem, 3vw, 2.5rem);
+    row-gap: 1rem;
+    align-items: start;
+  }
+  .rec__title {
+    grid-column: 1 / -1;
+  }
+  .rec .code {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .rec__body {
+    grid-column: 2;
+    grid-row: 2;
+    max-width: none;
+  }
+  .rec .cost {
+    grid-column: 1 / -1;
+  }
+  .recs {
+    gap: 3rem;
+  }
+}
+
+/* R4/BL-1: a step has to fit one screen with its caption and its button. The
+   usable height is 840px, not 900 — the navbar is sticky. Every number below
+   was taken from the tallest states (panel 3 steps 3 and 4). */
+.panel {
+  padding: 4.25rem 0;
+}
+.panel__head {
+  margin-bottom: 1.75rem;
+}
+/* 9 rows hid 15 of 24 lines with no signpost; 13 pushed two steps off the
+   screen. 11 rows, and the block now fades at whichever edge it clips — plus
+   it already auto-scrolls the marked line into view. */
+.focus .code pre {
+  max-height: calc(11 * 0.8rem * 1.6 + 2rem);
+}
+.cite__body {
+  padding: 0.7rem 1rem;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+.cite__code {
+  max-height: 7rem;
+}
+.cite__source {
+  padding: 0.45rem 1rem;
+}
+.ident {
+  padding: 0.85rem 1rem;
+}
+
+/* Regression 4: cap the card that shows a bare result, not every card — a
+   slider needs the width, a two-digit number does not. */
+.focus > .card,
+.focus__stack > .card,
+.focus > .probe,
+.focus__stack > .probe {
+  max-width: none;
+}
+/* The cap exists so a two-digit result does not fill 776px; the crash card
+   carries a sentence, so it keeps the column. */
+.focus .card:has(.card__body--center):not(:has(.crash)) {
+  max-width: 26rem;
+}
+
+/* Regression 3: at 900px the fixed 368px prose track made all five code blocks
+   clip. Hold the two-column form back until there is room for both. */
+@media (min-width: 900px) and (max-width: 1059px) {
+  .rec {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rec .code,
+  .rec__body {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .rec__body {
+    max-width: 46rem;
+  }
+}
+@media (min-width: 1060px) {
+  .rec {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 21rem);
+  }
+}
+
+/* The OHIF detour is the tallest step on the page. Tightened until panel 3
+   step 3 clears 840px in both languages — nothing removed, only compressed. */
+.scars {
+  padding: 0.85rem 1rem;
+}
+.scars__title {
+  margin-bottom: 0.7rem;
+}
+.scar {
+  padding: 0.45rem 0;
+}
+.scars__end {
+  margin-top: 0.75rem;
+  padding-top: 0.7rem;
+  line-height: 1.65;
+}
+.cite__code {
+  max-height: 6rem;
+}
+.steps__caption {
+  min-height: 2.7em;
+}
+
+/* The last two states (English panel 3, steps 3 and 4) sat 9-14px past the
+   fold. Taken out of the stepper's own chrome rather than the space between
+   panels, which is breathing room the page needs. */
+.steps__dots {
+  margin-bottom: 0.7rem;
+}
+.cite__code {
+  max-height: 5.5rem;
+}
+.ident {
+  padding: 0.75rem 1rem;
+}
+.scars {
+  padding: 0.75rem 1rem;
+}
+.scar {
+  padding: 0.38rem 0;
+}
+
+/* ============================================================================
+   Panels 2 and 3: closing the three holes
+   Measured at 1440px — 200-317px of stretched empty box under the viewport,
+   a 384px gap between a caption and its own button, and 507px of blank column
+   beside the verdict. None of it was the reading measure's fault.
+   ========================================================================== */
+
+/* 1. The image column was stretched to its sibling's height and left empty.
+   It now ends where its content ends, and the viewport is taller than square
+   so the column reaches further down on its own. */
+.stage__image {
+  align-self: start;
+  display: grid;
+  gap: 0.65rem;
+}
+.stage__image .vp {
+  aspect-ratio: 1;
+}
+.stage__note {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* 2. A button 384px away from the sentence it belongs to. It keeps the row it
+   saved, but sits next to its caption instead of against the far margin. */
+
+
+/* 3. The verdict's tint now spans the column while the text keeps its measure,
+   so the payoff of each argument stops looking like a half-filled box. */
+.verdict__text {
+  max-width: 62ch;
+}
+
+/* ============================================================================
+   The step band
+   A panel had three different measures stacked left-aligned — head 768px,
+   stage 1072px, caption and verdict 595px — so its right edge was ragged and
+   the lower third was a 352x390px hole. Korean runs 41.7 characters per line
+   at 62ch, which is already the right measure, so the text does not widen:
+   the verdict moves into the width the caption leaves instead.
+   ========================================================================== */
+.stepbar {
+  display: grid;
+  margin-top: 1.15rem;
+  border-top: 2px solid var(--text);
+  column-gap: clamp(1.5rem, 3vw, 2.5rem);
+  align-items: start;
+}
+/* With a verdict present the caption gives up width so the verdict gets it:
+   at 62ch the verdict was squeezed into 437px and ran 296px tall, which put the
+   final step 197px past the fold. */
+.stepbar:has(.verdict) {
+  grid-template-columns: minmax(0, 46ch) minmax(0, 1fr);
+}
+/* The caption keeps its button on its own row even beside the verdict — it
+   gives up width, not a line. 470px is still 33 Hangul per line. */
+.stepbar:has(.verdict) .steps {
+  grid-template-columns: minmax(0, 1fr) max-content;
+  column-gap: 1.25rem;
+}
+.stepbar .verdict {
+  margin-top: 1.25rem;
+  max-width: none;
+}
+.stepbar .verdict__text {
+  max-width: none;
+}
+@media (max-width: 900px) {
+  .stepbar:has(.verdict) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stepbar .verdict {
+    max-width: 62ch;
+  }
+}
+
+/* One text measure per panel instead of three: the head now ends where the
+   caption and the verdict do, so the ragged right edge becomes one clean one
+   and the stage reads as a deliberate break-out rather than an outlier. */
+.panel__head {
+  max-width: none;
+}
+.panel__lead {
+  max-width: 62ch;
+}
+/* The title is display type, not prose — letting it run wide is what fills the
+   head band. Capping it only moved the hole from the bottom to the top. */
+.panel__title {
+  max-width: none;
+}
+
+/* Panel 1's note sits in the code column now, so that column stops being 202px
+   shorter than the viewer beside it and the panel loses the height the note
+   used to add below everything. */
+.split__code {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+.split__code .note {
+  margin-top: 0;
+}
+
+/* One line: the object was the only change, and the screen died. Why that
+   happens is panel 3's whole demonstration — it is not spent here. */
+.crash__fact {
+  margin: 0.8rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+.crash__fact code {
+  background: var(--primary-soft);
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+
+/* Panel 1 ran 137px past one screen. Its head and the page's section padding
+   were the two places to take it from without touching the exhibit itself. */
+.panel {
+  padding: 3rem 0;
+}
+.panel__head {
+  margin-bottom: 1.35rem;
+}
+.split {
+  gap: clamp(1.5rem, 3vw, 2rem);
+}
+.split__code {
+  gap: 0.85rem;
+}
+.split__viewer {
+  gap: 0.6rem;
+}
+/* The widget card holds one number; it does not need card-sized padding. */
+.split__viewer .card__body--center {
+  padding: 0.75rem 1.1rem;
+}
+
+/* A Korean particle after an inline <code> read as detached — the chip's 5.70px
+   right padding is wider than the 3.98px word space around it. */
+code {
+  padding-right: 0.1em;
+}
+.hero__sub code,
+.crash__fact code,
+.code .token.comment {
+  padding-right: 0.22em;
+}
+
+/* The two values, on the slider they add up to. Panel 2 step 5 claims a slider
+   is nothing but `value` and `max`; showing them under those names is what
+   makes the claim land. */
+.sliderline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+.sliderline__read {
+  display: flex;
+  gap: 0.9rem;
+  margin: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.sliderline__read > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.sliderline__read dt {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.sliderline__read dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+/* Narrow: the readout must not eat the drag target. */
+@media (max-width: 620px) {
+  .sliderline {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+}
+/* Panel 3 step 4 is the tallest state on the page: two sliders, the identity
+   table and the panel's verdict all at once. The card chrome gives back the
+   last of what it needs. */
+.ident {
+  padding: 0.7rem 0.9rem;
+}
+.ident__title {
+  margin-bottom: 0.65rem;
+}
+.lab {
+  gap: 0.8rem;
+  padding: 0.95rem 1.1rem;
+}
+.lab__foot {
+  padding-top: 0.7rem;
+}
+
+/* The slider the panel is building lives in the frame, the way a workstation
+   puts its scrub bar over the image — not in a card beside it. */
+.vp__control {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.6rem 0.7rem 0.6rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.82), transparent);
+}
+.vp__control .sliderline {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.3rem;
+}
+.vp__control .sliderline__read dt {
+  color: rgba(214, 232, 240, 0.7);
+}
+.vp__control .sliderline__read dd {
+  color: #eaf3f7;
+}
+.vp__control .slider {
+  accent-color: var(--brand-cyan);
+}
+.vp__gone {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--bad);
+}
+
+/* A component that threw does not leave its surface behind. The frame goes
+   dark and says so, instead of showing a healthy image under a red caption. */
+.vp__failed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: #07090d;
+  border: 1px solid var(--bad);
+  border-radius: inherit;
+}
+.vp__failed__text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--bad);
+}
+.crash {
+  border-color: var(--bad);
+}
+
+/* React's message, as React wrote it — the page does not translate it, and
+   does not print a Korean paraphrase beside it. */
+.crash__message {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  text-align: left;
+  color: var(--bad);
+}
+.crash__fact {
+  border-top-color: var(--border-strong);
+}
+
+/* The hook's tally sits with its title: renders on the left, objects created. */
+.ident__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ident__tally {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.ident--ok .ident__tally {
+  color: var(--ok);
+}
+
+/* The tally columns are numbers; they should not wrap to four lines. */
+.ident__table th:nth-child(2),
+.ident__table td:nth-child(2) {
+  width: 4rem;
+  white-space: nowrap;
+}
+
+
+/* ============================================================================
+   Round 6 — measured fixes
+   ========================================================================== */
+
+/* F1. At 390px panel 3 step 3 pushed the page 67px sideways and put the Copy
+   button and all three source links past the right edge. A grid item's default
+   min-width is auto, so the code block and the citation head refused to shrink
+   below their content and burst the column. */
+.focus,
+.focus__stack {
+  min-width: 0;
+}
+.scar__code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .scar__head {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+}
+
+/* F8. The crash headline measured 3.57:1 on the frame's near-black. The frame
+   is #07090d in both themes, so the colour is pinned to the frame rather than
+   inherited from the page theme: #ff8095 on #07090d is 8.32:1. */
+.vp__failed__text {
+  color: #ff8095;
+}
+
+/* F12. A citation the reader opened on purpose was showing 88 of its 191px
+   with no scrollbar, no fade and no hint. It is inside a <details>. */
+.cite__code {
+  max-height: none;
+}
+
+/* F7 (dark). The hero band is the first thing R2 asks for, and in dark theme it
+   measured 1.049:1 against the page — it was not there. The page moved up to
+   #121a26, and the band keeps a lit edge so it reads as a band and not as more
+   page. */
+:root[data-theme='dark'] .hero {
+  border-bottom-color: rgba(90, 204, 230, 0.22);
+}
+
+/* F13. At 390px all three outbound links vanished with nothing in their place.
+   GitHub is the one a reader goes looking for. */
+@media (max-width: 720px) {
+  .navbar__link[data-keep='1'] {
+    display: inline-flex;
+  }
+}
+
+/* F11. The mirrored top fade: the block scrolls to the marked line, so the
+   lines above it were hidden with nothing to say so. */
+.code[data-clip*='u'] .code__head {
+  position: relative;
+}
+.code[data-clip*='u'] .code__head::after {
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 2.2rem;
+  z-index: 1;
+  background: linear-gradient(to top, transparent, var(--surface-sunken) 88%);
+}
+
+/* Measured 3.91:1 after the page surface moved; the brand blue needs its darker
+   step to stay a legible numeral on its own 9% wash. */
+.rec__n {
+  color: var(--primary-hover);
+}
+
+/* F2/F10. Panel 1 grew 205px the moment its only interaction was used, and the
+   one line the argument rests on (the setState call) was cut off on the right.
+   The line now wraps in the source file itself, and the block scrolls at a
+   fixed height so switching tabs no longer changes the panel height. */
+.split__code .code pre {
+  /* Both tabs get the same 13 lines, so switching tab changes the code and
+     nothing else. The hand-rolled file is 36 lines and scrolls, which is the
+     claim the badge is making anyway. */
+  height: calc(13 * 0.8rem * 1.6 + 2rem);
+  max-height: none;
+}
+
+/* F9. The CT is the subject of the library and it was a 240px thumbnail next to
+   an 808px code column, on panels running 150-200px under the fold. The image
+   column takes some of that unused budget back. Square, because the frame and a
+   512x512 CT are both square — the earlier 3/4 frame just added dead black. */
+.stage:not(.stage--wide) {
+  grid-template-columns: 17rem minmax(0, 1fr);
+}
+/* Panel 2 has the most vertical slack of the four, so its CT takes the most. */
+.panel--alt .stage:not(.stage--wide) {
+  grid-template-columns: 20rem minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .stage:not(.stage--wide),
+  .panel--alt .stage:not(.stage--wide) {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+}
+/* Re-states the stacking rule this block would otherwise out-order. */
+@media (max-width: 760px) {
+  .stage:not(.stage--wide),
+  .panel--alt .stage:not(.stage--wide) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The re-render button sits with the table it drives. */
+.ident__act {
+  margin-top: 0.75rem;
+}
+
+/* Grid items default to min-width:auto, so the slider lab refused to shrink
+   below its content and burst the column at 390px (measured: .lab 407px inside
+   a 342px .focus). The stacking rules below 620px never got a chance to help. */
+.lab,
+.lab__row,
+.lab__name,
+.sliderline,
+.sliderline__read,
+.ident,
+.ident__table {
+  min-width: 0;
+}
+.sliderline input[type='range'],
+.slider {
+  min-width: 0;
+}
+.ident__table code {
+  overflow-wrap: anywhere;
+}
+
+/* The nth-child(2) nowrap rule above was written when column 2 was the render
+   count. With that column gone, it pinned the VALUE cell open and burst the
+   column at 390px (measured: .ident__table 376px inside a 342px .focus). The
+   value cell names itself now instead of being addressed by position. */
+.ident__table td.ident__val {
+  width: auto;
+  white-space: normal;
+}
+.ident__table td.ident__val code {
+  overflow-wrap: anywhere;
+}
+
+
+/* ============================================================================
+   The console
+   Panel 3's evidence is a log, so it looks like one: the call at the top, a
+   line per render, the object's identity printed beside the value, and the
+   whole run scrolling instead of three rows and a number to trust.
+   ========================================================================== */
+.log {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+.log__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+.log__call {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.log__count {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.log__body {
+  /* Fixed, not max: the card asks the reader to drag, and a console that grows
+     as it fills would push the step past the fold — the same way the old table
+     did. Empty and full are the same size. */
+  height: 11rem;
+  /* Both axes, like the console it is imitating: a long line scrolls sideways
+     rather than wrapping, so the card's height does not depend on how wide the
+     object printed this time. */
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.2rem 0;
+}
+.log__empty {
+  margin: 0;
+  padding: 1.1rem 0.8rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.log__line {
+  display: grid;
+  min-width: max-content;
+  /* max-content, not auto: an auto track absorbs the free width and pushes the
+     value away from the id it belongs to. */
+  grid-template-columns: 2.4rem 0.8rem max-content max-content;
+  justify-content: start;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding: 0.2rem 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.log__line + .log__line {
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+.log__n {
+  text-align: right;
+  color: var(--text-muted);
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+.log__arrow {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+/* The whole finding, in one column: same object, same number. */
+.log__id {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.log__id--ok {
+  color: var(--ok);
+}
+.log__id--bad {
+  color: var(--bad);
+}
+.log__value {
+  color: var(--text);
+  white-space: nowrap;
+}
+.log__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.8rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+.log__note {
+  margin: 0;
+  flex: 1 1 18rem;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.ident .log {
+  margin-top: 0.1rem;
+}
+
+.log {
+  min-width: 0;
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Code, Panel } from './ui';
+import { Code, Panel, useCopy } from './ui';
 import { CtViewport, LoadTrack, SliceSlider } from './CtViewport';
 import {
   BY_HAND_SOURCE,
@@ -12,34 +12,27 @@ import {
 const VIEWPORT_ID = 'demo-hero';
 
 export function Hero({ imageIds, theme }: { imageIds: string[]; theme: 'light' | 'dark' }) {
+  const t = useCopy().panel1;
   const [tab, setTab] = useState<'hook' | 'byHand'>('hook');
   const hook = tab === 'hook';
 
   return (
-    <Panel
-      eyebrow="패널 1"
-      title="훅 한 번 호출이 위젯 하나의 배선을 전부 대신합니다"
-      lead={
-        <>
-          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤하거나 슬라이더를 움직이면 슬라이스가
-          바뀌고, 옆의 위젯은 그 변화를 React 상태로 읽습니다. 탭을 바꾸면 <b>지금 화면에서
-          실제로 실행 중인 구현</b>이 바뀝니다.
-        </>
-      }
-    >
-      <div className="grid">
-        <div>
+    <Panel eyebrow={t.eyebrow} title={t.title} lead={t.lead}>
+      <div className="split">
+        <div className="split__viewer">
           <CtViewport viewportId={VIEWPORT_ID} imageIds={imageIds} />
           <SliceSlider viewportId={VIEWPORT_ID} />
           <LoadTrack viewportId={VIEWPORT_ID} />
-          <div className="card" style={{ marginTop: '1rem' }}>
+          <p className="hint">{t.viewportHint}</p>
+
+          <div className="card">
             <div className="card__head">
-              실행 중인 위젯
+              {t.running}
               <span className={`badge badge--${hook ? 'ok' : 'bad'}`}>
                 {hook ? 'useViewportState' : 'useEffect'}
               </span>
             </div>
-            <div className="card__body" style={{ textAlign: 'center' }}>
+            <div className="card__body card__body--center">
               {hook ? (
                 <SliceIndicator viewportId={VIEWPORT_ID} />
               ) : (
@@ -49,15 +42,10 @@ export function Hero({ imageIds, theme }: { imageIds: string[]; theme: 'light' |
           </div>
         </div>
 
-        <div>
+        <div className="split__code">
           <div className="tabs" role="tablist">
-            <button
-              className="tab"
-              role="tab"
-              aria-selected={hook}
-              onClick={() => setTab('hook')}
-            >
-              useViewportState <span>{lineCount(HOOK_SOURCE)}줄</span>
+            <button className="tab" role="tab" aria-selected={hook} onClick={() => setTab('hook')}>
+              {t.tabHook} <span>{t.lines(lineCount(HOOK_SOURCE))}</span>
             </button>
             <button
               className="tab"
@@ -65,7 +53,7 @@ export function Hero({ imageIds, theme }: { imageIds: string[]; theme: 'light' |
               aria-selected={!hook}
               onClick={() => setTab('byHand')}
             >
-              직접 배선 <span>{lineCount(BY_HAND_SOURCE)}줄</span>
+              {t.tabByHand} <span>{t.lines(lineCount(BY_HAND_SOURCE))}</span>
             </button>
           </div>
           <Code
@@ -73,15 +61,10 @@ export function Hero({ imageIds, theme }: { imageIds: string[]; theme: 'light' |
             title="demo/widgets.tsx"
             code={hook ? HOOK_SOURCE : BY_HAND_SOURCE}
           />
+          {/* Beside the code it is about, in the height the viewer column
+              already occupies — not stacked under the whole panel. */}
+          <div className="note">{t.note}</div>
         </div>
-      </div>
-
-      <div className="note">
-        <strong>오른쪽 코드는 지어낸 게 아닙니다.</strong>
-        이 페이지가 실제로 import해서 렌더링하는 파일(<code>demo/widgets.tsx</code>)에서 그대로
-        뽑아옵니다. 그리고 직접 배선한 쪽은 Cornerstone3D + React 프로젝트가 위젯마다 반복해서
-        쓰는 바로 그 패턴입니다 — 줄 수보다 나쁜 건, 저 {lineCount(BY_HAND_SOURCE)}줄을 다 쓰고도 버그가
-        남아있다는 점입니다. 다음 패널에서 보여드립니다. ↓
       </div>
     </Panel>
   );

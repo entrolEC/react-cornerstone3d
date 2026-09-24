@@ -16,3 +16,11 @@ yarn-error.log*
 /.claude
 /.idea
 demo/dist
+
+# local-only: Playwright measurement shots and tooling output
+/*.png
+/shots
+/.playwright-mcp
+/.agents
+/skills-lock.json
+/docs/demo.gif

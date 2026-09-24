@@ -1,5 +1,5 @@
-// The two versions of the same widget. Both are rendered live on the page and
-// both are shown, from this very file, in the code panels next to them.
+// The two versions of the same widget. Both render live on the page, and both
+// are shown in the code panels beside them, extracted from this very file.
 
 // #region hook
 import { useViewportState } from 'react-cornerstone3d';
@@ -26,13 +26,16 @@ export function SliceIndicatorByHand({ viewportId }: { viewportId: string }) {
 
   useEffect(() => {
     const enabled = getEnabledElementByViewportId(viewportId);
-    if (!enabled) return; // 뷰포트가 아직 없으면? 나중에 켜져도 영영 구독하지 않는다
+    if (!enabled) return; // no viewport yet? then never, even once it exists
     const viewport = enabled.viewport as Types.IStackViewport;
     const { element } = viewport;
 
     const update = () =>
-      setState({ slice: viewport.getSliceIndex(), total: viewport.getNumberOfSlices() });
-    update(); // 첫 렌더와 구독 사이의 틈 메우기 — 빼먹기 쉽다
+      setState({
+        slice: viewport.getSliceIndex(),
+        total: viewport.getNumberOfSlices(),
+      });
+    update(); // patch the gap between first render and subscription — easy to forget
 
     element.addEventListener(Enums.Events.CAMERA_MODIFIED, update);
     element.addEventListener(Enums.Events.VOI_MODIFIED, update);
@@ -54,7 +57,7 @@ export function SliceIndicatorByHand({ viewportId }: { viewportId: string }) {
 // #endregion imperative
 
 // Line counts come from this file itself, so a badge can never claim a number
-// the code no longer has. (Outside the regions, so it never shows in a panel.)
+// the code no longer has. Outside the regions, so it never shows in a panel.
 import source from './widgets.tsx?raw';
 import { region } from './ui';
 

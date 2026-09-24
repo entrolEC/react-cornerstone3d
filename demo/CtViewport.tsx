@@ -1,6 +1,6 @@
 import { Enums, getEnabledElementByViewportId, type Types } from '@cornerstonejs/core';
 import { CornerstoneViewport, useImageLoadStates, useViewportState } from 'react-cornerstone3d';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { renderingEngineId } from './cornerstone';
 
 const stackOf = (viewportId: string) =>
@@ -17,10 +17,16 @@ export function CtViewport({
   viewportId,
   imageIds,
   showOverlay = true,
+  control,
+  failed,
 }: {
   viewportId: string;
   imageIds: string[];
   showOverlay?: boolean;
+  /** Sits inside the frame, the way a workstation puts its scrub bar. */
+  control?: ReactNode;
+  /** Covers the whole frame. A component that threw takes its surface with it. */
+  failed?: ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -63,8 +69,9 @@ export function CtViewport({
         renderingEngineId={renderingEngineId}
         style={{ width: '100%', height: '100%' }}
       />
-      {showOverlay && <div className="vp__hint">스크롤로 슬라이스 이동</div>}
       {showOverlay && <Overlay viewportId={viewportId} />}
+      {control && !failed && <div className="vp__control">{control}</div>}
+      {failed && <div className="vp__failed">{failed}</div>}
     </div>
   );
 }
@@ -135,4 +142,17 @@ export function LoadTrack({ viewportId }: { viewportId: string }) {
       </div>
     </div>
   );
+}
+
+/** Pages through slices on a loop, so a readout can be seen following along. */
+export function useAutoScroll(viewportId: string, active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => {
+      const viewport = stackOf(viewportId);
+      if (!viewport) return;
+      void viewport.setImageIdIndex((viewport.getSliceIndex() + 1) % viewport.getNumberOfSlices());
+    }, 700);
+    return () => clearInterval(id);
+  }, [viewportId, active]);
 }
