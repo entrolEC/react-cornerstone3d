@@ -19,8 +19,8 @@ jobs:
     strategy:
       fail-fast: false
       # Two points only: the peerDependencies floor and the newest 5.x.
-      # Every job installs Chromium, so a middle version would double the
-      # cost without telling us anything the two ends do not.
+      # Every job installs Chromium, so a third version adds half again to
+      # the cost without telling us anything the two ends do not.
       matrix:
         cornerstone: ['5.0.0', '5.x']
     steps:
@@ -50,7 +50,7 @@ jobs:
             "@cornerstonejs/core@$V" \
             "@cornerstonejs/metadata@$V" \
             "@cornerstonejs/dicom-image-loader@$V"
-          node -p "'installed @cornerstonejs/core ' + require('@cornerstonejs/core/package.json').version" || true
+          node -p "'installed @cornerstonejs/core ' + require('@cornerstonejs/core/package.json').version"
 
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
