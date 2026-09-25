@@ -69,7 +69,7 @@ Without that adapter, every React viewer hand-rolls the same event plumbing, and
 - **Tearing** under React 18+ concurrent rendering — two components showing two different slice numbers on one screen
 - **Subscription leaks** under StrictMode double-mounting
 - **Mount-order races** when UI mounts before a viewport is enabled
-- **Infinite loops or deep-compare hacks**, because Cornerstone3D getters return a fresh object on every call — a naive `getSnapshot` never stabilizes (OHIF papers over this with per-hook `JSON.stringify` diffing)
+- **Infinite loops or deep-compare hacks**, because Cornerstone3D getters return a fresh object on every call — a naive `getSnapshot` never stabilizes. OHIF sidesteps `getSnapshot` by pushing events into `useState`, then quiets the resulting re-renders hook by hook with ad-hoc guards: a `JSON.stringify` compare in `useMeasurements`, scalar `===` checks in the scrollbar and VOI hooks, a bare `Date.now()` counter in the orientation markers (OHIF Viewers `master` @ `9753879`)
 
 This library solves that bug layer once, centrally. UI components become pure functions of engine state.
 

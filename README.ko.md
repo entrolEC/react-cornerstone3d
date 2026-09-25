@@ -67,7 +67,7 @@ Cornerstone3D가 잘못 만들어진 게 아닙니다 — **엔진**이지 스�
 - **Tearing** — React 18+ concurrent 렌더링에서 한 화면의 두 컴포넌트가 서로 다른 슬라이스 번호를 표시
 - **구독 누수** — StrictMode 이중 마운트에서
 - **마운트 순서 경합** — 뷰포트가 enable되기 전에 UI가 먼저 마운트될 때
-- **무한 루프 또는 깊은 비교 땜질** — Cornerstone3D getter는 매 호출 새 객체를 반환하므로 naive한 `getSnapshot`은 절대 안정되지 않음 (OHIF는 훅마다 `JSON.stringify` 비교로 덮어둠)
+- **무한 루프 또는 깊은 비교 땜질** — Cornerstone3D getter는 매 호출 새 객체를 반환하므로 naive한 `getSnapshot`은 절대 안정되지 않음. OHIF는 `getSnapshot`을 쓰지 않고 이벤트를 `useState`로 밀어 넣은 뒤, 그로 인한 리렌더를 훅마다 제각각의 가드로 막음: `useMeasurements`의 `JSON.stringify` 비교, 스크롤바·VOI 훅의 스칼라 `===` 비교, orientation marker의 `Date.now()` 카운터 (OHIF Viewers `master` @ `9753879`)
 
 이 라이브러리는 그 버그 계층을 중앙에서 한 번에 해결합니다. UI 컴포넌트는 엔진 상태의 순수 함수가 됩니다.
 
