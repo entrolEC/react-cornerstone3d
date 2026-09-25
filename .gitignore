@@ -16,3 +16,6 @@ yarn-error.log*
 /.claude
 /.idea
 demo/dist
+
+# local-only: Playwright MCP console logs
+/.playwright-mcp
