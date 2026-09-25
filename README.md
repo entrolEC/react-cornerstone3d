@@ -1,6 +1,6 @@
 # react-cornerstone3d
 
-[한국어](./README.ko.md) · **[Live demo →](https://entrolec.github.io/react-cornerstone3d/)**
+[한국어](./README.ko.md) · [![CI](https://github.com/entrolEC/react-cornerstone3d/actions/workflows/ci.yml/badge.svg)](https://github.com/entrolEC/react-cornerstone3d/actions/workflows/ci.yml) · **[Live demo →](https://entrolec.github.io/react-cornerstone3d/)**
 
 React bindings that expose [Cornerstone3D](https://www.cornerstonejs.org/)'s live engine state to React components — tearing-free, via `useSyncExternalStore`.
 

@@ -1,6 +1,6 @@
 # react-cornerstone3d
 
-[English](./README.md) · **[라이브 데모 →](https://entrolec.github.io/react-cornerstone3d/)**
+[English](./README.md) · [![CI](https://github.com/entrolEC/react-cornerstone3d/actions/workflows/ci.yml/badge.svg)](https://github.com/entrolEC/react-cornerstone3d/actions/workflows/ci.yml) · **[라이브 데모 →](https://entrolec.github.io/react-cornerstone3d/)**
 
 [Cornerstone3D](https://www.cornerstonejs.org/)의 살아있는 엔진 상태를 React 컴포넌트에 노출하는 React 바인딩 — `useSyncExternalStore` 기반, tearing 없음.
 
