@@ -61,6 +61,62 @@ export function CtViewport({
     return () => element.removeEventListener('wheel', onWheel);
   }, [viewportId]);
 
+  // Window/level, the way a workstation does it: drag across for width, down
+  // for centre. Hand-rolled with setProperties rather than pulling in
+  // @cornerstonejs/tools — a write here has to stay a plain Cornerstone3D call
+  // (ADR 0001), and the whole page is an argument about how its effect comes
+  // back. It also gives the reader a second value to move, so a log or a
+  // render counter is not waiting on the slice alone.
+  useEffect(() => {
+    const element = wrapRef.current;
+    if (!element) return;
+
+    let from: { x: number; y: number; width: number; centre: number } | undefined;
+
+    const down = (event: PointerEvent) => {
+      // The slider and the buttons live inside this frame; a drag on them is
+      // theirs.
+      if ((event.target as HTMLElement).closest('input, button, a, summary')) return;
+      const voi = stackOf(viewportId)?.getProperties().voiRange;
+      if (!voi) return;
+      from = {
+        x: event.clientX,
+        y: event.clientY,
+        width: voi.upper - voi.lower,
+        centre: (voi.upper + voi.lower) / 2,
+      };
+      element.setPointerCapture(event.pointerId);
+    };
+
+    const move = (event: PointerEvent) => {
+      if (!from) return;
+      const viewport = stackOf(viewportId);
+      if (!viewport) return;
+      // 4 HU per pixel: a drag across the frame covers roughly the range a
+      // chest window needs, and one pixel is still a visible step.
+      const width = Math.max(1, from.width + (event.clientX - from.x) * 4);
+      const centre = from.centre + (event.clientY - from.y) * 4;
+      viewport.setProperties({ voiRange: { lower: centre - width / 2, upper: centre + width / 2 } });
+      viewport.render();
+    };
+
+    const up = (event: PointerEvent) => {
+      from = undefined;
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+    };
+
+    element.addEventListener('pointerdown', down);
+    element.addEventListener('pointermove', move);
+    element.addEventListener('pointerup', up);
+    element.addEventListener('pointercancel', up);
+    return () => {
+      element.removeEventListener('pointerdown', down);
+      element.removeEventListener('pointermove', move);
+      element.removeEventListener('pointerup', up);
+      element.removeEventListener('pointercancel', up);
+    };
+  }, [viewportId]);
+
   return (
     <div className="vp" ref={wrapRef}>
       <CornerstoneViewport

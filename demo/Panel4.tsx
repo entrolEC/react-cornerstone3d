@@ -38,7 +38,7 @@ export function Panel4({ imageIds, theme: _theme }: { imageIds: string[]; theme:
             {step === 0 ? (
               <HookDragLog viewportId={VIEWPORT_ID} />
             ) : (
-              <HookHoldLog viewportId={VIEWPORT_ID} />
+              <EngineShake viewportId={VIEWPORT_ID} />
             )}
           </div>
         </div>
@@ -67,7 +67,7 @@ export function Panel4({ imageIds, theme: _theme }: { imageIds: string[]; theme:
 }
 
 /** The identity of every object the hook hands this component, as it happens. */
-function useHookLog(viewportId: string, mode: 'drag' | 'hold') {
+function useHookLog(viewportId: string) {
   const state = useViewportState(viewportId);
   const lines = useRef<LogLine[]>([]);
   const ids = useRef(new Map<object, number>());
@@ -75,7 +75,6 @@ function useHookLog(viewportId: string, mode: 'drag' | 'hold') {
   // app asked for. Logging it would log the logger, and printing on every
   // render is the infinite loop this panel is about.
   const painting = useRef(false);
-  const armed = useRef(mode === 'drag');
   const [, bump] = useState(0);
 
   useEffect(() => {
@@ -83,8 +82,7 @@ function useHookLog(viewportId: string, mode: 'drag' | 'hold') {
       painting.current = false;
       return;
     }
-    if (!state || !armed.current) return;
-    if (mode === 'hold') armed.current = false;
+    if (!state) return;
     let id = ids.current.get(state);
     if (id === undefined) {
       id = ids.current.size + 1;
@@ -95,20 +93,13 @@ function useHookLog(viewportId: string, mode: 'drag' | 'hold') {
     bump((n) => n + 1);
   });
 
-  return {
-    lines: lines.current,
-    objects: ids.current.size,
-    record: () => {
-      armed.current = true;
-      bump((n) => n + 1);
-    },
-  };
+  return { lines: lines.current, objects: ids.current.size };
 }
 
 /** Step 4: the value changes, so the object does. */
 function HookDragLog({ viewportId }: { viewportId: string }) {
   const t = useCopy().panel4.identity;
-  const { lines, objects } = useHookLog(viewportId, 'drag');
+  const { lines, objects } = useHookLog(viewportId);
 
   return (
     <div className="ident ident--ok">
@@ -128,27 +119,141 @@ function HookDragLog({ viewportId }: { viewportId: string }) {
   );
 }
 
-/** Step 5: the value does not change, so the object does not either. */
-function HookHoldLog({ viewportId }: { viewportId: string }) {
-  const t = useCopy().panel4.identity;
-  const { lines, objects, record } = useHookLog(viewportId, 'hold');
-
+/**
+ * Step 2: the Engine fires, the values do not move, and React is never asked.
+ *
+ * `setCamera(viewport.getCamera())` dispatches CAMERA_MODIFIED — one of the
+ * five events the Binding listens to — while every value in the Snapshot stays
+ * exactly where it was. Measured: three presses, three CAMERA_MODIFIED, slice
+ * and voiRange and camera position all identical afterwards. (The other two
+ * obvious nudges are silent: CS3D fires nothing for setProperties with the
+ * same voiRange, or setImageIdIndex with the current index.)
+ *
+ * This used to be a log with a "record from here" button that armed once and
+ * disarmed on the first line, so the card sat still no matter what the reader
+ * did — including moving the slider, which is the first thing anyone tries.
+ * Nothing was being shown. What makes the absence visible is a number that
+ * climbs beside one that does not.
+ */
+function EngineShake({ viewportId }: { viewportId: string }) {
+  const t = useCopy().panel4.shake;
   return (
-    <div className="ident ident--ok">
-      <p className="ident__title">{t.holdTitle}</p>
-      <LogView
-        call={`console.log(useViewportState('${viewportId}'))`}
-        lines={lines}
-        tone="ok"
-        empty={t.empty}
-        count={t.objects(objects)}
-        foot={
-          <button className="button button--primary button--sm" onClick={record}>
-            {t.hold}
-          </button>
-        }
-      />
-      <p className="ident__verdict">{t.hookVerdict}</p>
+    <div className="shake">
+      <div className="shake__row">
+        <button
+          className="button button--primary button--sm"
+          onClick={() => {
+            const viewport = getEnabledElementByViewportId(viewportId)?.viewport as
+              | Types.IViewport
+              | undefined;
+            if (!viewport) return;
+            // The same camera, handed straight back. A fresh object with
+            // identical values — which is the Engine's whole habit.
+            viewport.setCamera(viewport.getCamera());
+            viewport.render();
+          }}
+        >
+          {t.nudge}
+        </button>
+        <p className="shake__hint">{t.hint}</p>
+      </div>
+      <div className="shake__meters">
+        {/* Each counter is its own component. Counting engine events
+            re-renders whatever holds that number, and if the two shared a
+            component the event count would drive the render count it is being
+            compared against. */}
+        <EngineCount viewportId={viewportId} />
+        <ReadCount viewportId={viewportId} />
+      </div>
+      <p className="shake__verdict">{t.verdict}</p>
+    </div>
+  );
+}
+
+/**
+ * Both counters start measuring once the viewport has settled. Opening the
+ * step costs a rebuild or two of its own — the camera reset after setStack —
+ * and those are real notifications, but they are not what the reader came to
+ * see. Counting from the same moment on both sides is what makes the pair
+ * comparable at all.
+ */
+const SETTLE_MS = 800;
+
+function useSettled() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), SETTLE_MS);
+    return () => clearTimeout(id);
+  }, []);
+  return ready;
+}
+
+/** What the Engine emitted — counted live, not quoted. */
+function EngineCount({ viewportId }: { viewportId: string }) {
+  const t = useCopy().panel4.shake;
+  const [events, setEvents] = useState(0);
+  const ready = useSettled();
+
+  useEffect(() => {
+    if (!ready) return;
+    const element = getEnabledElementByViewportId(viewportId)?.viewport?.element;
+    if (!element) return;
+    const count = () => setEvents((n) => n + 1);
+    for (const type of ENGINE_EVENTS) element.addEventListener(type, count);
+    return () => {
+      for (const type of ENGINE_EVENTS) element.removeEventListener(type, count);
+    };
+  }, [viewportId, ready]);
+
+  return <Tally label={t.engine} value={events} tone="bad" />;
+}
+
+/**
+ * What reached React. Not a render count: StrictMode doubles those and mounting
+ * costs a couple of its own, so a card that opens on "4" makes "it did not
+ * move" something the reader has to take on trust. Counting distinct Snapshots
+ * instead starts at zero by construction — the first one is the baseline, and
+ * every later one is a time the hook told React something changed.
+ */
+function ReadCount({ viewportId }: { viewportId: string }) {
+  const t = useCopy().panel4.shake;
+  const state = useViewportState(viewportId);
+  const ready = useSettled();
+  const seen = useRef(new Map<object, number>());
+  // Whatever arrived while the viewport was settling is the baseline, not a
+  // finding. The Snapshot on screen when the window opens becomes #1.
+  if (!ready) seen.current = new Map();
+  if (state && !seen.current.has(state)) seen.current.set(state, seen.current.size + 1);
+
+  const told = Math.max(0, seen.current.size - 1);
+  return (
+    <Tally
+      label={t.renders}
+      value={told}
+      tone="ok"
+      suffix={state ? ` · #${seen.current.get(state)}` : ''}
+    />
+  );
+}
+
+function Tally({
+  label,
+  value,
+  tone,
+  suffix,
+}: {
+  label: string;
+  value: number;
+  tone: 'ok' | 'bad';
+  suffix?: string;
+}) {
+  return (
+    <div className={`tally tally--${tone}`}>
+      <span className="tally__value">
+        {value}
+        {suffix && <i>{suffix}</i>}
+      </span>
+      <span className="tally__label">{label}</span>
     </div>
   );
 }

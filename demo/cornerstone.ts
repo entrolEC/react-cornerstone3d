@@ -58,3 +58,4 @@ export function setup(): Promise<string[]> {
   })();
   return pending;
 }
+

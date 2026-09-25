@@ -112,12 +112,17 @@ export interface Copy {
     holdNote: ReactNode;
     identity: {
       hookTitle: string;
-      holdTitle: string;
-      hold: string;
       objects: (n: number) => string;
       empty: string;
       engineNote: (events: number) => ReactNode;
       hookVerdict: ReactNode;
+    };
+    shake: {
+      nudge: string;
+      hint: ReactNode;
+      engine: string;
+      renders: string;
+      verdict: ReactNode;
     };
     cost: {
       withSelector: string;
@@ -214,7 +219,7 @@ export const COPY: Record<Lang, Copy> = {
         provider: 'Provider 0개',
         providerLabel: '앱 구조를 바꾸지 않습니다',
       },
-      caption: '진짜 Cornerstone3D 엔진입니다. 옆의 숫자는 훅이 읽고 있습니다.',
+      caption: '진짜 Cornerstone3D 엔진입니다. 드래그하면 W/L이 바뀌고, 옆의 숫자는 훅이 읽고 있습니다.',
       waiting: '읽는 중',
       demo: '데모 보기',
       github: 'GitHub',
@@ -226,9 +231,10 @@ export const COPY: Record<Lang, Copy> = {
       title: '슬라이더 하나의 배선이 24줄에서 2줄이 됩니다',
       lead: (
         <>
-          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤하거나 슬라이더를 끌면 슬라이스가
-          바뀝니다. 탭을 바꾸면 <b>지금 화면 아래에서 실제로 돌고 있는 슬라이더</b>가 바뀝니다 —
-          코드 패널만 바뀌는 게 아닙니다.
+          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤하거나 슬라이더를 끌면 슬라이스가,{' '}
+          <b>영상을 드래그하면 W/L</b>이 바뀝니다. 탭을 바꾸면{' '}
+          <b>지금 화면 아래에서 실제로 돌고 있는 슬라이더</b>가 바뀝니다 — 코드 패널만 바뀌는 게
+          아닙니다.
         </>
       ),
       tabHook: 'useViewportState',
@@ -415,8 +421,8 @@ export const COPY: Record<Lang, Copy> = {
           바뀝니다 — 여기까지는 패널 3과 같아 보입니다.
         </>,
         <>
-          <b>이번엔 가만히 두고.</b> 「지금부터 기록」을 누르고 아무것도 만지지 마세요.
-          엔진은 계속 이벤트를 내는데 <b>객체는 하나</b>입니다. 패널 3에서는 여기서{' '}
+          <b>이번엔 값을 안 바꾸고 엔진만 흔들어 봅시다.</b> 버튼을 여러 번 눌러 보세요.
+          엔진 이벤트는 계속 올라가는데 <b>훅이 알린 횟수는 0</b>입니다. 패널 3에서는 여기서{' '}
           <code>#1 #2 #3</code>이 나왔습니다.
         </>,
         <>
@@ -425,7 +431,7 @@ export const COPY: Record<Lang, Copy> = {
         </>,
       ],
       dragNote: <>영상을 스크롤하거나 끌어 보세요. 옆의 로그가 실시간으로 쌓입니다.</>,
-      holdNote: <>손대지 마세요. 엔진은 계속 이벤트를 냅니다.</>,
+      holdNote: <>값은 그대로입니다. 엔진만 이벤트를 냅니다.</>,
       verdict: (
         <>
           패널 3의 <code>#1 #2 #3</code>과 위 <code>#1 #1 #1</code>이 같은 표입니다. 차이는
@@ -438,8 +444,6 @@ export const COPY: Record<Lang, Copy> = {
       ),
       identity: {
         hookTitle: '옮기는 중 — 값이 바뀌니 객체도 새것입니다',
-        holdTitle: '가만히 둘 때 — 엔진은 계속 떠드는데 객체는 그대로입니다',
-        hold: '지금부터 기록',
         objects: (n) => `서로 다른 객체 ${n}개`,
         empty: '아직 없음',
         engineNote: (events) => (
@@ -451,6 +455,29 @@ export const COPY: Record<Lang, Copy> = {
           <>
             <b>엔진은 조용하지 않습니다.</b> 한 번의 슬라이스 이동이 이벤트 여러 개입니다.
             그런데 컴포넌트가 받는 객체는 <b>값이 실제로 달라졌을 때만</b> 새것입니다.
+          </>
+        ),
+      },
+      shake: {
+        nudge: '엔진 흔들기',
+        hint: (
+          <>
+            누를 때마다 <code>setCamera(viewport.getCamera())</code> — 방금 읽은 카메라를 그대로
+            다시 넣습니다. 엔진은 <code>CAMERA_MODIFIED</code>를 발사하지만 <b>값은 한 군데도
+            달라지지 않습니다.</b>
+          </>
+        ),
+        engine: '엔진이 낸 이벤트',
+        renders: '훅이 React에 알린 횟수',
+        verdict: (
+          <>
+            왼쪽 숫자만 올라갑니다. <b>리렌더는 일어나지도 않았습니다</b> — Binding이 다시 만든
+            Snapshot을 이전 것과 <b>값으로</b> 비교했고, 같아서 아무에게도 알리지 않았기
+            때문입니다. 엔진 getter는 부를 때마다 새 객체를 주지만, 그게 곧 새 상태는
+            아닙니다.
+            <br />
+            슬라이더를 움직이거나 <b>영상을 드래그해 W/L을 바꿔</b> 보세요 — 그때는 값이 실제로
+            달라지므로 오른쪽 숫자도 같이 올라갑니다.
           </>
         ),
       },
@@ -770,7 +797,7 @@ if (state?.kind === 'stack') { /* ... */ }`,
         provider: 'No Provider',
         providerLabel: 'your app structure is untouched',
       },
-      caption: 'A real Cornerstone3D engine. The numbers beside it are the hook reading.',
+      caption: 'A real Cornerstone3D engine. Drag it for window/level — the numbers beside it are the hook reading.',
       waiting: 'reading',
       demo: 'See the demo',
       github: 'GitHub',
@@ -782,9 +809,9 @@ if (state?.kind === 'stack') { /* ... */ }`,
       title: 'One slider: 24 lines of wiring become 2',
       lead: (
         <>
-          The CT below is a real Cornerstone3D engine. Scroll it, or drag the slider, and the
-          slice changes. Switching tabs switches <b>the slider actually running under the
-          image</b> — not just the listing beside it.
+          The CT below is a real Cornerstone3D engine. Scroll it or drag the slider to change
+          the slice; <b>drag the image itself for window/level</b>. Switching tabs switches{' '}
+          <b>the slider actually running under the image</b> — not just the listing beside it.
         </>
       ),
       tabHook: 'useViewportState',
@@ -975,9 +1002,9 @@ if (state?.kind === 'stack') { /* ... */ }`,
           changes, so the object does — so far this looks like panel 3.
         </>,
         <>
-          <b>Now touch nothing.</b> Press "record from here" and leave it alone. The Engine keeps
-          firing events and <b>there is one object.</b> In panel 3 this is where{' '}
-          <code>#1 #2 #3</code> came from.
+          <b>Now shake the Engine without changing a value.</b> Press the button a few times.
+          The event count climbs and <b>the hook never tells React anything.</b> In panel 3 this is
+          where <code>#1 #2 #3</code> came from.
         </>,
         <>
           <b>And the selector.</b> Read the whole Snapshot and a camera move re-renders you. Read
@@ -985,7 +1012,7 @@ if (state?.kind === 'stack') { /* ... */ }`,
         </>,
       ],
       dragNote: <>Scroll or drag the image. The log beside it fills as it happens.</>,
-      holdNote: <>Hands off. The Engine keeps firing events.</>,
+      holdNote: <>The values do not move. Only the Engine does.</>,
       verdict: (
         <>
           Panel 3's <code>#1 #2 #3</code> and the <code>#1 #1 #1</code> above are the same table.
@@ -998,8 +1025,6 @@ if (state?.kind === 'stack') { /* ... */ }`,
       ),
       identity: {
         hookTitle: 'While it moves — the value changes, so the object does',
-        holdTitle: 'While nothing is touched — the Engine keeps talking, the object does not change',
-        hold: 'record from here',
         objects: (n) => `${n} distinct objects`,
         empty: 'nothing yet',
         engineNote: (events) => (
@@ -1012,6 +1037,29 @@ if (state?.kind === 'stack') { /* ... */ }`,
           <>
             <b>The Engine is not quiet.</b> One slice change is a burst of events. The object the
             component receives is new <b>only when the values actually differ.</b>
+          </>
+        ),
+      },
+      shake: {
+        nudge: 'shake the Engine',
+        hint: (
+          <>
+            Each press is <code>setCamera(viewport.getCamera())</code> — the camera it just read,
+            handed straight back. The Engine fires <code>CAMERA_MODIFIED</code> and{' '}
+            <b>not one value is different.</b>
+          </>
+        ),
+        engine: 'events the Engine fired',
+        renders: 'times the hook told React',
+        verdict: (
+          <>
+            Only the left number moves. <b>The re-render never happened</b> — the Binding compared
+            its rebuilt Snapshot with the previous one <b>by value</b>, found them the same, and
+            told nobody. The Engine's getters hand back a fresh object every call; a fresh object
+            is not new state.
+            <br />
+            Move the slider, or <b>drag the image to change window/level</b> — those do change a
+            value, and the right-hand numbers move with them.
           </>
         ),
       },

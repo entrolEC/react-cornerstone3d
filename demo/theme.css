@@ -2497,3 +2497,83 @@ code {
   line-height: 1.7;
   color: var(--text-muted);
 }
+
+/* Window/level is a drag on the image, so say so with the cursor. The controls
+   inside the frame keep their own. */
+.vp {
+  cursor: grab;
+  touch-action: none;
+}
+.vp:active {
+  cursor: grabbing;
+}
+.vp__control,
+.vp__control * {
+  cursor: auto;
+}
+
+/* ---------- panel 4: the Engine moves, React does not ---------- */
+/* Two numbers side by side, one climbing and one frozen. The absence of a
+   re-render is the finding, and an absence needs something moving next to it
+   to be visible at all. */
+.shake {
+  display: grid;
+  gap: 1.1rem;
+}
+.shake__row {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+.shake__hint,
+.shake__verdict {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.shake__meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.tally {
+  flex: 1 1 8rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.tally__value {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.7rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--text);
+}
+.tally__value i {
+  font-size: 0.9rem;
+  font-style: normal;
+  color: var(--text-muted);
+}
+.tally__label {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.tally--bad {
+  border-color: color-mix(in srgb, var(--bad) 40%, var(--border));
+}
+.tally--bad .tally__value {
+  color: var(--bad);
+}
+.tally--ok {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+}
+.tally--ok .tally__value {
+  color: var(--ok);
+}
