@@ -178,7 +178,15 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 캐시 총량(`useCacheState`), Volume `volumeIds` | 로드맵 |
 | 어노테이션 / 툴 / 세그멘테이션 상태 | 로드맵 |
 
+**1.0 기준** (0.x 동안 바뀔 수 있음):
+
+- Generic Viewport(`PLANAR_NEXT`) 지원
+- `@cornerstonejs/core` 매트릭스 CI 통과
+- Image Load State가 부재뿐 아니라 실패 상태도 보고
+
 **요구사항:** React 18+, `@cornerstonejs/core` 5.x. ESM만 제공합니다.
+
+**안정성:** 메이저 버전이 0인 동안 breaking change는 minor 릴리스(0.x → 0.y)에서만 일어나고 [CHANGELOG.md](./CHANGELOG.md)에 기록됩니다. patch 릴리스는 그대로 받아도 안전합니다. 정확한 버전 또는 tilde 범위(`~0.4.0`)로 고정하기를 권장합니다. caret(`^0.4.0`)도 0.x에서는 patch만 허용하지만, tilde가 의도를 분명히 드러냅니다.
 
 ## 범위 밖
 
