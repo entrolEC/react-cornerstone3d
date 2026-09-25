@@ -186,7 +186,7 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 
 **요구사항:** React 18+, `@cornerstonejs/core` 5.x. ESM만 제공합니다.
 
-**안정성:** 메이저 버전이 0인 동안 breaking change는 minor 릴리스(0.x → 0.y)에서만 일어나고 [CHANGELOG.md](./CHANGELOG.md)에 기록됩니다. patch 릴리스는 그대로 받아도 안전합니다. 정확한 버전 또는 tilde 범위(`~0.4.0`)로 고정하기를 권장합니다. caret(`^0.4.0`)도 0.x에서는 patch만 허용하지만, tilde가 의도를 분명히 드러냅니다.
+**안정성:** 메이저 버전이 0인 동안 breaking change는 minor 릴리스(0.x → 0.y)에서만 일어나고 [CHANGELOG.md](./CHANGELOG.md)에 기록됩니다. patch 릴리스는 그대로 받아도 안전합니다. 정확한 버전 또는 tilde 범위(`~0.4.0`)로 고정하기를 권장합니다.
 
 ## 범위 밖
 

@@ -188,7 +188,7 @@ v0.4 — sync only. The library's sole responsibility is state synchronization.
 
 **Requires:** React 18+, `@cornerstonejs/core` 5.x. Ships ESM only.
 
-**Stability:** while the major version is 0, a breaking change lands only in a minor release (0.x → 0.y) and is recorded in [CHANGELOG.md](./CHANGELOG.md). Patch releases are safe to take. Pin the exact version or a tilde range (`~0.4.0`); caret (`^0.4.0`) covers only patches on 0.x anyway, but a tilde says what you mean.
+**Stability:** while the major version is 0, a breaking change lands only in a minor release (0.x → 0.y) and is recorded in [CHANGELOG.md](./CHANGELOG.md). Patch releases are safe to take. Pin the exact version or a tilde range (`~0.4.0`).
 
 ## Out of scope
 
