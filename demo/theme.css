@@ -446,25 +446,6 @@ code {
   border-radius: var(--radius);
   overflow: hidden;
 }
-.card__head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.85rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-sunken);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-.card__body {
-  padding: 1.1rem;
-}
-.card__body--center {
-  flex: 1;
-  display: grid;
-  place-items: center;
-}
 
 .badge {
   font-size: 0.68rem;
@@ -483,22 +464,6 @@ code {
 :root[data-theme='dark'] .badge {
   color: #16181a;
 }
-/* --ok and --bad are light fills on dark paper, so their labels go dark. The
-   plain badge is not a fill — it keeps body-text colour, and needs the same
-   specificity as the rule above to say so. */
-
-/* ---------- load track (one cell per slice) ---------- */
-.track { margin-top: 0.35rem; }
-.track__cells {
-  display: flex; gap: 1px; height: 7px;
-  border-radius: 4px; overflow: hidden;
-  background: var(--surface-sunken);
-}
-.track__cell { flex: 1; background: var(--border); transition: background 120ms; }
-.track__cell--loaded { background: var(--primary); opacity: 0.55; }
-.track__cell--current { opacity: 1; box-shadow: inset 0 0 0 1px var(--text); }
-.track__caption { margin-top: 0.35rem; font-size: 0.78rem; color: var(--text-muted); }
-.track__caption code { font-size: 0.78rem; }
 
 /* ---------- indicator ---------- */
 .ind {
@@ -508,10 +473,6 @@ code {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   color: var(--text);
-}
-.ind--small {
-  font-size: 1rem;
-  line-height: 1.7;
 }
 .ind--empty {
   font-size: 1.1rem;
@@ -810,18 +771,6 @@ code {
   max-height: calc(12 * 0.8rem * 1.6 + 2rem);
 }
 
-.probe {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 1rem 1.1rem;
-}
-.probe__title {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 0.85rem;
-}
-
 .rules {
   margin: 0;
   padding-left: 1.4rem;
@@ -963,12 +912,6 @@ code {
 
 
 /* ============ panel 3: the loop, traced ============ */
-/* Two booleans never said what React does with them; this shows the reads{
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 1rem 1.1rem;
-}
 
 /* ============ panel 3: same value, different object ============ */
 /* Printing the values alone reads as "they are the same", which is the trap.
@@ -991,12 +934,6 @@ code {
   font-size: 0.9rem;
   line-height: 1.7;
 }
-.ident__aside {
-  margin: 0.7rem 0 0;
-  font-size: 0.82rem;
-  line-height: 1.65;
-  color: var(--text-muted);
-}
 /* Panel 2: the reader presses the button that breaks it. */
 .try {
   display: grid;
@@ -1010,15 +947,6 @@ code {
   border-radius: var(--radius);
   background: var(--surface);
   padding: 1rem 1.1rem;
-}
-.scars__title {
-  margin: 0 0 0.9rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-/* A detour into another codebase: no viewport, full width. */
-.stage--wide {
-  grid-template-columns: minmax(0, 1fr);
 }
 .scar {
   display: grid;
@@ -1625,10 +1553,7 @@ code {
 /* R4: a result card is not a code block — it should be as wide as its content
    needs, not as wide as the column allows. A two-digit slice number sitting in
    775px was the clearest case. Code keeps the full width. */
-.focus > .card,
-.focus__stack > .card,
-.focus > .probe,
-.focus__stack > .probe {
+.focus > .card{
   max-width: 34rem;
 }
 
@@ -1702,17 +1627,8 @@ code {
 }
 
 /* Regression 4: cap the card that shows a bare result, not every card — a
-   slider needs the width, a two-digit number does not. */
-.focus > .card,
-.focus__stack > .card,
-.focus > .probe,
-.focus__stack > .probe {
+   slider needs the width{
   max-width: none;
-}
-/* The cap exists so a two-digit result does not fill 776px; the crash card
-   carries a sentence, so it keeps the column. */
-.focus .card:has(.card__body--center):not(:has(.crash)) {
-  max-width: 26rem;
 }
 
 /* Regression 3: at 900px the fixed 368px prose track made all five code blocks
@@ -1740,9 +1656,6 @@ code {
    step 3 clears 840px in both languages — nothing removed, only compressed. */
 .scars {
   padding: 0.85rem 1rem;
-}
-.scars__title {
-  margin-bottom: 0.7rem;
 }
 .scar {
   padding: 0.45rem 0;
@@ -1916,10 +1829,6 @@ code {
 .split__viewer {
   gap: 0.6rem;
 }
-/* The widget card holds one number; it does not need card-sized padding. */
-.split__viewer .card__body--center {
-  padding: 0.75rem 1.1rem;
-}
 
 /* A Korean particle after an inline <code> read as detached — the chip's 5.70px
    right padding is wider than the 3.98px word space around it. */
@@ -2011,26 +1920,6 @@ code {
 .vp__control .slider {
   accent-color: var(--brand-cyan);
 }
-
-/* A component that threw does not leave its surface behind. The frame goes
-   dark and says so, instead of showing a healthy image under a red caption. */
-.vp__failed {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  background: #07090d;
-  border: 1px solid var(--bad);
-  border-radius: inherit;
-}
-.vp__failed__text {
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1.6;
-  text-align: center;
-  color: var(--bad);
-}
 .crash {
   border-color: var(--bad);
 }
@@ -2079,13 +1968,6 @@ code {
     flex-wrap: wrap;
     gap: 0.25rem;
   }
-}
-
-/* F8. The crash headline measured 3.57:1 on the frame's near-black. The frame
-   is #07090d in both themes, so the colour is pinned to the frame rather than
-   inherited from the page theme: #ff8095 on #07090d is 8.32:1. */
-.vp__failed__text {
-  color: #ff8095;
 }
 
 /* F12. A citation the reader opened on purpose was showing 88 of its 191px

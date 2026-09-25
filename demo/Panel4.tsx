@@ -38,7 +38,7 @@ export function Panel4({ imageIds, theme: _theme }: { imageIds: string[]; theme:
             {step === 0 ? (
               <HookDragLog viewportId={VIEWPORT_ID} />
             ) : (
-              <EngineShake viewportId={VIEWPORT_ID} />
+              <SameWrite viewportId={VIEWPORT_ID} />
             )}
           </div>
         </div>
@@ -120,7 +120,8 @@ function HookDragLog({ viewportId }: { viewportId: string }) {
 }
 
 /**
- * Step 2: the Engine fires, the values do not move, and React is never asked.
+ * Step 2: a write that changes nothing still makes the Engine fire, and React
+ * is never asked.
  *
  * `setCamera(viewport.getCamera())` dispatches CAMERA_MODIFIED — one of the
  * five events the Binding listens to — while every value in the Snapshot stays
@@ -134,12 +135,17 @@ function HookDragLog({ viewportId }: { viewportId: string }) {
  * did — including moving the slider, which is the first thing anyone tries.
  * Nothing was being shown. What makes the absence visible is a number that
  * climbs beside one that does not.
+ *
+ * The button was called "shake the Engine", which is a metaphor this codebase
+ * made up. It is a write, and CONTEXT.md already has a word for that — a
+ * Command — so the label says what it does with the vocabulary the rest of the
+ * page uses.
  */
-function EngineShake({ viewportId }: { viewportId: string }) {
-  const t = useCopy().panel4.shake;
+function SameWrite({ viewportId }: { viewportId: string }) {
+  const t = useCopy().panel4.sameWrite;
   return (
-    <div className="shake">
-      <div className="shake__row">
+    <div className="samewrite">
+      <div className="samewrite__row">
         <button
           className="button button--primary button--sm"
           onClick={() => {
@@ -155,9 +161,9 @@ function EngineShake({ viewportId }: { viewportId: string }) {
         >
           {t.nudge}
         </button>
-        <p className="shake__hint">{t.hint}</p>
+        <p className="samewrite__hint">{t.hint}</p>
       </div>
-      <div className="shake__meters">
+      <div className="samewrite__meters">
         {/* Each counter is its own component. Counting engine events
             re-renders whatever holds that number, and if the two shared a
             component the event count would drive the render count it is being
@@ -165,7 +171,7 @@ function EngineShake({ viewportId }: { viewportId: string }) {
         <EngineCount viewportId={viewportId} />
         <ReadCount viewportId={viewportId} />
       </div>
-      <p className="shake__verdict">{t.verdict}</p>
+      <p className="samewrite__verdict">{t.verdict}</p>
     </div>
   );
 }
@@ -190,7 +196,7 @@ function useSettled() {
 
 /** What the Engine emitted — counted live, not quoted. */
 function EngineCount({ viewportId }: { viewportId: string }) {
-  const t = useCopy().panel4.shake;
+  const t = useCopy().panel4.sameWrite;
   const [events, setEvents] = useState(0);
   const ready = useSettled();
 
@@ -216,7 +222,7 @@ function EngineCount({ viewportId }: { viewportId: string }) {
  * every later one is a time the hook told React something changed.
  */
 function ReadCount({ viewportId }: { viewportId: string }) {
-  const t = useCopy().panel4.shake;
+  const t = useCopy().panel4.sameWrite;
   const state = useViewportState(viewportId);
   const ready = useSettled();
   const seen = useRef(new Map<object, number>());

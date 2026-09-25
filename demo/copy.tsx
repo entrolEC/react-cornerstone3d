@@ -117,7 +117,7 @@ export interface Copy {
       engineNote: (events: number) => ReactNode;
       hookVerdict: ReactNode;
     };
-    shake: {
+    sameWrite: {
       nudge: string;
       hint: ReactNode;
       engine: string;
@@ -421,9 +421,9 @@ export const COPY: Record<Lang, Copy> = {
           바뀝니다 — 여기까지는 패널 3과 같아 보입니다.
         </>,
         <>
-          <b>이번엔 값을 안 바꾸고 엔진만 흔들어 봅시다.</b> 버튼을 여러 번 눌러 보세요.
-          엔진 이벤트는 계속 올라가는데 <b>훅이 알린 횟수는 0</b>입니다. 패널 3에서는 여기서{' '}
-          <code>#1 #2 #3</code>이 나왔습니다.
+          <b>이번엔 엔진에 값을 쓰되, 방금 읽은 값을 그대로 씁니다.</b> 버튼을 여러 번 눌러
+          보세요. 엔진 이벤트는 계속 올라가는데 <b>훅이 알린 횟수는 0</b>입니다. 패널 3에서는
+          여기서 <code>#1 #2 #3</code>이 나왔습니다.
         </>,
         <>
           <b>그리고 selector.</b> Snapshot을 통째로 읽으면 카메라가 움직여도 리렌더됩니다.
@@ -458,13 +458,13 @@ export const COPY: Record<Lang, Copy> = {
           </>
         ),
       },
-      shake: {
-        nudge: '엔진 흔들기',
+      sameWrite: {
+        nudge: '같은 값으로 다시 쓰기',
         hint: (
           <>
-            누를 때마다 <code>setCamera(viewport.getCamera())</code> — 방금 읽은 카메라를 그대로
-            다시 넣습니다. 엔진은 <code>CAMERA_MODIFIED</code>를 발사하지만 <b>값은 한 군데도
-            달라지지 않습니다.</b>
+            누를 때마다 <code>setCamera(viewport.getCamera())</code> — 카메라를 읽어서 그대로
+            돌려주는 쓰기입니다. 엔진은 그래도 <code>CAMERA_MODIFIED</code>를 발사하고,{' '}
+            <b>값은 한 군데도 달라지지 않습니다.</b>
           </>
         ),
         engine: '엔진이 낸 이벤트',
@@ -1002,9 +1002,9 @@ if (state?.kind === 'stack') { /* ... */ }`,
           changes, so the object does — so far this looks like panel 3.
         </>,
         <>
-          <b>Now shake the Engine without changing a value.</b> Press the button a few times.
-          The event count climbs and <b>the hook never tells React anything.</b> In panel 3 this is
-          where <code>#1 #2 #3</code> came from.
+          <b>Now write to the Engine — but write back the value you just read.</b> Press the
+          button a few times. The event count climbs and <b>the hook never tells React
+          anything.</b> In panel 3 this is where <code>#1 #2 #3</code> came from.
         </>,
         <>
           <b>And the selector.</b> Read the whole Snapshot and a camera move re-renders you. Read
@@ -1040,13 +1040,13 @@ if (state?.kind === 'stack') { /* ... */ }`,
           </>
         ),
       },
-      shake: {
-        nudge: 'shake the Engine',
+      sameWrite: {
+        nudge: 'write the same value back',
         hint: (
           <>
-            Each press is <code>setCamera(viewport.getCamera())</code> — the camera it just read,
-            handed straight back. The Engine fires <code>CAMERA_MODIFIED</code> and{' '}
-            <b>not one value is different.</b>
+            Each press is <code>setCamera(viewport.getCamera())</code> — a write that reads the
+            camera and hands it straight back. The Engine fires <code>CAMERA_MODIFIED</code>
+            anyway, and <b>not one value is different.</b>
           </>
         ),
         engine: 'events the Engine fired',

@@ -18,15 +18,12 @@ export function CtViewport({
   imageIds,
   showOverlay = true,
   control,
-  failed,
 }: {
   viewportId: string;
   imageIds: string[];
   showOverlay?: boolean;
   /** Sits inside the frame, the way a workstation puts its scrub bar. */
   control?: ReactNode;
-  /** Covers the whole frame. A component that threw takes its surface with it. */
-  failed?: ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -126,8 +123,7 @@ export function CtViewport({
         style={{ width: '100%', height: '100%' }}
       />
       {showOverlay && <Overlay viewportId={viewportId} />}
-      {control && !failed && <div className="vp__control">{control}</div>}
-      {failed && <div className="vp__failed">{failed}</div>}
+      {control && <div className="vp__control">{control}</div>}
     </div>
   );
 }
