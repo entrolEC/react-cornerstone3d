@@ -55,11 +55,11 @@ First published release, as `react-cornerstone3d`.
 
 ### Added
 
-- `useViewportState(viewportId, selector?)`: Cornerstone3D viewport state (camera, VOI, slice index) in React via `useSyncExternalStore`, one shared Binding per viewport, StrictMode-safe.
+- `useViewportState(viewportId, selector?, options?)`: Cornerstone3D viewport state (camera, VOI, slice index) in React via `useSyncExternalStore`, one shared Binding per viewport, StrictMode-safe.
 - Volume viewports and per-kind Viewport State types.
 - Viewport lifecycle: `undefined` before enable and after destroy, fill-in and empty-out automatic.
 - Selectors: re-render only when the selected value changes.
-- rAF batching: one Snapshot update per frame during a drag.
+- rAF batching: one Snapshot update per frame during a drag. Opt out per hook with `{ batch: false }` (`UseViewportStateOptions`).
 - `<CornerstoneViewport />`: a thin enable/disable component over the hook core.
 - Browser smoke tests that verify the Cornerstone3D assumption layer.
 
