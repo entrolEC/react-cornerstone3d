@@ -103,6 +103,9 @@ function createFakeStackViewport(viewportId: string, { enabled = true } = {}) {
   const viewport = {
     element: document.createElement('div'),
     type: Enums.ViewportType.STACK,
+    // Mirrors CS3D: taking a stack is what marks the legacy Stack class; the
+    // hook reads this capability, not `type` (ADR 0008).
+    setStack: async () => undefined,
     getCamera: cameraGetter(engineState),
     getProperties: () => ({ voiRange: { ...engineState.voiRange } }),
     getSliceIndex: () => engineState.sliceIndex,

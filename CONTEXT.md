@@ -9,7 +9,7 @@ The running Cornerstone3D instance (rendering engine, viewports, tools). The sin
 _Avoid_: store, backend
 
 **Viewport State**:
-The observable state of one viewport: camera, VOI (window/level), Slice Position, what it points at (the current image and, for a Stack, its image list), and similar per-viewport values. Values are what the Engine *reports*, not what is painted on the canvas: the slice index is the slice the Engine has been told to show, which may run ahead of the pixels.
+The observable state of one viewport: camera, VOI (window/level), Slice Position, what it points at (the current image and, for a Stack, its image list), and similar per-viewport values. Values are what the Engine *reports*, not what is painted on the canvas: the slice index is the slice the Engine has been told to show, which may run ahead of the pixels. Its `kind` (`stack` or `volume`) names the slice model the Engine runs and is read from what the viewport can do, not from its type tag (ADR 0008).
 _Avoid_: viewport data, view state
 
 **Slice Position**:

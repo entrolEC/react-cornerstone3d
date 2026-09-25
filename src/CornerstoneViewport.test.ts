@@ -32,6 +32,9 @@ function createFakeEngine(id = 'engine') {
       const viewport = {
         element,
         type,
+        // Mirrors CS3D: only the legacy Stack class takes a stack, and that
+        // capability — not `type` — is what the hook reads (ADR 0008).
+        ...(type === Enums.ViewportType.STACK ? { setStack: async () => undefined } : {}),
         getCamera: (): Types.ICamera => ({ parallelScale: 100 }),
         getProperties: () => ({ voiRange: { lower: 0, upper: 400 } }),
         getSliceIndex: () => 0,
