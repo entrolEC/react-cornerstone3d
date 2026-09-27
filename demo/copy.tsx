@@ -149,19 +149,19 @@ export interface Copy {
       cite: { ohif: string; cs3d: string };
     };
     diagram: {
-      alt: string;
       engine: string;
       getters: string;
       gettersNote: string;
       events: string;
-      binding: string;
+      /** What one Binding is keyed by. */
+      bindingKey: string;
       build: string;
+      /** The finding. Carries the marker. */
       equal: string;
       snapshot: string;
-      scheduler: string;
-      schedulerA: string;
-      selector: string;
-      objectIs: string;
+      queue: string;
+      queueNote: string;
+      hook: string;
       component: string;
       componentNote: string;
       read: string;
@@ -170,9 +170,8 @@ export interface Copy {
       caption: ReactNode;
     };
     fields: {
-      getter: string;
-      event: string;
-      result: string;
+      /** The rule, stated once before anything is checked against it. */
+      rule: ReactNode;
       rows: {
         name: string;
         getter: string;
@@ -543,31 +542,24 @@ export const COPY: Record<Lang, Copy> = {
         },
       },
       diagram: {
-        alt: '엔진의 getter와 이벤트를 Binding 하나가 받아 Snapshot을 만들고, 스케줄러가 프레임마다 한 번 알리며, useViewportState가 그것을 컴포넌트에 전달한다.',
         engine: 'Cornerstone3D 엔진',
         getters: 'viewport getter',
-        gettersNote: '부를 때마다 새 객체',
+        gettersNote: '부를 때마다 새 객체를 돌려준다',
         events: 'element 이벤트',
-        binding: 'Binding — viewportId 하나당 하나',
-        build: '안 바뀐 부분은 이전 참조 그대로',
-        equal: '같으면 아무에게도 안 알린다',
-        snapshot: '불변 · 참조 안정',
-        scheduler: '프레임 큐 하나',
-        schedulerA: '한 프레임 = 한 번의 알림',
-        selector: 'selector 메모',
-        objectIs: 'Object.is가 다를 때만 리렌더',
+        bindingKey: 'viewportId 하나당 하나',
+        build: '이벤트가 오면 다시 만든다. 안 움직인 부분은 이전 참조를 그대로 둔다',
+        equal: '다시 만든 게 이전과 같으면, 아무에게도 알리지 않는다',
+        snapshot: '불변이고 참조가 안정적이다',
+        queue: '프레임 큐 하나',
+        queueNote: '한 프레임에 더러워진 Binding을 모아 한 번만 알린다',
+        hook: 'Object.is가 다를 때만 리렌더한다',
         component: '컴포넌트',
         componentNote: '엔진 상태의 순수 함수',
-        read: 'getter 읽기',
+        read: '읽기',
         fire: '발사',
         notify: '알림',
         caption: (
           <>
-            Binding은 이벤트가 올 때만 Snapshot을 다시 만들고, <b>안 움직인 부분은 이전 참조를
-            그대로 둡니다</b> — 그래서 selector 하나가 다른 필드 때문에 리렌더되지 않습니다.
-            다시 만든 결과가 이전과 같으면 아무에게도 알리지 않습니다. 한 프레임에 더러워진
-            Binding은 한 번에 처리되므로 <b>두 훅이 읽는 값은 항상 같은 프레임</b>입니다.
-            <br />
             쓰기는 이 그림에 없습니다. 컴포넌트가 Cornerstone3D를 직접 부르고, 그 결과는{' '}
             <b>엔진 이벤트로 되돌아와서만</b> React에 도착합니다 — 읽기 경로가 하나뿐인 이유이고,
             패널 1에서 흐리게 처리했던 그 부분입니다.
@@ -575,12 +567,15 @@ export const COPY: Record<Lang, Copy> = {
         ),
       },
       fields: {
-        getter: 'getter',
-        event: '이벤트',
-        result: '결과',
+        rule: (
+          <>
+            값을 읽을 <b>getter</b>가 있고, 값이 움직였다고 알려줄 <b>이벤트</b>가 있어야
+            Snapshot 필드가 됩니다.
+          </>
+        ),
         rows: [
           {
-            name: '슬라이스 · 장수 · W/L · 카메라',
+            name: '슬라이스, 장수, W/L, 카메라',
             getter: 'getSliceIndex() 등',
             hasGetter: true,
             event: 'STACK_NEW_IMAGE 등',
@@ -592,26 +587,26 @@ export const COPY: Record<Lang, Copy> = {
             name: '이 슬라이스가 로드됐는가',
             getter: 'cache.isLoaded()',
             hasGetter: true,
-            event: '로딩 시작 이벤트 없음',
+            event: '로딩이 시작될 때 나오는 이벤트가 없습니다',
             hasEvent: false,
-            result: '앱이 직접',
+            result: '앱이 직접 읽습니다',
             field: false,
           },
           {
             name: '캔버스에 그려졌는가',
-            getter: 'getter 없음',
+            getter: '지금 상태를 물어볼 getter가 없습니다',
             hasGetter: false,
             event: 'IMAGE_RENDERED',
             hasEvent: true,
-            result: '앱이 직접',
+            result: '앱이 직접 듣습니다',
             field: false,
           },
         ],
         note: (
           <>
-            둘 다 있어야 하는 이유는 간단합니다. <b>getter가 없으면</b> 물어본 순간의 값을 읽을
-            수 없고, <b>이벤트가 없으면</b> 값이 움직인 걸 영영 모릅니다. 어느 쪽이든 Snapshot에
-            넣으면 거짓말이 됩니다 — 그래서 넣지 않고, 필요하면 앱이 직접 듣습니다.
+            둘 다 필요한 이유는 간단합니다. getter가 없으면 물어본 순간의 값을 읽을 수 없고,
+            이벤트가 없으면 값이 움직인 걸 영영 모릅니다. 어느 쪽이든 Snapshot에 넣으면 그
+            Snapshot이 거짓말을 하게 됩니다.
           </>
         ),
       },
@@ -1125,19 +1120,17 @@ if (state?.kind === 'stack') { /* ... */ }`,
         },
       },
       diagram: {
-        alt: 'One Binding takes the Engine’s getters and events, builds a Snapshot, a single frame queue notifies once per frame, and useViewportState hands it to the component.',
-        engine: 'Cornerstone3D Engine',
+        engine: 'Cornerstone3D engine',
         getters: 'viewport getters',
-        gettersNote: 'a fresh object every call',
+        gettersNote: 'a fresh object on every call',
         events: 'element events',
-        binding: 'Binding — one per viewportId',
-        build: 'keep what did not move',
-        equal: 'same? then tell nobody',
-        snapshot: 'immutable · stable reference',
-        scheduler: 'one frame queue',
-        schedulerA: 'one frame = one notification',
-        selector: 'memoised selector',
-        objectIs: 're-render only if Object.is differs',
+        bindingKey: 'one per viewportId',
+        build: 'rebuild on an event, keeping the references of whatever did not move',
+        equal: 'if the rebuild says the same thing, nobody is told',
+        snapshot: 'immutable, and the reference holds',
+        queue: 'one frame queue',
+        queueNote: 'every Binding dirtied in a frame is told once, together',
+        hook: 're-renders only when Object.is differs',
         component: 'component',
         componentNote: 'a pure function of Engine state',
         read: 'read',
@@ -1145,12 +1138,6 @@ if (state?.kind === 'stack') { /* ... */ }`,
         notify: 'notify',
         caption: (
           <>
-            The Binding rebuilds the Snapshot only when an event says to, and{' '}
-            <b>keeps the references of whatever did not move</b> — which is why a selector on one
-            field is not re-rendered by a change to another. If the rebuild says the same thing,
-            nobody is told. Every Binding dirtied in a frame is handled in one pass, so{' '}
-            <b>two hooks always read the same frame</b>.
-            <br />
             Writes are not on this picture. The component calls Cornerstone3D directly and the
             effect reaches React <b>only by coming back as an Engine event</b> — which is why
             there is one read path, and what the dimmed half of panel 1 was.
@@ -1158,44 +1145,46 @@ if (state?.kind === 'stack') { /* ... */ }`,
         ),
       },
       fields: {
-        getter: 'getter',
-        event: 'event',
-        result: 'result',
+        rule: (
+          <>
+            A value becomes a Snapshot field when there is a <b>getter</b> to read it and an{' '}
+            <b>event</b> to say it moved.
+          </>
+        ),
         rows: [
           {
-            name: 'slice · count · W/L · camera',
+            name: 'slice, count, W/L, camera',
             getter: 'getSliceIndex(), …',
             hasGetter: true,
             event: 'STACK_NEW_IMAGE, …',
             hasEvent: true,
-            result: 'Snapshot field',
+            result: 'a Snapshot field',
             field: true,
           },
           {
             name: 'is this slice loaded',
             getter: 'cache.isLoaded()',
             hasGetter: true,
-            event: 'no event when loading starts',
+            event: 'nothing fires when loading starts',
             hasEvent: false,
-            result: 'yours',
+            result: 'you read it yourself',
             field: false,
           },
           {
             name: 'is it painted on the canvas',
-            getter: 'no getter',
+            getter: 'nothing to ask for the current state',
             hasGetter: false,
             event: 'IMAGE_RENDERED',
             hasEvent: true,
-            result: 'yours',
+            result: 'you listen for it yourself',
             field: false,
           },
         ],
         note: (
           <>
-            Both halves are needed for a plain reason. <b>Without a getter</b> the value cannot
-            be read at the moment it is asked for; <b>without an event</b> nothing ever says it
-            moved. Either way, putting it in the Snapshot would make the Snapshot lie — so it
-            stays out, and the app listens for it directly when it needs to.
+            Both halves are needed for a plain reason. Without a getter the value cannot be read
+            at the moment it is asked for; without an event nothing ever says it moved. Either
+            way, putting it in the Snapshot would make the Snapshot lie.
           </>
         ),
       },

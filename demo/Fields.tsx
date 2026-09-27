@@ -3,42 +3,40 @@ import { useCopy } from './ui';
 /**
  * Why the hook gives you some things and not others.
  *
- * The rule needs both halves: a getter to read the value now, and an event to
- * know it moved. Miss either one and a Snapshot field would be a lie — either
- * stale forever, or unreadable at the moment it is asked for.
+ * This was a full-bleed admin table with a tracked all-caps `GETTER` head, red
+ * and green cells, and a 340px column of nothing on the left. Red said
+ * something had gone wrong; nothing has. Those two values are simply not
+ * fields, and an absence should read as an absence.
  *
- * The design artifact draws this as a quadrant over the image-cache domain
- * (loading, quality, max, available, cancelled). None of those appear anywhere
- * on this page, so the rejected examples here are the two the reader has
- * already run into: the slice that had not loaded yet in panel 5's first step,
- * and the difference between "told to show" and "painted" that the slider has
- * been demonstrating since panel 1.
+ * So the rule is stated once, and each row is checked against it with the two
+ * halves shown as what they are: a name, or a dash and the reason there is
+ * none. The row that passes is the one the marker points at — the same gesture
+ * the code panels use for the line that matters.
  */
 export function Fields() {
   const t = useCopy().panel5.fields;
 
   return (
     <div className="fields">
-      <table className="fields__table">
-        <thead>
-          <tr>
-            <th />
-            <th>{t.getter}</th>
-            <th>{t.event}</th>
-            <th>{t.result}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {t.rows.map((row) => (
-            <tr key={row.name} className={row.field ? 'fields__row--in' : 'fields__row--out'}>
-              <th scope="row">{row.name}</th>
-              <td className={row.hasGetter ? 'yes' : 'no'}>{row.getter}</td>
-              <td className={row.hasEvent ? 'yes' : 'no'}>{row.event}</td>
-              <td>{row.result}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <p className="fields__rule">{t.rule}</p>
+      <ul className="fields__list">
+        {t.rows.map((row) => (
+          <li className={`fields__row${row.field ? ' fields__row--in' : ''}`} key={row.name}>
+            <p className="fields__what">{row.name}</p>
+            {/* No column labels. `getSliceIndex()` is plainly a getter and
+                `STACK_NEW_IMAGE` is plainly an event; where one is missing the
+                sentence says which. Repeating the names above every cell was
+                telling the reader what they can already see. */}
+            <p className={`fields__half${row.hasGetter ? '' : ' fields__half--none'}`}>
+              {row.hasGetter ? <code>{row.getter}</code> : row.getter}
+            </p>
+            <p className={`fields__half${row.hasEvent ? '' : ' fields__half--none'}`}>
+              {row.hasEvent ? <code>{row.event}</code> : row.event}
+            </p>
+            <p className="fields__verdict">{row.result}</p>
+          </li>
+        ))}
+      </ul>
       <p className="fields__note">{t.note}</p>
     </div>
   );
