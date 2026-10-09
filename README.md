@@ -177,10 +177,12 @@ v0.4 — sync only. The library's sole responsibility is state synchronization.
 | Selectors (re-render only when *your* value changes) | ✅ |
 | rAF batching for interaction-rate events | ✅ |
 | Optional `<CornerstoneViewport />` component | ✅ |
-| Cache totals (`useCacheState`), Volume `volumeIds` | roadmap |
-| Annotation / tool / segmentation state | roadmap |
+| Image Load State reports failure (`'absent' \| 'loaded' \| 'failed'`) | 0.5 |
+| Cache State (`useCacheState`: image bytes held) | 0.5 |
+| Volume `volumeIds` | roadmap |
+| Annotation / tool / segmentation state (`@cornerstonejs/tools`, separate entry) | roadmap |
 
-**Toward 1.0** (subject to change while 0.x):
+**Toward 1.0** (subject to change while 0.x; 0.5 is specified in the local `.scratch/v2-sync-surface/spec.md`):
 
 - Generic Viewport (`PLANAR_NEXT`) support
 - CI green across the `@cornerstonejs/core` matrix

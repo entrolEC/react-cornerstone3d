@@ -175,10 +175,12 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 셀렉터 (내가 쓰는 값이 바뀔 때만 리렌더) | ✅ |
 | 고빈도 이벤트 rAF 배칭 | ✅ |
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
-| 캐시 총량(`useCacheState`), Volume `volumeIds` | 로드맵 |
-| 어노테이션 / 툴 / 세그멘테이션 상태 | 로드맵 |
+| Image Load State의 실패 보고 (`'absent' \| 'loaded' \| 'failed'`) | 0.5 |
+| Cache State (`useCacheState`: 캐시가 쥔 이미지 바이트) | 0.5 |
+| Volume `volumeIds` | 로드맵 |
+| 어노테이션 / 툴 / 세그멘테이션 상태 (`@cornerstonejs/tools`, 별도 엔트리) | 로드맵 |
 
-**1.0 기준** (0.x 동안 바뀔 수 있음):
+**1.0 기준** (0.x 동안 바뀔 수 있음; 0.5의 범위는 로컬 `.scratch/v2-sync-surface/spec.md`에 있음):
 
 - Generic Viewport(`PLANAR_NEXT`) 지원
 - `@cornerstonejs/core` 매트릭스 CI 통과
