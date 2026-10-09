@@ -33,7 +33,13 @@ export function Fields() {
             <p className={`fields__half${row.hasEvent ? '' : ' fields__half--none'}`}>
               {row.hasEvent ? <code>{row.event}</code> : row.event}
             </p>
-            <p className="fields__verdict">{row.result}</p>
+            {/* A hook name is the answer when the library covers it; prose
+                when it does not. Three of four rows are covered now, so the
+                page's marker would stop being a marker — the distinction is
+                carried by what the cell says instead. */}
+            <p className="fields__verdict">
+              {row.field ? <code>{row.result}</code> : row.result}
+            </p>
           </li>
         ))}
       </ul>

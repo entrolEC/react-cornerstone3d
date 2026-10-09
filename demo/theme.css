@@ -2539,7 +2539,7 @@ code {
 
 /* ---------- panel 5: what becomes a field ---------- */
 .fields {
-  max-width: 54rem;
+  max-width: 58rem;
 }
 .fields__rule {
   margin: 0 0 1.1rem;
@@ -2559,7 +2559,7 @@ code {
 }
 .fields__row {
   display: grid;
-  grid-template-columns: minmax(10rem, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(7rem, auto);
+  grid-template-columns: minmax(9rem, 1fr) minmax(0, 1.15fr) minmax(0, 1.15fr) max-content;
   gap: 0.35rem 1.4rem;
   align-items: baseline;
   padding: 0.85rem 0.1rem;
@@ -2598,13 +2598,13 @@ code {
   color: var(--text-muted);
   justify-self: start;
 }
-/* The row that passes gets the gesture this page uses in prose for the point
-   the reader is scanning for: a rule under the words, in the accent. */
 .fields__row--in .fields__verdict {
   color: var(--text);
-  font-weight: 650;
-  box-shadow: inset 0 -0.13em 0 var(--primary);
-  padding: 0 0.04em;
+}
+.fields__verdict code {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .fields__note {

@@ -511,8 +511,8 @@ export const COPY: Record<Lang, Copy> = {
           만든 게 정말 달라졌는지, 한 프레임에 몇 번 알릴지.
         </>,
         <>
-          <b>대신 아무거나 주지는 않습니다.</b> getter가 있고 이벤트가 있어야 필드가 됩니다.
-          둘 중 하나가 없으면 앱의 몫입니다.
+          <b>대신 아무거나 주지는 않습니다.</b> getter와 이벤트가 둘 다 있어야 필드가 됩니다 —{' '}
+          <b>한 줄만 빼고</b>. 그 한 줄이 규칙의 진짜 모양을 말해 줍니다.
         </>,
       ],
       verdict: (
@@ -580,33 +580,45 @@ export const COPY: Record<Lang, Copy> = {
             hasGetter: true,
             event: 'STACK_NEW_IMAGE 등',
             hasEvent: true,
-            result: 'Snapshot 필드',
+            result: 'useViewportState',
             field: true,
           },
           {
-            name: '이 슬라이스가 로드됐는가',
+            name: '이 슬라이스가 캐시에 있는가',
             getter: 'cache.isLoaded()',
             hasGetter: true,
-            event: '로딩이 시작될 때 나오는 이벤트가 없습니다',
-            hasEvent: false,
-            result: '앱이 직접 읽습니다',
-            field: false,
+            event: 'IMAGE_CACHE_IMAGE_ADDED',
+            hasEvent: true,
+            result: 'useImageLoadState',
+            field: true,
           },
           {
-            name: '캔버스에 그려졌는가',
-            getter: '지금 상태를 물어볼 getter가 없습니다',
+            name: '이 슬라이스가 로드에 실패했는가',
+            getter: '실패하면 캐시가 항목을 지워서, 요청한 적 없는 것과 구분되지 않습니다',
             hasGetter: false,
-            event: 'IMAGE_RENDERED',
+            event: 'IMAGE_LOAD_FAILED',
             hasEvent: true,
-            result: '앱이 직접 듣습니다',
+            result: 'useImageLoadState',
+            field: true,
+          },
+          {
+            name: '이 슬라이스가 로딩 중인가',
+            getter: 'cache.getImageLoadObject()',
+            hasGetter: true,
+            event: '요청이 시작될 때 나오는 이벤트가 없습니다',
+            hasEvent: false,
+            result: '앱이 직접 읽습니다',
             field: false,
           },
         ],
         note: (
           <>
-            둘 다 필요한 이유는 간단합니다. getter가 없으면 물어본 순간의 값을 읽을 수 없고,
-            이벤트가 없으면 값이 움직인 걸 영영 모릅니다. 어느 쪽이든 Snapshot에 넣으면 그
-            Snapshot이 거짓말을 하게 됩니다.
+            셋째 줄은 규칙을 깹니다 — getter가 없는데 훅이 줍니다. 조건이 하나 붙기
+            때문입니다: <b>실패한 뒤 엔진이 그 이미지에 대해 할 수 있는 말이 전부 훅이 듣는
+            이벤트뿐</b>이라면(재시도 성공, 또는 또 한 번의 실패) 기억해 둔 상태가 조용히
+            낡을 수 없습니다. 그래서 「들은 실패」는 필드가 됩니다. 넷째 줄은 그렇지
+            않습니다 — 요청이 시작되는 순간을 아무도 말해 주지 않으니, 훅이 기억하면 그
+            기억은 틀린 채로 남습니다.
           </>
         ),
       },
@@ -716,6 +728,27 @@ if (state?.kind === 'stack') { /* ... */ }`,
               슬라이스 컨트롤 하나로 Stack과 MPR을 함께 다룹니다. 직접 짜면 Volume에서 갱신이 멈춥니다 —
               Volume에는 <code>STACK_NEW_IMAGE</code>가 오지 않고, 슬라이스가 카메라에서
               유도되기 때문입니다. 훅이 그 차이를 내부에서 처리합니다.
+            </>
+          ),
+        },
+        {
+          title: '읽을 수 있는 건 뷰포트 상태만이 아닙니다',
+          label: '다른 훅',
+          mark: 'useImageLoadState',
+          code: `// 슬라이스 하나가 캐시에 있는지
+const state = useImageLoadState(imageId);     // 'absent' | 'loaded' | 'failed'
+
+// 스택 전체를 한 번에
+const states = useImageLoadStates(imageIds);  // 같은 값의 배열
+
+// 캐시가 지금 쥐고 있는 바이트
+const { imageBytes } = useCacheState();`,
+          body: (
+            <>
+              출처가 다릅니다. 위의 <code>useViewportState</code>는 <b>뷰포트의 말</b>이고,
+              이 셋은 <b>캐시 모듈의 말</b>입니다. <code>'loaded'</code>는 캐시에 들어왔다는
+              뜻이지 캔버스에 그려졌다는 뜻이 아닙니다. 둘을 합치는 조인은 앱이 합니다 —
+              라이브러리는 합치지 않습니다.
             </>
           ),
         },
@@ -1089,8 +1122,9 @@ if (state?.kind === 'stack') { /* ... */ }`,
           rebuild actually says something new, and how often to tell React in one frame.
         </>,
         <>
-          <b>It does not hand you everything, though.</b> A value needs a getter and an event to
-          become a field. Missing either one and it stays yours.
+          <b>It does not hand you everything, though.</b> A value needs both a getter and an
+          event to become a field — <b>except one row</b>, and that row is where the real shape
+          of the rule shows.
         </>,
       ],
       verdict: (
@@ -1158,33 +1192,45 @@ if (state?.kind === 'stack') { /* ... */ }`,
             hasGetter: true,
             event: 'STACK_NEW_IMAGE, …',
             hasEvent: true,
-            result: 'a Snapshot field',
+            result: 'useViewportState',
             field: true,
           },
           {
-            name: 'is this slice loaded',
+            name: 'is this slice in the cache',
             getter: 'cache.isLoaded()',
             hasGetter: true,
-            event: 'nothing fires when loading starts',
-            hasEvent: false,
-            result: 'you read it yourself',
-            field: false,
+            event: 'IMAGE_CACHE_IMAGE_ADDED',
+            hasEvent: true,
+            result: 'useImageLoadState',
+            field: true,
           },
           {
-            name: 'is it painted on the canvas',
-            getter: 'nothing to ask for the current state',
+            name: 'did this slice fail to load',
+            getter: 'on failure the cache drops the entry, so it reads like one never requested',
             hasGetter: false,
-            event: 'IMAGE_RENDERED',
+            event: 'IMAGE_LOAD_FAILED',
             hasEvent: true,
-            result: 'you listen for it yourself',
+            result: 'useImageLoadState',
+            field: true,
+          },
+          {
+            name: 'is this slice loading',
+            getter: 'cache.getImageLoadObject()',
+            hasGetter: true,
+            event: 'nothing fires when the request starts',
+            hasEvent: false,
+            result: 'you read it yourself',
             field: false,
           },
         ],
         note: (
           <>
-            Both halves are needed for a plain reason. Without a getter the value cannot be read
-            at the moment it is asked for; without an event nothing ever says it moved. Either
-            way, putting it in the Snapshot would make the Snapshot lie.
+            The third row breaks the rule — no getter, and the hook gives it anyway. It comes
+            with a condition: if <b>every next thing the Engine can say about that image is an
+            event the hook hears</b> (a retry that succeeds, or another failure), then the
+            remembered state cannot go quietly stale. So a failure that was heard is a field.
+            The fourth row is not — nothing announces the moment a request starts, so anything
+            the hook remembered would simply stay wrong.
           </>
         ),
       },
@@ -1295,6 +1341,27 @@ if (state?.kind === 'stack') { /* ... */ }`,
               One slice control serves both a stack and an MPR. Hand-wired code breaks here:{' '}
               <code>STACK_NEW_IMAGE</code> never arrives on a volume, where the slice is derived
               from the camera instead. The hook absorbs that difference.
+            </>
+          ),
+        },
+        {
+          title: 'Viewport state is not the only thing you can read',
+          label: 'the other hooks',
+          mark: 'useImageLoadState',
+          code: `// is one slice in the cache
+const state = useImageLoadState(imageId);     // 'absent' | 'loaded' | 'failed'
+
+// a whole stack at once
+const states = useImageLoadStates(imageIds);  // an array of the same
+
+// bytes the cache is holding right now
+const { imageBytes } = useCacheState();`,
+          body: (
+            <>
+              Different sources. <code>useViewportState</code> above is <b>the viewport's
+              word</b>; these three are <b>the cache module's</b>. <code>'loaded'</code> means
+              the cache has the image, not that it is painted on a canvas. Joining the two is
+              the app's job — the library does not do it for you.
             </>
           ),
         },
