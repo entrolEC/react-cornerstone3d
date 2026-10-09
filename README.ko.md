@@ -1,6 +1,6 @@
 # react-cornerstone3d
 
-[English](./README.md) · **[라이브 데모 →](https://entrolec.github.io/react-cornerstone3d/)**
+[English](./README.md) · [![CI](https://github.com/entrolEC/react-cornerstone3d/actions/workflows/ci.yml/badge.svg)](https://github.com/entrolEC/react-cornerstone3d/actions/workflows/ci.yml) · **[라이브 데모 →](https://entrolec.github.io/react-cornerstone3d/)**
 
 [Cornerstone3D](https://www.cornerstonejs.org/)의 살아있는 엔진 상태를 React 컴포넌트에 노출하는 React 바인딩 — `useSyncExternalStore` 기반, tearing 없음.
 
@@ -71,7 +71,7 @@ Cornerstone3D가 잘못 만들어진 게 아닙니다 — **엔진**이지 스�
 - **Tearing** — React 18+ concurrent 렌더링에서 한 화면의 두 컴포넌트가 서로 다른 슬라이스 번호를 표시
 - **구독 누수** — StrictMode 이중 마운트에서
 - **마운트 순서 경합** — 뷰포트가 enable되기 전에 UI가 먼저 마운트될 때
-- **무한 루프 또는 손으로 쓴 값 비교** — Cornerstone3D getter는 매 호출 새 객체를 반환하므로 naive한 `getSnapshot`은 절대 안정되지 않음. OHIF의 슬라이스 스크롤바는 [이전 `getCamera()` 결과를 ref에 복사해 두고 `utilities.isEqual`로 직접 비교](https://github.com/OHIF/Viewers/blob/41c03bcfd8ac/extensions/cornerstone/src/Viewport/Overlays/ViewportSliceProgressScrollbar/hooks.ts#L48-L68)합니다 — Snapshot이 하는 일을 손으로 쓴 것입니다
+- **무한 루프 또는 깊은 비교 땜질** — Cornerstone3D getter는 매 호출 새 객체를 반환하므로 naive한 `getSnapshot`은 절대 안정되지 않음. OHIF는 `getSnapshot`을 쓰지 않고 이벤트를 `useState`로 밀어 넣은 뒤, 그로 인한 리렌더를 훅마다 제각각의 가드로 막음: `useMeasurements`의 `JSON.stringify` 비교, 스크롤바·VOI 훅의 스칼라 `===` 비교, orientation marker의 `Date.now()` 카운터 (OHIF Viewers `master` @ `9753879`)
 
 이 라이브러리는 그 버그 계층을 중앙에서 한 번에 해결합니다. UI 컴포넌트는 엔진 상태의 순수 함수가 됩니다.
 
@@ -117,11 +117,19 @@ type ViewportState = StackViewportState | VolumeViewportState;
 ### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
 
 ```ts
-function useImageLoadState(imageId: string | undefined): boolean | undefined;
-function useImageLoadStates(imageIds: readonly string[] | undefined): readonly boolean[] | undefined;
+type ImageLoadState = 'absent' | 'loaded' | 'failed';
+function useImageLoadState(imageId: string | undefined): ImageLoadState | undefined;
+function useImageLoadStates(imageIds: readonly string[] | undefined): readonly ImageLoadState[] | undefined;
 ```
 
-이미지가 캐시에 있는지를, 캐시 모듈이 말하는 대로(`cache.isLoaded`) 돌려줍니다. 뷰포트가 아니라 캐시의 말입니다: 로드는 됐지만 아직 어느 캔버스에도 그려지지 않은 이미지가 있을 수 있습니다. 두 가지 부재는 구분됩니다 — `undefined`는 물어볼 이미지가 없었다는 뜻(`imageId`가 `undefined`), `false`는 캐시에 물었는데 없다는 뜻입니다. 요청한 적이 없든, 실패해서 지워졌든 같은 답입니다.
+이미지가 캐시에 있는지를, 캐시 모듈이 말하는 대로(`cache.isLoaded`) 돌려줍니다. 뷰포트가 아니라 캐시의 말입니다: 로드는 됐지만 아직 어느 캔버스에도 그려지지 않은 이미지가 있을 수 있습니다.
+
+- `'loaded'` — 캐시에 있습니다. 캐시 getter가 늘 우선합니다.
+- `'failed'` — 지켜보는 동안 로드가 실패했고(`IMAGE_LOAD_FAILED`), 그 뒤로 캐시에 들어온 적이 없습니다. 재시도에는 시작 이벤트가 없으므로 이미지가 들어오거나(`'loaded'`) 다시 실패할 때까지 `'failed'`로 남습니다.
+- `'absent'` — 그 밖의 전부: 요청한 적 없음, 퇴거됨, 아무도 지켜보지 않을 때 실패함. 캐시는 실패한 항목을 지우고 기록을 남기지 않으므로, 아무도 듣지 못한 실패는 보고할 수 없습니다 ([ADR 0009](./docs/adr/0009-a-heard-failure-is-a-field.md)).
+- `undefined` — 물어볼 이미지가 없었습니다(`imageId`가 `undefined`).
+
+모든 상태가 빈 문자열이 아니므로 `if (state)`가 아니라 `=== 'loaded'`로 비교하세요.
 
 배열 훅은 목록 전체에 대한 `useImageLoadState`입니다: 항목마다 같은 답, frozen 배열 하나, 어떤 항목이든 바뀌었을 때만 교체. `undefined`를 주면 `undefined`, 빈 목록은 늘 같은 빈 배열입니다. 자기 상태는 없습니다 — `useImageLoadState(imageIds[i])`를 읽는 눈금 컴포넌트와 `useImageLoadStates(imageIds)`를 읽는 트랙은 이미지당 하나의 Binding을 공유합니다.
 
@@ -131,15 +139,33 @@ function useImageLoadStates(imageIds: readonly string[] | undefined): readonly b
 function LoadTrack({ viewportId }: { viewportId: string }) {
   const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
   const current  = useViewportState(viewportId, (s) => s.currentImageId);
-  const loaded   = useImageLoadStates(imageIds); // readonly boolean[] | undefined
-  if (!imageIds || !loaded) return null;
-  return <div className="track">{imageIds.map((id, i) => <span key={id} data-loaded={loaded[i]} data-current={id === current} />)}</div>;
+  const states   = useImageLoadStates(imageIds); // readonly ImageLoadState[] | undefined
+  if (!imageIds || !states) return null;
+  return <div className="track">{imageIds.map((id, i) => <span key={id} data-state={states[i]} data-current={id === current} />)}</div>;
 }
 ```
 
-없는 것: *로딩 중*과 *실패*. 캐시에는 둘 다 getter가 없습니다 — 로드를 요청하면 항목이 조용히 생기고, 실패하면 조용히 지워집니다 — 그래서 라이브러리가 Engine에 없는 기록을 따로 들고 있지 않는 한 Snapshot에 실을 수 없습니다 ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). 그 둘이 필요하면 Cornerstone3D `eventTarget`의 `IMAGE_LOAD_FAILED` / `IMAGE_LOAD_ERROR`를 직접 들으세요. 눈금 N개를 그리는 것도 앱의 몫입니다: N이 크면 행을 memo하거나 canvas에 그리세요.
+없는 것: *로딩 중*. 로드를 요청하면 캐시 항목이 이벤트 없이 조용히 생기므로 Snapshot이 따라갈 수 없습니다 ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). 눈금 N개를 그리는 것도 앱의 몫입니다: N이 크면 행을 memo하거나 canvas에 그리세요.
 
-내부적으로 Cornerstone3D의 `eventTarget`은 리스너를 평범한 배열로 들고 있어서, 라이브러리는 관찰 중인 모든 이미지에 대해 리스너 한 쌍만 붙이고 id로 라우팅합니다 — 슬라이스 천 장을 관찰해도 리스너는 천 개가 아니라 둘입니다.
+내부적으로 Cornerstone3D의 `eventTarget`은 리스너를 평범한 배열로 들고 있어서, 라이브러리는 관찰 중인 모든 이미지에 대해 리스너 한 벌(추가, 제거, 로드 실패)만 붙이고 id로 라우팅합니다 — 슬라이스 천 장을 관찰해도 리스너는 삼천 개가 아니라 셋입니다.
+
+### `useCacheState()`
+
+```ts
+interface CacheState { readonly imageBytes: number }
+function useCacheState(): CacheState;
+```
+
+캐시 모듈이 보고하는 보유량입니다. `imageBytes`는 `cache.getCacheSize()` — 캐시가 세는 이미지 바이트입니다(볼륨은 그 수에 들어가지 않아서 이름이 "image"입니다). `IMAGE_CACHE_IMAGE_ADDED` / `_REMOVED`를 따라가며, 한 프레임에 천 장이 들어와도 렌더는 한 번이고, 객체는 frozen이고 숫자가 바뀔 때만 교체됩니다. `undefined`는 없습니다 — 캐시는 항상 있습니다. 최대치는 여기 없습니다: `setMaxCacheSize`는 이벤트를 내지 않고, 그 값은 앱이 정했으니 앱이 압니다.
+
+```tsx
+function MemoryGauge({ maxBytes }: { maxBytes: number }) {
+  const { imageBytes } = useCacheState();
+  return <meter min={0} max={maxBytes} value={imageBytes}>{Math.round(imageBytes / 2 ** 20)} MB</meter>;
+}
+```
+
+침묵 경로 하나: progressive 로딩 중 Cornerstone3D의 `setPartialImage`는 이벤트 없이 크기를 줄이므로, 다음 캐시 이벤트까지 `imageBytes`가 약간 크게 읽힐 수 있습니다.
 
 ### `<CornerstoneViewport />`
 
@@ -164,7 +190,7 @@ import { CornerstoneViewport } from 'react-cornerstone3d';
 
 ## 현재 상태
 
-v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기화입니다.
+v0.5 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기화입니다.
 
 | 기능 | 상태 |
 |---|---|
@@ -179,10 +205,21 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 셀렉터 (내가 쓰는 값이 바뀔 때만 리렌더) | ✅ |
 | 고빈도 이벤트 rAF 배칭 | ✅ |
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
-| 캐시 총량(`useCacheState`), Volume `volumeIds` | 로드맵 |
-| 어노테이션 / 툴 / 세그멘테이션 상태 | 로드맵 |
+| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; VOI는 `setDisplaySetPresentation`으로 쓰세요, 레거시 `setProperties`는 거기서 이벤트를 내지 않습니다 ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
+| Image Load State의 실패 보고 (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
+| Cache State (`useCacheState`: 캐시가 쥔 이미지 바이트) | ✅ |
+| Volume `volumeIds` | 로드맵 |
+| 어노테이션 / 툴 / 세그멘테이션 상태 (`@cornerstonejs/tools`, 별도 엔트리) | 로드맵 |
+
+**1.0 기준** (0.x 동안 바뀔 수 있음; 0.5의 범위는 로컬 `.scratch/v2-sync-surface/spec.md`에 있음):
+
+- Generic Viewport(`PLANAR_NEXT`) 지원
+- `@cornerstonejs/core` 매트릭스 CI 통과
+- Image Load State가 부재뿐 아니라 실패 상태도 보고
 
 **요구사항:** React 18+, `@cornerstonejs/core` 5.x. ESM만 제공합니다.
+
+**안정성:** 메이저 버전이 0인 동안 breaking change는 minor 릴리스(0.x → 0.y)에서만 일어나고 [CHANGELOG.md](./CHANGELOG.md)에 기록됩니다. patch 릴리스는 그대로 받아도 안전합니다. 정확한 버전 또는 tilde 범위(`~0.5.0`)로 고정하기를 권장합니다.
 
 ## 범위 밖
 

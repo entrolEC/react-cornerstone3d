@@ -4,7 +4,9 @@ import { useImageLoadState, useImageLoadStates } from './index';
 import {
   added,
   fireRawAdded,
+  fireRawFailed,
   endFrame,
+  failed,
   loaded,
   removed,
   installFakeCache,
@@ -45,7 +47,7 @@ describe('useImageLoadStates', () => {
   test('reads every image from the cache on the first render', () => {
     loaded.add('img:1');
     const { result } = renderHook(() => useImageLoadStates(ids));
-    expect(result.current).toEqual([false, true, false]);
+    expect(result.current).toEqual(['absent', 'loaded', 'absent']);
     expect(Object.isFrozen(result.current)).toBe(true);
   });
 
@@ -56,8 +58,8 @@ describe('useImageLoadStates', () => {
     added('img:2');
 
     expect(result.current).not.toBe(before);
-    expect(result.current).toEqual([false, false, true]);
-    expect(before).toEqual([false, false, false]);
+    expect(result.current).toEqual(['absent', 'absent', 'loaded']);
+    expect(before).toEqual(['absent', 'absent', 'absent']);
   });
 
   test('an event for an image outside the list keeps the same array and does not re-render', () => {
@@ -88,18 +90,46 @@ describe('useImageLoadStates', () => {
     expect(renders).toBe(rendersBefore);
     endFrame();
 
-    expect(result.current).toEqual([true, false, true]);
+    expect(result.current).toEqual(['loaded', 'absent', 'loaded']);
     expect(renders).toBe(rendersBefore + 1);
   });
 
-  test('removal flips the entry back to false', () => {
+  test('several failures in one frame land in one array and one render', () => {
+    loaded.add('img:1');
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders++;
+      return useImageLoadStates(ids);
+    });
+    const rendersBefore = renders;
+
+    fireRawFailed('img:0');
+    fireRawFailed('img:2');
+    expect(renders).toBe(rendersBefore);
+    endFrame();
+
+    expect(result.current).toEqual(['failed', 'loaded', 'failed']);
+    expect(Object.isFrozen(result.current)).toBe(true);
+    expect(renders).toBe(rendersBefore + 1);
+  });
+
+  test('a failure outside the list keeps the same array', () => {
+    const { result } = renderHook(() => useImageLoadStates(ids));
+    const before = result.current;
+
+    failed('img:elsewhere');
+
+    expect(result.current).toBe(before);
+  });
+
+  test('removal flips the entry back to absent', () => {
     loaded.add('img:0');
     const { result } = renderHook(() => useImageLoadStates(ids));
-    expect(result.current).toEqual([true, false, false]);
+    expect(result.current).toEqual(['loaded', 'absent', 'absent']);
 
     removed('img:0');
 
-    expect(result.current).toEqual([false, false, false]);
+    expect(result.current).toEqual(['absent', 'absent', 'absent']);
   });
 
   test('re-rendering with a new array of the same ids keeps the array and the subscriptions', () => {
@@ -114,7 +144,7 @@ describe('useImageLoadStates', () => {
     expect(result.current).toBe(before);
     // No Binding was unsubscribed and re-subscribed: the dispatcher never detached.
     expect(spy.removed()).toBe(0);
-    expect(spy.added()).toBe(2);
+    expect(spy.added()).toBe(3);
     spy.restore();
   });
 
@@ -127,8 +157,8 @@ describe('useImageLoadStates', () => {
 
     added('img:1');
 
-    expect(result.current.list).toEqual([false, true, false]);
-    expect(result.current.ticks).toEqual([false, true, false]);
+    expect(result.current.list).toEqual(['absent', 'loaded', 'absent']);
+    expect(result.current.ticks).toEqual(['absent', 'loaded', 'absent']);
   });
 
   test('changing the list releases the old Bindings and acquires the new ones', () => {
@@ -141,10 +171,10 @@ describe('useImageLoadStates', () => {
 
     rerender({ list: ['new:0', 'new:1'] });
 
-    expect(result.current).toEqual([false, true]);
+    expect(result.current).toEqual(['absent', 'loaded']);
     expect(imageBindings.size).toBe(2);
     added('img:0'); // the old list — must not reach us
-    expect(result.current).toEqual([false, true]);
+    expect(result.current).toEqual(['absent', 'loaded']);
 
     rerender({ list: undefined });
     expect(result.current).toBeUndefined();
@@ -159,7 +189,7 @@ describe('useImageLoadStates', () => {
     unmount();
 
     expect(imageBindings.size).toBe(0);
-    expect(spy.removed()).toBe(2);
+    expect(spy.removed()).toBe(3);
     spy.restore();
   });
 
@@ -169,10 +199,10 @@ describe('useImageLoadStates', () => {
       wrapper: strictModeWrapper,
     });
     expect(imageBindings.size).toBe(3);
-    expect(spy.added() - spy.removed()).toBe(2);
+    expect(spy.added() - spy.removed()).toBe(3);
 
     added('img:1');
-    expect(result.current).toEqual([false, true, false]);
+    expect(result.current).toEqual(['absent', 'loaded', 'absent']);
 
     unmount();
     expect(spy.added()).toBe(spy.removed());
@@ -183,11 +213,11 @@ describe('useImageLoadStates', () => {
   test('a list with a repeated id reads the same Binding twice and unmounts cleanly', () => {
     const spy = spyCacheListeners();
     const { result, unmount } = renderHook(() => useImageLoadStates(['img:dup', 'img:dup']));
-    expect(result.current).toEqual([false, false]);
+    expect(result.current).toEqual(['absent', 'absent']);
     expect(imageBindings.size).toBe(1);
 
     added('img:dup');
-    expect(result.current).toEqual([true, true]);
+    expect(result.current).toEqual(['loaded', 'loaded']);
 
     unmount();
     expect(imageBindings.size).toBe(0);
@@ -201,10 +231,10 @@ describe('useImageLoadStates', () => {
       ({ list }: { list: readonly string[] }) => useImageLoadStates(list),
       { initialProps: { list: ids } },
     );
-    expect(result.current).toEqual([true, false, false]);
+    expect(result.current).toEqual(['loaded', 'absent', 'absent']);
 
     rerender({ list: [...ids].reverse() });
 
-    expect(result.current).toEqual([false, false, true]);
+    expect(result.current).toEqual(['absent', 'absent', 'loaded']);
   });
 });

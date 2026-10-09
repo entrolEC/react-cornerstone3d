@@ -17,7 +17,7 @@ yarn-error.log*
 /.idea
 demo/dist
 
-# local-only: Playwright measurement shots and tooling output
+# local-only: Playwright measurement shots and MCP console logs, tooling output
 /*.png
 /shots
 /.playwright-mcp

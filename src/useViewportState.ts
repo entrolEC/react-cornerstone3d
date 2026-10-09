@@ -55,6 +55,10 @@ export type ViewportState = StackViewportState | VolumeViewportState;
 // no CAMERA_MODIFIED of its own; without it the count stays stale until the
 // app happens to move the camera. A Volume's slice index derives from the
 // camera, so CAMERA_MODIFIED already covers scrolling.
+// CS3D 5.x's Generic Viewport (PlanarViewport) never fires
+// PRE_STACK_NEW_IMAGE: a slice change or a new stack goes through
+// setViewState, which fires CAMERA_MODIFIED synchronously, so the same list
+// covers it (the generic browser suite is the guard).
 const ELEMENT_EVENTS = [
   Enums.Events.CAMERA_MODIFIED,
   Enums.Events.VOI_MODIFIED,
@@ -63,13 +67,39 @@ const ELEMENT_EVENTS = [
   Enums.Events.VOLUME_VIEWPORT_NEW_VOLUME,
 ];
 
-// Only these types map to CS3D's VolumeViewport class, the one with slices.
-// VOLUME_3D's class returns null from getSliceIndex and lacks
-// getNumberOfSlices entirely (calling it throws).
-const SLICED_VOLUME_TYPES: ReadonlySet<string> = new Set([
-  Enums.ViewportType.ORTHOGRAPHIC,
-  Enums.ViewportType.PERSPECTIVE,
-]);
+// Which slice model the Engine runs for this viewport — the question `kind`
+// answers: an index into an image list (stack) or a point along the camera
+// normal (volume). Decided by capability, not by `viewport.type`: CS3D 5.x's
+// Generic Viewport remaps STACK and ORTHOGRAPHIC alike to PLANAR_NEXT (ADR
+// 0008). Method presence alone cannot tell the models apart either —
+// BaseVolumeViewport also has getImageIds(volumeId), and every class has
+// getSliceIndex — so the probes are the ones that do.
+function isStackShaped(viewport: object): boolean {
+  // A Generic Viewport hosts both models in one class: ask which it holds.
+  // 'empty' reads as a stack — its stack getters already answer (an empty
+  // list, index 0), the same as a legacy Stack before setStack.
+  const generic = viewport as Partial<Types.IGenericViewport>;
+  if (typeof generic.getCurrentMode === 'function') {
+    const mode = generic.getCurrentMode();
+    return mode === 'stack' || mode === 'empty';
+  }
+  // Legacy classes hold one model each; only StackViewport takes a stack.
+  return typeof (viewport as Partial<Types.IStackViewport>).setStack === 'function';
+}
+
+// A viewport without slices has no Slice Position. Read, don't probe: the
+// getters exist on classes without slices too (VOLUME_3D's getSliceIndex
+// returns null and its getNumberOfSlices reports 1; a Volume before its data
+// reports undefined for both), and a class may lack them altogether.
+function readSlicePosition(viewport: object): {
+  sliceIndex: number | undefined;
+  numberOfSlices: number | undefined;
+} {
+  const sliced = viewport as Partial<Pick<Types.IVolumeViewport, 'getSliceIndex' | 'getNumberOfSlices'>>;
+  const sliceIndex = sliced.getSliceIndex?.() ?? undefined;
+  if (sliceIndex === undefined) return { sliceIndex: undefined, numberOfSlices: undefined };
+  return { sliceIndex, numberOfSlices: sliced.getNumberOfSlices?.() ?? undefined };
+}
 
 function camerasEqual(a: Types.ICamera, b: Types.ICamera): boolean {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -155,7 +185,7 @@ function buildSnapshot(
   // structuredClone: getter output may share nested arrays with the Engine;
   // freezing those in place would break Engine-side mutation.
   const camera = shareCamera(structuredClone(viewport.getCamera()), prev?.camera);
-  if (viewport.type === Enums.ViewportType.STACK) {
+  if (isStackShaped(viewport)) {
     const stack = viewport as Types.IStackViewport;
     return deepFreeze<ViewportState>({
       kind: 'stack',
@@ -180,7 +210,6 @@ function buildSnapshot(
   // ponytail: every non-Stack kind reads as 'volume' (camera + VOI is the
   // shared surface); split further kinds if video/WSI state is ever needed.
   const volume = viewport as Types.IVolumeViewport;
-  const sliced = SLICED_VOLUME_TYPES.has(viewport.type);
   return deepFreeze<ViewportState>({
     kind: 'volume',
     camera,
@@ -189,8 +218,7 @@ function buildSnapshot(
       prev?.voiRange,
     ),
     // Engine reports undefined before setVolumes; our contract is undefined too.
-    sliceIndex: sliced ? (volume.getSliceIndex() ?? undefined) : undefined,
-    numberOfSlices: sliced ? (volume.getNumberOfSlices() ?? undefined) : undefined,
+    ...readSlicePosition(viewport),
     // The 3D class returns null (typed as string); ours is undefined either way.
     currentImageId: volume.getCurrentImageId() ?? undefined,
   });

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: '@cornerstonejs/core ${{ matrix.cornerstone }}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Two points only: the peerDependencies floor and the newest 5.x.
+      # Every job installs Chromium, so a third version adds half again to
+      # the cost without telling us anything the two ends do not.
+      matrix:
+        cornerstone: ['5.0.0', '5.x']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Resolve @cornerstonejs/core ${{ matrix.cornerstone }}
+        id: cs
+        # `npm view` returns a string for an exact version and an array for a range.
+        run: |
+          version=$(npm view "@cornerstonejs/core@${{ matrix.cornerstone }}" version --json \
+            | jq -r 'if type == "array" then last else . end')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "@cornerstonejs/core ${{ matrix.cornerstone }} -> $version"
+
+      - name: Install @cornerstonejs/* ${{ steps.cs.outputs.version }} over the lockfile
+        # core pins metadata as an exact peer, and dicom-image-loader (used by the
+        # browser tests) pins core and metadata exactly — so all three move together.
+        env:
+          V: ${{ steps.cs.outputs.version }}
+        run: |
+          npm i --no-save \
+            "@cornerstonejs/core@$V" \
+            "@cornerstonejs/metadata@$V" \
+            "@cornerstonejs/dicom-image-loader@$V"
+          node -p "'installed @cornerstonejs/core ' + require('@cornerstonejs/core/package.json').version"
+
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
