@@ -2,10 +2,11 @@
 // a reader can check it. Evidence and method:
 // .scratch/demo-site/issues/01-ohif-slider-evidence.md
 //
-// Verified 2026-09-19 by reading the sources below. Not observed in a running
-// OHIF — the page says only what the code says.
+// Verified 2026-10-09 by reading the sources below, re-checked against the
+// commit the README now cites so the page and the README point at one OHIF.
+// Not observed in a running OHIF — the page says only what the code says.
 
-const OHIF = '41c03bcfd8ac';
+const OHIF = '9753879';
 const CS3D = '264ca707f481';
 
 const ohif = (path: string, lines: string) =>
@@ -43,7 +44,7 @@ export const OHIF_SCARS: { code: string; quote: string; where: string; href: str
   {
     code: "'use no memo'",
     quote:
-      "The compiler's memoization assumes referential purity, so compiling it silently drops updates.",
+      "The compiler's memoization assumes referential purity, so compiling them silently drops updates.",
     // Eight files under Viewport/ carry this opt-out at 41c03bcfd8ac, not one.
     where: 'hooks.ts:1 — and 7 more',
     href: ohif(HOOKS, 'L1-L5'),
@@ -52,14 +53,14 @@ export const OHIF_SCARS: { code: string; quote: string; where: string; href: str
     code: 'requestAnimationFrame(syncFromViewport)',
     quote:
       '\u2026 fires its slice events synchronously during the mount \u2014 before these listeners attach \u2026',
-    where: 'hooks.ts:134',
-    href: ohif(HOOKS, 'L134-L141'),
+    where: 'hooks.ts:141',
+    href: ohif(HOOKS, 'L135-L141'),
   },
   {
     code: 'addEventListener(CAMERA_MODIFIED, syncFromViewport)',
     quote: '\u2026 leaving the scrollbar unseeded (or stale, with a now-wrong slice count).',
-    where: 'hooks.ts:161',
-    href: ohif(HOOKS, 'L161-L167'),
+    where: 'hooks.ts:167',
+    href: ohif(HOOKS, 'L160-L167'),
   },
   {
     // The getter returns a fresh array every call, so a reference check says
@@ -68,7 +69,7 @@ export const OHIF_SCARS: { code: string; quote: string; where: string; href: str
     code: 'utilities.isEqual(next, lastViewPlaneNormalRef.current)',
     quote: '\u2026 Ignore camera updates that keep the same orientation (pan/zoom/scroll).',
     where: 'hooks.ts:63',
-    href: ohif(HOOKS, 'L48-L68'),
+    href: ohif(HOOKS, 'L56-L68'),
   },
 ];
 

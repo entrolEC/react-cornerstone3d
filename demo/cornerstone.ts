@@ -50,6 +50,16 @@ let pending: Promise<string[]> | undefined;
 /** Idempotent: StrictMode mounts this twice and must get one Engine. */
 export function setup(): Promise<string[]> {
   pending ??= (async () => {
+    // Deliberately unconfigured. init({ rendering: { useGenericViewport: true } })
+    // remaps Stack and Orthographic alike onto PlanarViewport, where the legacy
+    // write setProperties({ voiRange }) ends in setDataPresentationState: it
+    // renders and fires no element event (ADR 0008, upstream cornerstone3D
+    // #2977, still open in 5.11.7). The window/level drag in CtViewport takes
+    // exactly that path, so with the flag on the overlay numbers would stop
+    // moving under your finger — and this page spends six panels arguing that
+    // a write reaches React by coming back as an event. It would read as the
+    // library being broken. Turn the flag on and that drag needs
+    // setDisplaySetPresentation({ voiRange }) instead.
     coreInit();
     dicomImageLoaderInit({ maxWebWorkers: 1 });
     installSlowLoader(); // must follow the loader init: it wraps what that registers
