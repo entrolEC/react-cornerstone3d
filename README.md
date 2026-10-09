@@ -115,11 +115,19 @@ Every state object is a deep-frozen Snapshot, and the reference stays identical 
 ### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
 
 ```ts
-function useImageLoadState(imageId: string | undefined): boolean | undefined;
-function useImageLoadStates(imageIds: readonly string[] | undefined): readonly boolean[] | undefined;
+type ImageLoadState = 'absent' | 'loaded' | 'failed';
+function useImageLoadState(imageId: string | undefined): ImageLoadState | undefined;
+function useImageLoadStates(imageIds: readonly string[] | undefined): readonly ImageLoadState[] | undefined;
 ```
 
-Whether an image is in the cache, as the cache module reports it (`cache.isLoaded`). It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas. Two absences are distinct — `undefined` means there was no image to ask about (`imageId` was `undefined`), `false` means the cache was asked and does not have it, whether the image was never requested or failed and was dropped.
+Whether an image is in the cache, as the cache module reports it (`cache.isLoaded`). It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas.
+
+- `'loaded'` — the cache has it. The cache's getter always wins.
+- `'failed'` — a load of it failed (`IMAGE_LOAD_FAILED`) while it was being watched, and the cache has not had it since. A retry has no start event, so it stays `'failed'` until the image arrives (`'loaded'`) or fails again.
+- `'absent'` — anything else: never requested, evicted, or failed before anything was watching it. The cache deletes a failed entry and keeps no record, so a failure nobody heard cannot be reported ([ADR 0009](./docs/adr/0009-a-heard-failure-is-a-field.md)).
+- `undefined` — there was no image to ask about (`imageId` was `undefined`).
+
+Every state is a non-empty string: compare with `=== 'loaded'`, never `if (state)`.
 
 The array hook is `useImageLoadState` for a whole list: same answer per entry, one frozen array, replaced only when some entry changed. `undefined` in, `undefined` out; an empty list is one stable empty array. It owns no state of its own — a tick component reading `useImageLoadState(imageIds[i])` and a track reading `useImageLoadStates(imageIds)` share one Binding per image.
 
@@ -129,15 +137,15 @@ The library never joins viewport and image state; the join is yours, and it is t
 function LoadTrack({ viewportId }: { viewportId: string }) {
   const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
   const current  = useViewportState(viewportId, (s) => s.currentImageId);
-  const loaded   = useImageLoadStates(imageIds); // readonly boolean[] | undefined
-  if (!imageIds || !loaded) return null;
-  return <div className="track">{imageIds.map((id, i) => <span key={id} data-loaded={loaded[i]} data-current={id === current} />)}</div>;
+  const states   = useImageLoadStates(imageIds); // readonly ImageLoadState[] | undefined
+  if (!imageIds || !states) return null;
+  return <div className="track">{imageIds.map((id, i) => <span key={id} data-state={states[i]} data-current={id === current} />)}</div>;
 }
 ```
 
-What you will not find: *loading* and *failed*. The cache has no getter for either — an entry appears silently when a load is requested and is deleted silently when it fails — so a Snapshot cannot carry them without the library keeping records the Engine does not ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). For those, listen to `IMAGE_LOAD_FAILED` / `IMAGE_LOAD_ERROR` on Cornerstone3D's `eventTarget` yourself. Drawing N ticks is also yours: memo the row or paint a canvas if N is large.
+What you will not find: *loading*. A cache entry appears silently when a load is requested, with no event to say so, so a Snapshot cannot follow it ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). Drawing N ticks is also yours: memo the row or paint a canvas if N is large.
 
-Under the hood, Cornerstone3D's `eventTarget` keeps listeners in a plain array, so the library attaches one listener pair for all observed images and routes by id — a thousand observed slices cost two listeners, not a thousand.
+Under the hood, Cornerstone3D's `eventTarget` keeps listeners in a plain array, so the library attaches one set of listeners (added, removed, load failed) for all observed images and routes by id — a thousand observed slices cost three listeners, not three thousand.
 
 ### `<CornerstoneViewport />`
 
@@ -178,7 +186,7 @@ v0.4 — sync only. The library's sole responsibility is state synchronization.
 | rAF batching for interaction-rate events | ✅ |
 | Optional `<CornerstoneViewport />` component | ✅ |
 | Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack and Volume both; write VOI with `setDisplaySetPresentation`, the legacy `setProperties` fires no event there ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
-| Image Load State reports failure (`'absent' \| 'loaded' \| 'failed'`) | 0.5 |
+| Image Load State reports failure (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
 | Cache State (`useCacheState`: image bytes held) | 0.5 |
 | Volume `volumeIds` | roadmap |
 | Annotation / tool / segmentation state (`@cornerstonejs/tools`, separate entry) | roadmap |

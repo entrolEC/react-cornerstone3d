@@ -6,7 +6,8 @@ import { afterEach, beforeEach, vi } from 'vitest';
 // jsdom harness for the image Bindings. The test file mocks
 // `cache.isLoaded` to read `loaded`; events go through the real eventTarget.
 // Payloads mirror CS3D 5.10.7: ADDED carries the cached image
-// (`detail.image.imageId`), REMOVED carries the id (`detail.imageId`).
+// (`detail.image.imageId`), REMOVED and LOAD_FAILED carry the id
+// (`detail.imageId`). A failure leaves the cache as it was.
 
 export const loaded = new Set<string>();
 
@@ -46,6 +47,15 @@ export const fireRawRemoved = (imageId: string) =>
     );
   });
 
+export const fireRawFailed = (imageId: string) =>
+  act(() => {
+    eventTarget.dispatchEvent(
+      new CustomEvent(Enums.Events.IMAGE_LOAD_FAILED, {
+        detail: { imageId, error: new Error('fake load failure') },
+      }),
+    );
+  });
+
 export const endFrame = () => act(() => vi.advanceTimersToNextFrame());
 
 export const added = (imageId: string) => {
@@ -58,10 +68,16 @@ export const removed = (imageId: string) => {
   endFrame();
 };
 
+export const failed = (imageId: string) => {
+  fireRawFailed(imageId);
+  endFrame();
+};
+
 // Counts only the dispatcher's listeners, not the viewport Binding's lifecycle ones.
 const CACHE_EVENTS = new Set<string>([
   Enums.Events.IMAGE_CACHE_IMAGE_ADDED,
   Enums.Events.IMAGE_CACHE_IMAGE_REMOVED,
+  Enums.Events.IMAGE_LOAD_FAILED,
 ]);
 
 export function spyCacheListeners() {

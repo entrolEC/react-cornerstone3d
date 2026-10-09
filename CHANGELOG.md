@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `useImageLoadState(imageId)` returns `'absent' | 'loaded' | 'failed'` (exported as `ImageLoadState`) instead of a boolean, and `useImageLoadStates(imageIds)` an array of the same. `'absent'` is 0.4.0's `false`. `'failed'` means a load failure (`IMAGE_LOAD_FAILED`) was heard while the hook was mounted and the cache has not had the image since; it clears when a retry succeeds. A failure before mount reads `'absent'`. Watch for truthiness checks: `if (loaded)` still compiles and is now always true — compare with `=== 'loaded'`. (ADR 0009)
+
 ### Fixed
 
 - A Generic Viewport (`PLANAR_NEXT`, from `init({ rendering: { useGenericViewport: true } })`) holding a Stack now reads as kind `'stack'`. The kind is decided by what the viewport can do, not by `viewport.type`; previously such a Stack fell into the Volume branch and reported `sliceIndex`, `numberOfSlices` and `imageIds` as `undefined`. (ADR 0008)

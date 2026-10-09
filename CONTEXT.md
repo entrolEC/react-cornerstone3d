@@ -25,7 +25,7 @@ A write from React to the Engine — always a Cornerstone3D API call. Its effect
 _Avoid_: setter, dispatch, mutation
 
 **Image Load State**:
-Whether one image is in the cache, as the cache module reports it. It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas. An image the cache does not know is not loaded — the same answer whether it was never requested or failed.
+Whether one image is in the cache, as the cache module reports it, in one of three answers: *loaded* (the cache has it), *failed*, or *absent* (anything else — never requested, evicted). It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas. *Failed* is what the Binding heard while it was alive: a load failure for that image, with the cache not having reported the image since; a failure before anyone listened reads *absent*.
 _Avoid_: loading status, ready, rendered, cached flag
 
 **Binding**:

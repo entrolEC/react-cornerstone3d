@@ -6,6 +6,7 @@ import {
   fireRawAdded,
   fireRawRemoved,
   endFrame,
+  failed,
   loaded,
   removed,
   installFakeCache,
@@ -25,15 +26,15 @@ vi.mock('@cornerstonejs/core', async (importOriginal) => {
 installFakeCache();
 
 describe('useImageLoadState', () => {
-  test('an image the cache does not know is not loaded: false', () => {
+  test('an image the cache does not know reads absent', () => {
     const { result } = renderHook(() => useImageLoadState('img:unknown'));
-    expect(result.current).toBe(false);
+    expect(result.current).toBe('absent');
   });
 
-  test('an image already in the cache reads true on the first render', () => {
+  test('an image already in the cache reads loaded on the first render', () => {
     loaded.add('img:pre');
     const { result } = renderHook(() => useImageLoadState('img:pre'));
-    expect(result.current).toBe(true);
+    expect(result.current).toBe('loaded');
   });
 
   test('no imageId: undefined, and nothing is subscribed or registered', () => {
@@ -46,23 +47,97 @@ describe('useImageLoadState', () => {
     spy.restore();
   });
 
-  test('turns true when the cache adds the image', () => {
+  test('turns loaded when the cache adds the image', () => {
     const { result } = renderHook(() => useImageLoadState('img:a'));
-    expect(result.current).toBe(false);
+    expect(result.current).toBe('absent');
 
     added('img:a');
 
-    expect(result.current).toBe(true);
+    expect(result.current).toBe('loaded');
   });
 
-  test('turns false again when the cache removes the image', () => {
+  test('turns absent again when the cache removes the image', () => {
     loaded.add('img:b');
     const { result } = renderHook(() => useImageLoadState('img:b'));
-    expect(result.current).toBe(true);
+    expect(result.current).toBe('loaded');
 
     removed('img:b');
 
-    expect(result.current).toBe(false);
+    expect(result.current).toBe('absent');
+  });
+
+  test('turns failed when a load failure for this image is heard', () => {
+    const { result } = renderHook(() => useImageLoadState('img:bad'));
+    expect(result.current).toBe('absent');
+
+    failed('img:bad');
+
+    expect(result.current).toBe('failed');
+  });
+
+  test('a failure is forgotten once the cache adds the image: a later eviction reads absent', () => {
+    const { result } = renderHook(() => useImageLoadState('img:retry'));
+    failed('img:retry');
+    expect(result.current).toBe('failed');
+
+    added('img:retry');
+    expect(result.current).toBe('loaded');
+
+    removed('img:retry');
+    expect(result.current).toBe('absent');
+  });
+
+  test('a failure for another image changes neither the value nor the render count', () => {
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders++;
+      return useImageLoadState('img:fine');
+    });
+    const rendersBefore = renders;
+
+    failed('img:broken');
+
+    expect(renders).toBe(rendersBefore);
+    expect(result.current).toBe('absent');
+  });
+
+  test('a failure heard while the cache has the image is ignored, now and after eviction', () => {
+    loaded.add('img:held');
+    const { result } = renderHook(() => useImageLoadState('img:held'));
+
+    failed('img:held');
+    expect(result.current).toBe('loaded');
+
+    removed('img:held');
+    expect(result.current).toBe('absent');
+  });
+
+  test('a failure fired before anyone subscribed reads absent', () => {
+    failed('img:early');
+
+    const { result } = renderHook(() => useImageLoadState('img:early'));
+
+    expect(result.current).toBe('absent');
+  });
+
+  test('the heard failure goes with the last consumer: subscribing again reads absent', () => {
+    const first = renderHook(() => useImageLoadState('img:forgot'));
+    failed('img:forgot');
+    expect(first.result.current).toBe('failed');
+    first.unmount();
+
+    const again = renderHook(() => useImageLoadState('img:forgot'));
+    expect(again.result.current).toBe('absent');
+
+    // The same Binding object subscribed again (StrictMode, an evicted
+    // Binding re-subscribed by its hook instance) forgets too.
+    const binding = imageBindings.acquire('img:forgot-same');
+    const off = binding.subscribe(() => {});
+    failed('img:forgot-same');
+    expect(binding.getSnapshot()).toBe('failed');
+    off();
+    binding.subscribe(() => {})();
+    expect(binding.getSnapshot()).toBe('absent');
   });
 
   test('an event for another image does not re-render', () => {
@@ -76,7 +151,7 @@ describe('useImageLoadState', () => {
     added('img:other');
 
     expect(renders).toBe(rendersBefore);
-    expect(result.current).toBe(false);
+    expect(result.current).toBe('absent');
   });
 
   test('events in one frame collapse into one re-render (ADR 0006)', () => {
@@ -94,19 +169,19 @@ describe('useImageLoadState', () => {
     endFrame();
 
     expect(renders).toBe(rendersBefore + 1);
-    expect(result.current).toBe(true);
+    expect(result.current).toBe('loaded');
   });
 
-  test('the dispatcher holds two eventTarget listeners no matter how many images are observed', () => {
+  test('the dispatcher holds three eventTarget listeners no matter how many images are observed', () => {
     const spy = spyCacheListeners();
     const ids = Array.from({ length: 50 }, (_, i) => `img:many-${i}`);
     const { unmount } = renderHook(() => ids.map((id) => useImageLoadState(id)));
 
     expect(imageBindings.size).toBe(50);
-    expect(spy.added()).toBe(2);
+    expect(spy.added()).toBe(3);
 
     unmount();
-    expect(spy.removed()).toBe(2);
+    expect(spy.removed()).toBe(3);
     expect(imageBindings.size).toBe(0);
     spy.restore();
   });
@@ -117,7 +192,7 @@ describe('useImageLoadState', () => {
 
     added('img:r1');
 
-    expect(result.current).toEqual([false, true, false]);
+    expect(result.current).toEqual(['absent', 'loaded', 'absent']);
   });
 
   test('two consumers of one image share one Binding', () => {
@@ -126,25 +201,25 @@ describe('useImageLoadState', () => {
     expect(imageBindings.size).toBe(1);
 
     added('img:shared');
-    expect(a.result.current).toBe(true);
-    expect(b.result.current).toBe(true);
+    expect(a.result.current).toBe('loaded');
+    expect(b.result.current).toBe('loaded');
 
     a.unmount();
     expect(imageBindings.size).toBe(1);
     removed('img:shared');
-    expect(b.result.current).toBe(false);
+    expect(b.result.current).toBe('absent');
   });
 
   test('the last consumer leaving evicts the Binding and detaches the dispatcher', () => {
     const spy = spyCacheListeners();
     const { unmount } = renderHook(() => useImageLoadState('img:last'));
     expect(imageBindings.size).toBe(1);
-    expect(spy.added()).toBe(2);
+    expect(spy.added()).toBe(3);
 
     unmount();
 
     expect(imageBindings.size).toBe(0);
-    expect(spy.removed()).toBe(2);
+    expect(spy.removed()).toBe(3);
     spy.restore();
   });
 
@@ -165,10 +240,10 @@ describe('useImageLoadState', () => {
       wrapper: strictModeWrapper,
     });
     expect(imageBindings.size).toBe(1);
-    expect(spy.added() - spy.removed()).toBe(2);
+    expect(spy.added() - spy.removed()).toBe(3);
 
     added('img:strict');
-    expect(result.current).toBe(true);
+    expect(result.current).toBe('loaded');
 
     unmount();
     expect(spy.added()).toBe(spy.removed());
@@ -180,11 +255,11 @@ describe('useImageLoadState', () => {
     loaded.add('img:second');
     let id: string | undefined = 'img:first';
     const { result, rerender } = renderHook(() => useImageLoadState(id));
-    expect(result.current).toBe(false);
+    expect(result.current).toBe('absent');
 
     id = 'img:second';
     rerender();
-    expect(result.current).toBe(true);
+    expect(result.current).toBe('loaded');
     expect(imageBindings.size).toBe(1);
 
     id = undefined;
@@ -207,23 +282,23 @@ describe('useImageLoadState', () => {
     const offOld = old.subscribe(() => {}); // live again, outside the registry
 
     added('img:orphan');
-    expect(old.getSnapshot()).toBe(true);
-    expect(fresh.getSnapshot()).toBe(true);
+    expect(old.getSnapshot()).toBe('loaded');
+    expect(fresh.getSnapshot()).toBe('loaded');
 
     offFresh();
-    expect(spy.added() - spy.removed()).toBe(2); // old still listens
+    expect(spy.added() - spy.removed()).toBe(3); // old still listens
     removed('img:orphan');
-    expect(old.getSnapshot()).toBe(false);
+    expect(old.getSnapshot()).toBe('absent');
 
     offOld();
     expect(spy.added()).toBe(spy.removed());
     spy.restore();
   });
 
-  test('the value is a bare boolean, referentially trivial', () => {
+  test('the value is a bare string, referentially trivial', () => {
     const { result, rerender } = renderHook(() => useImageLoadState('img:bool'));
-    expect(typeof result.current).toBe('boolean');
+    expect(typeof result.current).toBe('string');
     rerender();
-    expect(result.current).toBe(false);
+    expect(result.current).toBe('absent');
   });
 });

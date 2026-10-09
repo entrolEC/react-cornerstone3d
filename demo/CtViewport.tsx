@@ -115,7 +115,7 @@ export function LoadTrack({ viewportId }: { viewportId: string }) {
   const loaded = useImageLoadStates(imageIds);
   if (!imageIds || !loaded) return null;
 
-  const count = loaded.filter(Boolean).length;
+  const count = loaded.filter((state) => state === 'loaded').length;
   return (
     <div className="track" aria-label="슬라이스별 로드 상태">
       <div className="track__cells">
@@ -124,7 +124,7 @@ export function LoadTrack({ viewportId }: { viewportId: string }) {
             key={id}
             className={
               'track__cell' +
-              (loaded[i] ? ' track__cell--loaded' : '') +
+              (loaded[i] === 'loaded' ? ' track__cell--loaded' : '') +
               (id === current ? ' track__cell--current' : '')
             }
           />

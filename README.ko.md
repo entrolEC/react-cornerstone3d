@@ -113,11 +113,19 @@ type ViewportState = StackViewportState | VolumeViewportState;
 ### `useImageLoadState(imageId)` · `useImageLoadStates(imageIds)`
 
 ```ts
-function useImageLoadState(imageId: string | undefined): boolean | undefined;
-function useImageLoadStates(imageIds: readonly string[] | undefined): readonly boolean[] | undefined;
+type ImageLoadState = 'absent' | 'loaded' | 'failed';
+function useImageLoadState(imageId: string | undefined): ImageLoadState | undefined;
+function useImageLoadStates(imageIds: readonly string[] | undefined): readonly ImageLoadState[] | undefined;
 ```
 
-이미지가 캐시에 있는지를, 캐시 모듈이 말하는 대로(`cache.isLoaded`) 돌려줍니다. 뷰포트가 아니라 캐시의 말입니다: 로드는 됐지만 아직 어느 캔버스에도 그려지지 않은 이미지가 있을 수 있습니다. 두 가지 부재는 구분됩니다 — `undefined`는 물어볼 이미지가 없었다는 뜻(`imageId`가 `undefined`), `false`는 캐시에 물었는데 없다는 뜻입니다. 요청한 적이 없든, 실패해서 지워졌든 같은 답입니다.
+이미지가 캐시에 있는지를, 캐시 모듈이 말하는 대로(`cache.isLoaded`) 돌려줍니다. 뷰포트가 아니라 캐시의 말입니다: 로드는 됐지만 아직 어느 캔버스에도 그려지지 않은 이미지가 있을 수 있습니다.
+
+- `'loaded'` — 캐시에 있습니다. 캐시 getter가 늘 우선합니다.
+- `'failed'` — 지켜보는 동안 로드가 실패했고(`IMAGE_LOAD_FAILED`), 그 뒤로 캐시에 들어온 적이 없습니다. 재시도에는 시작 이벤트가 없으므로 이미지가 들어오거나(`'loaded'`) 다시 실패할 때까지 `'failed'`로 남습니다.
+- `'absent'` — 그 밖의 전부: 요청한 적 없음, 퇴거됨, 아무도 지켜보지 않을 때 실패함. 캐시는 실패한 항목을 지우고 기록을 남기지 않으므로, 아무도 듣지 못한 실패는 보고할 수 없습니다 ([ADR 0009](./docs/adr/0009-a-heard-failure-is-a-field.md)).
+- `undefined` — 물어볼 이미지가 없었습니다(`imageId`가 `undefined`).
+
+모든 상태가 빈 문자열이 아니므로 `if (state)`가 아니라 `=== 'loaded'`로 비교하세요.
 
 배열 훅은 목록 전체에 대한 `useImageLoadState`입니다: 항목마다 같은 답, frozen 배열 하나, 어떤 항목이든 바뀌었을 때만 교체. `undefined`를 주면 `undefined`, 빈 목록은 늘 같은 빈 배열입니다. 자기 상태는 없습니다 — `useImageLoadState(imageIds[i])`를 읽는 눈금 컴포넌트와 `useImageLoadStates(imageIds)`를 읽는 트랙은 이미지당 하나의 Binding을 공유합니다.
 
@@ -127,15 +135,15 @@ function useImageLoadStates(imageIds: readonly string[] | undefined): readonly b
 function LoadTrack({ viewportId }: { viewportId: string }) {
   const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
   const current  = useViewportState(viewportId, (s) => s.currentImageId);
-  const loaded   = useImageLoadStates(imageIds); // readonly boolean[] | undefined
-  if (!imageIds || !loaded) return null;
-  return <div className="track">{imageIds.map((id, i) => <span key={id} data-loaded={loaded[i]} data-current={id === current} />)}</div>;
+  const states   = useImageLoadStates(imageIds); // readonly ImageLoadState[] | undefined
+  if (!imageIds || !states) return null;
+  return <div className="track">{imageIds.map((id, i) => <span key={id} data-state={states[i]} data-current={id === current} />)}</div>;
 }
 ```
 
-없는 것: *로딩 중*과 *실패*. 캐시에는 둘 다 getter가 없습니다 — 로드를 요청하면 항목이 조용히 생기고, 실패하면 조용히 지워집니다 — 그래서 라이브러리가 Engine에 없는 기록을 따로 들고 있지 않는 한 Snapshot에 실을 수 없습니다 ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). 그 둘이 필요하면 Cornerstone3D `eventTarget`의 `IMAGE_LOAD_FAILED` / `IMAGE_LOAD_ERROR`를 직접 들으세요. 눈금 N개를 그리는 것도 앱의 몫입니다: N이 크면 행을 memo하거나 canvas에 그리세요.
+없는 것: *로딩 중*. 로드를 요청하면 캐시 항목이 이벤트 없이 조용히 생기므로 Snapshot이 따라갈 수 없습니다 ([ADR 0007](./docs/adr/0007-a-field-needs-a-getter-and-an-event.md)). 눈금 N개를 그리는 것도 앱의 몫입니다: N이 크면 행을 memo하거나 canvas에 그리세요.
 
-내부적으로 Cornerstone3D의 `eventTarget`은 리스너를 평범한 배열로 들고 있어서, 라이브러리는 관찰 중인 모든 이미지에 대해 리스너 한 쌍만 붙이고 id로 라우팅합니다 — 슬라이스 천 장을 관찰해도 리스너는 천 개가 아니라 둘입니다.
+내부적으로 Cornerstone3D의 `eventTarget`은 리스너를 평범한 배열로 들고 있어서, 라이브러리는 관찰 중인 모든 이미지에 대해 리스너 한 벌(추가, 제거, 로드 실패)만 붙이고 id로 라우팅합니다 — 슬라이스 천 장을 관찰해도 리스너는 삼천 개가 아니라 셋입니다.
 
 ### `<CornerstoneViewport />`
 
@@ -176,7 +184,7 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 고빈도 이벤트 rAF 배칭 | ✅ |
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
 | Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; VOI는 `setDisplaySetPresentation`으로 쓰세요, 레거시 `setProperties`는 거기서 이벤트를 내지 않습니다 ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
-| Image Load State의 실패 보고 (`'absent' \| 'loaded' \| 'failed'`) | 0.5 |
+| Image Load State의 실패 보고 (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
 | Cache State (`useCacheState`: 캐시가 쥔 이미지 바이트) | 0.5 |
 | Volume `volumeIds` | 로드맵 |
 | 어노테이션 / 툴 / 세그멘테이션 상태 (`@cornerstonejs/tools`, 별도 엔트리) | 로드맵 |

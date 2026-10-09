@@ -1,8 +1,8 @@
 import { useRef, useSyncExternalStore } from 'react';
 import { sameStrings, type Binding } from './binding';
-import { imageBindings } from './useImageLoadState';
+import { imageBindings, type ImageLoadState } from './useImageLoadState';
 
-const EMPTY: readonly boolean[] = Object.freeze([]);
+const EMPTY: readonly ImageLoadState[] = Object.freeze([]);
 
 function sameIds(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
   if (a === undefined || b === undefined) return a === b;
@@ -14,7 +14,7 @@ function sameIds(a: readonly string[] | undefined, b: readonly string[] | undefi
 // identity, and here that is N unsubscribes and N subscribes.
 interface Subscription {
   readonly ids: readonly string[] | undefined;
-  readonly targets: readonly Binding<boolean>[] | undefined;
+  readonly targets: readonly Binding<ImageLoadState>[] | undefined;
   readonly subscribe: (onChange: () => void) => () => void;
 }
 
@@ -25,7 +25,7 @@ const NONE: Subscription = {
 };
 
 /**
- * Whether each image in a list is in the cache — `useImageLoadState` for a
+ * The Image Load State of each image in a list — `useImageLoadState` for a
  * whole stack. It owns no state of its own: it reads the same per-image
  * Bindings a tick component would (ADR 0007, one Binding per key) and
  * gathers their answers into one frozen array.
@@ -42,7 +42,7 @@ const NONE: Subscription = {
  */
 export function useImageLoadStates(
   imageIds: readonly string[] | undefined,
-): readonly boolean[] | undefined {
+): readonly ImageLoadState[] | undefined {
   const sub = useRef<Subscription>(NONE);
   if (!sameIds(sub.current.ids, imageIds)) {
     if (imageIds === undefined) {
@@ -64,7 +64,7 @@ export function useImageLoadStates(
   }
   const { targets, subscribe } = sub.current;
 
-  const memo = useRef<readonly boolean[]>(EMPTY);
+  const memo = useRef<readonly ImageLoadState[]>(EMPTY);
   return useSyncExternalStore(subscribe, () => {
     if (targets === undefined) return undefined;
     if (targets.length === 0) return EMPTY;

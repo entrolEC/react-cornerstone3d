@@ -1,5 +1,5 @@
 export { CornerstoneViewport, type CornerstoneViewportProps } from './CornerstoneViewport';
-export { useImageLoadState } from './useImageLoadState';
+export { useImageLoadState, type ImageLoadState } from './useImageLoadState';
 export { useImageLoadStates } from './useImageLoadStates';
 export {
   useViewportState,
