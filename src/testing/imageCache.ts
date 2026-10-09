@@ -3,13 +3,16 @@ import { act, cleanup } from '@testing-library/react';
 import { createElement, StrictMode, type ReactNode } from 'react';
 import { afterEach, beforeEach, vi } from 'vitest';
 
-// jsdom harness for the image Bindings. The test file mocks
-// `cache.isLoaded` to read `loaded`; events go through the real eventTarget.
-// Payloads mirror CS3D 5.10.7: ADDED carries the cached image
+// jsdom harness for the cache Bindings. The test file mocks
+// `cache.isLoaded` to read `loaded` and, where it reads the size,
+// `cache.getCacheSize` to read `cacheSize.bytes`; events go through the real
+// eventTarget. Payloads mirror CS3D 5.10.7: ADDED carries the cached image
 // (`detail.image.imageId`), REMOVED and LOAD_FAILED carry the id
-// (`detail.imageId`). A failure leaves the cache as it was.
+// (`detail.imageId`). The size moves before ADDED/REMOVED fire, as the real
+// cache's does. A failure leaves the cache as it was.
 
 export const loaded = new Set<string>();
+export const cacheSize = { bytes: 0 };
 
 /**
  * Per-test setup for a file that has mocked `cache.isLoaded` (the `vi.mock`
@@ -19,29 +22,36 @@ export function installFakeCache() {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] });
     vi.mocked(cache.isLoaded).mockImplementation((imageId) => loaded.has(imageId));
+    if (vi.isMockFunction(cache.getCacheSize)) {
+      vi.mocked(cache.getCacheSize).mockImplementation(() => cacheSize.bytes);
+    }
   });
   afterEach(() => {
     cleanup(); // unmount before the fake clock goes away (shared scheduler)
     vi.useRealTimers();
     loaded.clear();
+    cacheSize.bytes = 0;
     vi.mocked(cache.isLoaded).mockReset();
+    if (vi.isMockFunction(cache.getCacheSize)) vi.mocked(cache.getCacheSize).mockReset();
   });
 }
 
 export const strictModeWrapper = ({ children }: { children: ReactNode }) =>
   createElement(StrictMode, null, children);
 
-export const fireRawAdded = (imageId: string) =>
+export const fireRawAdded = (imageId: string, bytes = 0) =>
   act(() => {
     loaded.add(imageId);
+    cacheSize.bytes += bytes;
     eventTarget.dispatchEvent(
       new CustomEvent(Enums.Events.IMAGE_CACHE_IMAGE_ADDED, { detail: { image: { imageId } } }),
     );
   });
 
-export const fireRawRemoved = (imageId: string) =>
+export const fireRawRemoved = (imageId: string, bytes = 0) =>
   act(() => {
     loaded.delete(imageId);
+    cacheSize.bytes -= bytes;
     eventTarget.dispatchEvent(
       new CustomEvent(Enums.Events.IMAGE_CACHE_IMAGE_REMOVED, { detail: { imageId } }),
     );
@@ -58,13 +68,13 @@ export const fireRawFailed = (imageId: string) =>
 
 export const endFrame = () => act(() => vi.advanceTimersToNextFrame());
 
-export const added = (imageId: string) => {
-  fireRawAdded(imageId);
+export const added = (imageId: string, bytes = 0) => {
+  fireRawAdded(imageId, bytes);
   endFrame();
 };
 
-export const removed = (imageId: string) => {
-  fireRawRemoved(imageId);
+export const removed = (imageId: string, bytes = 0) => {
+  fireRawRemoved(imageId, bytes);
   endFrame();
 };
 
@@ -73,7 +83,9 @@ export const failed = (imageId: string) => {
   endFrame();
 };
 
-// Counts only the dispatcher's listeners, not the viewport Binding's lifecycle ones.
+// Counts the cache-event listeners — the image dispatcher's and the Cache
+// State Binding's alike, so a test counts one kind by mounting only that
+// kind — not the viewport Binding's lifecycle ones.
 const CACHE_EVENTS = new Set<string>([
   Enums.Events.IMAGE_CACHE_IMAGE_ADDED,
   Enums.Events.IMAGE_CACHE_IMAGE_REMOVED,

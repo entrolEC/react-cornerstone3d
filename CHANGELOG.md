@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `useCacheState()` — what the cache holds: `{ imageBytes }`, the cache's own `getCacheSize()`, following `IMAGE_CACHE_IMAGE_ADDED` / `_REMOVED`. One Binding for the whole cache; a frame of arrivals is one render, and the frozen object is replaced only when the number moved. No maximum (`setMaxCacheSize` fires no event). During progressive loading `setPartialImage` lowers the size silently, so the value can read slightly high until the next cache event.
+
 ### Changed
 
 - **Breaking:** `useImageLoadState(imageId)` returns `'absent' | 'loaded' | 'failed'` (exported as `ImageLoadState`) instead of a boolean, and `useImageLoadStates(imageIds)` an array of the same. `'absent'` is 0.4.0's `false`. `'failed'` means a load failure (`IMAGE_LOAD_FAILED`) was heard while the hook was mounted and the cache has not had the image since; it clears when a retry succeeds. A failure before mount reads `'absent'`. Watch for truthiness checks: `if (loaded)` still compiles and is now always true — compare with `=== 'loaded'`. (ADR 0009)

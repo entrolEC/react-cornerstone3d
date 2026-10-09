@@ -28,6 +28,10 @@ _Avoid_: setter, dispatch, mutation
 Whether one image is in the cache, as the cache module reports it, in one of three answers: *loaded* (the cache has it), *failed*, or *absent* (anything else — never requested, evicted). It is the cache's word, not the viewport's: an image can be loaded and not yet on any canvas. *Failed* is what the Binding heard while it was alive: a load failure for that image, with the cache not having reported the image since; a failure before anyone listened reads *absent*.
 _Avoid_: loading status, ready, rendered, cached flag
 
+**Cache State**:
+The totals the cache module reports. Today, the bytes held by images (`imageBytes`, the cache's own count — volumes are not in it). It is the cache's word, not any viewport's.
+_Avoid_: memory usage, cache info
+
 **Binding**:
-A subscription connecting one Engine event source to Snapshot rebuilding, keyed by what its getters take — a viewportId, or an imageId. Exactly one Binding exists per key while it has consumers; hooks are surfaces over Bindings and one hook may read several. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
+A subscription connecting one Engine event source to Snapshot rebuilding, keyed by what its getters take — a viewportId, or an imageId; the cache's takes nothing, there being one cache. Exactly one Binding exists per key while it has consumers (the keyless one always exists, and hears the Engine only while it has consumers); hooks are surfaces over Bindings and one hook may read several. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
 _Avoid_: sync, connector, store

@@ -147,6 +147,24 @@ What you will not find: *loading*. A cache entry appears silently when a load is
 
 Under the hood, Cornerstone3D's `eventTarget` keeps listeners in a plain array, so the library attaches one set of listeners (added, removed, load failed) for all observed images and routes by id — a thousand observed slices cost three listeners, not three thousand.
 
+### `useCacheState()`
+
+```ts
+interface CacheState { readonly imageBytes: number }
+function useCacheState(): CacheState;
+```
+
+What the cache module reports holding: `imageBytes` is `cache.getCacheSize()`, the bytes of the images in the cache as the cache counts them (volumes are not in that count, hence the name). It follows `IMAGE_CACHE_IMAGE_ADDED` / `_REMOVED`; a thousand arrivals in one frame are one render, and the object is frozen and replaced only when the number moved. Never `undefined` — the cache always exists. The maximum is not here: `setMaxCacheSize` fires no event, and your app set it, so your app knows it.
+
+```tsx
+function MemoryGauge({ maxBytes }: { maxBytes: number }) {
+  const { imageBytes } = useCacheState();
+  return <meter min={0} max={maxBytes} value={imageBytes}>{Math.round(imageBytes / 2 ** 20)} MB</meter>;
+}
+```
+
+One silent path: during progressive loading Cornerstone3D's `setPartialImage` lowers the size without an event, so `imageBytes` can read slightly high until the next cache event.
+
 ### `<CornerstoneViewport />`
 
 Optional. Renders a `<div>`, enables it as a viewport on mount and disables it on unmount. The Engine stays app-created — the component only resolves it through the registry.
@@ -187,7 +205,7 @@ v0.4 — sync only. The library's sole responsibility is state synchronization.
 | Optional `<CornerstoneViewport />` component | ✅ |
 | Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack and Volume both; write VOI with `setDisplaySetPresentation`, the legacy `setProperties` fires no event there ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
 | Image Load State reports failure (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
-| Cache State (`useCacheState`: image bytes held) | 0.5 |
+| Cache State (`useCacheState`: image bytes held) | ✅ |
 | Volume `volumeIds` | roadmap |
 | Annotation / tool / segmentation state (`@cornerstonejs/tools`, separate entry) | roadmap |
 

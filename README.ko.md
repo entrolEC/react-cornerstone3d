@@ -145,6 +145,24 @@ function LoadTrack({ viewportId }: { viewportId: string }) {
 
 내부적으로 Cornerstone3D의 `eventTarget`은 리스너를 평범한 배열로 들고 있어서, 라이브러리는 관찰 중인 모든 이미지에 대해 리스너 한 벌(추가, 제거, 로드 실패)만 붙이고 id로 라우팅합니다 — 슬라이스 천 장을 관찰해도 리스너는 삼천 개가 아니라 셋입니다.
 
+### `useCacheState()`
+
+```ts
+interface CacheState { readonly imageBytes: number }
+function useCacheState(): CacheState;
+```
+
+캐시 모듈이 보고하는 보유량입니다. `imageBytes`는 `cache.getCacheSize()` — 캐시가 세는 이미지 바이트입니다(볼륨은 그 수에 들어가지 않아서 이름이 "image"입니다). `IMAGE_CACHE_IMAGE_ADDED` / `_REMOVED`를 따라가며, 한 프레임에 천 장이 들어와도 렌더는 한 번이고, 객체는 frozen이고 숫자가 바뀔 때만 교체됩니다. `undefined`는 없습니다 — 캐시는 항상 있습니다. 최대치는 여기 없습니다: `setMaxCacheSize`는 이벤트를 내지 않고, 그 값은 앱이 정했으니 앱이 압니다.
+
+```tsx
+function MemoryGauge({ maxBytes }: { maxBytes: number }) {
+  const { imageBytes } = useCacheState();
+  return <meter min={0} max={maxBytes} value={imageBytes}>{Math.round(imageBytes / 2 ** 20)} MB</meter>;
+}
+```
+
+침묵 경로 하나: progressive 로딩 중 Cornerstone3D의 `setPartialImage`는 이벤트 없이 크기를 줄이므로, 다음 캐시 이벤트까지 `imageBytes`가 약간 크게 읽힐 수 있습니다.
+
 ### `<CornerstoneViewport />`
 
 선택 사항. `<div>`를 렌더링하고 마운트 시 뷰포트로 enable, 언마운트 시 disable합니다. Engine은 앱이 만들고, 컴포넌트는 레지스트리로 찾기만 합니다.
@@ -185,7 +203,7 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
 | Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; VOI는 `setDisplaySetPresentation`으로 쓰세요, 레거시 `setProperties`는 거기서 이벤트를 내지 않습니다 ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
 | Image Load State의 실패 보고 (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
-| Cache State (`useCacheState`: 캐시가 쥔 이미지 바이트) | 0.5 |
+| Cache State (`useCacheState`: 캐시가 쥔 이미지 바이트) | ✅ |
 | Volume `volumeIds` | 로드맵 |
 | 어노테이션 / 툴 / 세그멘테이션 상태 (`@cornerstonejs/tools`, 별도 엔트리) | 로드맵 |
 
