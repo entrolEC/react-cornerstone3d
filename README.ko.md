@@ -175,7 +175,7 @@ v0.4 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 셀렉터 (내가 쓰는 값이 바뀔 때만 리렌더) | ✅ |
 | 고빈도 이벤트 rAF 배칭 | ✅ |
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
-| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; VOI는 `setDisplaySetPresentation`으로 쓰세요, 레거시 `setProperties`는 거기서 이벤트를 내지 않습니다 |
+| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; VOI는 `setDisplaySetPresentation`으로 쓰세요, 레거시 `setProperties`는 거기서 이벤트를 내지 않습니다 ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
 | 캐시 총량(`useCacheState`), Volume `volumeIds` | 로드맵 |
 | 어노테이션 / 툴 / 세그멘테이션 상태 | 로드맵 |
 

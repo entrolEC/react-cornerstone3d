@@ -87,7 +87,8 @@ test('Generic Viewport (PLANAR_NEXT): a Stack reads as kind "stack" with Slice P
   // setDataPresentationState, which renders and fires nothing, so the getter
   // moves and no element event says so (CS3D 5.10.7). ADR 0007 rule 1 is
   // about the Engine's pair, not our subscription: the hook cannot hear a
-  // silent write. Pin the fact so a CS3D fix shows up here.
+  // silent write. Pin the fact so a CS3D fix shows up here
+  // (upstream: cornerstonejs/cornerstone3D#2977).
   let voiEvents = 0;
   const countVoi = () => voiEvents++;
   viewport.element.addEventListener(Enums.Events.VOI_MODIFIED, countVoi);
