@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-09
+
 ### Added
 
 - `useCacheState()` — what the cache holds: `{ imageBytes }`, the cache's own `getCacheSize()`, following `IMAGE_CACHE_IMAGE_ADDED` / `_REMOVED`. One Binding for the whole cache; a frame of arrivals is one render, and the frozen object is replaced only when the number moved. No maximum (`setMaxCacheSize` fires no event). During progressive loading `setPartialImage` lowers the size silently, so the value can read slightly high until the next cache event.
@@ -75,7 +77,8 @@ First published release, as `react-cornerstone3d`.
 
 - Snapshot invalidated on `PRE_STACK_NEW_IMAGE`, so `imageIdIndex` is the requested slice during a load and after a failed load, not one slice behind. (ADR 0003)
 
-[Unreleased]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.1.1...v0.2.0

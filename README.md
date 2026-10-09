@@ -188,7 +188,7 @@ A missing Engine at mount is a mount-ordering bug, so the component throws inste
 
 ## Status
 
-v0.4 — sync only. The library's sole responsibility is state synchronization.
+v0.5 — sync only. The library's sole responsibility is state synchronization.
 
 | Capability | Status |
 |---|---|
@@ -217,7 +217,7 @@ v0.4 — sync only. The library's sole responsibility is state synchronization.
 
 **Requires:** React 18+, `@cornerstonejs/core` 5.x. Ships ESM only.
 
-**Stability:** while the major version is 0, a breaking change lands only in a minor release (0.x → 0.y) and is recorded in [CHANGELOG.md](./CHANGELOG.md). Patch releases are safe to take. Pin the exact version or a tilde range (`~0.4.0`).
+**Stability:** while the major version is 0, a breaking change lands only in a minor release (0.x → 0.y) and is recorded in [CHANGELOG.md](./CHANGELOG.md). Patch releases are safe to take. Pin the exact version or a tilde range (`~0.5.0`).
 
 ## Out of scope
 
