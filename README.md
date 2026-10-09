@@ -177,6 +177,7 @@ v0.4 — sync only. The library's sole responsibility is state synchronization.
 | Selectors (re-render only when *your* value changes) | ✅ |
 | rAF batching for interaction-rate events | ✅ |
 | Optional `<CornerstoneViewport />` component | ✅ |
+| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack and Volume both; write VOI with `setDisplaySetPresentation`, the legacy `setProperties` fires no event there ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
 | Image Load State reports failure (`'absent' \| 'loaded' \| 'failed'`) | 0.5 |
 | Cache State (`useCacheState`: image bytes held) | 0.5 |
 | Volume `volumeIds` | roadmap |

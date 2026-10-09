@@ -10,91 +10,23 @@ import {
 import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, expect, test } from 'vitest';
 import { useViewportState, type StackViewportState } from './index';
+import {
+  COLS,
+  ROWS,
+  failingImageLoader,
+  fakeMetaDataProvider,
+  smokeImageIds as imageIds,
+  smokeImageLoader,
+} from './testing/smokeStack';
 
 // Smoke tests against the real Engine on a real canvas. They verify the
 // assumption layer the jsdom fakes encode: which events CS3D actually fires,
 // when, and with what payloads — not the hook logic (jsdom suite owns that).
 
-const ROWS = 64;
-const COLS = 64;
-const imageIds = ['smoke:0', 'smoke:1', 'smoke:2'];
-
-function fakeImage(imageId: string): Types.IImage {
-  const pixelData = new Uint8Array(ROWS * COLS);
-  return {
-    imageId,
-    rows: ROWS,
-    columns: COLS,
-    height: ROWS,
-    width: COLS,
-    color: false,
-    rgba: false,
-    numberOfComponents: 1,
-    dataType: 'Uint8Array',
-    slope: 1,
-    intercept: 0,
-    windowCenter: 128,
-    windowWidth: 256,
-    voiLUTFunction: 'LINEAR',
-    minPixelValue: 0,
-    maxPixelValue: 255,
-    rowPixelSpacing: 1,
-    columnPixelSpacing: 1,
-    invert: false,
-    sizeInBytes: pixelData.byteLength,
-    getPixelData: () => pixelData,
-    getCanvas: undefined,
-  } as unknown as Types.IImage;
-}
-
-function fakeMetaDataProvider(type: string, imageId: string) {
-  const sliceIndex = imageIds.indexOf(imageId);
-  if (sliceIndex === -1) return undefined;
-  switch (type) {
-    case 'imagePlaneModule':
-      return {
-        frameOfReferenceUID: 'smoke-FOR',
-        rows: ROWS,
-        columns: COLS,
-        imageOrientationPatient: [1, 0, 0, 0, 1, 0],
-        rowCosines: [1, 0, 0],
-        columnCosines: [0, 1, 0],
-        imagePositionPatient: [0, 0, sliceIndex],
-        pixelSpacing: [1, 1],
-        rowPixelSpacing: 1,
-        columnPixelSpacing: 1,
-        sliceThickness: 1,
-      };
-    case 'imagePixelModule':
-      return {
-        samplesPerPixel: 1,
-        photometricInterpretation: 'MONOCHROME2',
-        rows: ROWS,
-        columns: COLS,
-        bitsAllocated: 8,
-        bitsStored: 8,
-        highBit: 7,
-        pixelRepresentation: 0,
-      };
-    case 'generalSeriesModule':
-      return { modality: 'SC' };
-    case 'voiLutModule':
-      return { windowWidth: [256], windowCenter: [128] };
-    case 'modalityLutModule':
-      return { rescaleSlope: 1, rescaleIntercept: 0 };
-    default:
-      return undefined;
-  }
-}
-
 beforeAll(async () => {
   await csInit();
-  imageLoader.registerImageLoader('smoke', ((imageId: string) => ({
-    promise: Promise.resolve(fakeImage(imageId)),
-  })) as unknown as Types.ImageLoaderFn);
-  imageLoader.registerImageLoader('fail', (() => ({
-    promise: Promise.reject(new Error('smoke: image load failure')),
-  })) as unknown as Types.ImageLoaderFn);
+  imageLoader.registerImageLoader('smoke', smokeImageLoader);
+  imageLoader.registerImageLoader('fail', failingImageLoader);
   metaData.addProvider(fakeMetaDataProvider);
 });
 
