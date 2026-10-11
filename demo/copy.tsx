@@ -218,7 +218,7 @@ export const COPY: Record<Lang, Copy> = {
     failed: 'DICOM 데이터를 불러오지 못했습니다',
     panel1: {
       eyebrow: '1',
-      title: '슬라이더 하나의 배선이 24줄에서 2줄이 됩니다',
+      title: '같은 슬라이더, 배선 24줄과 2줄',
       lead: (
         <>
           아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤로 슬라이스를,{' '}
@@ -245,14 +245,14 @@ export const COPY: Record<Lang, Copy> = {
           </p>
           <p>
             그런데 줄 수는 작은 문제입니다. 직접 짠 24줄에 붙은 <b>이름 다섯 개</b>를 보세요.
-            길어서가 아니라 <b>다섯 군데를 전부 맞게 써야</b> 해서 어렵습니다. ↓
+            <b>다섯 군데를 전부 맞게 써야</b> 돌아갑니다. ↓
           </p>
         </>
       ),
     },
     panel2: {
       eyebrow: '2',
-      title: '길어서가 아닙니다. 저 24줄이 틀릴 수 있어서입니다',
+      title: '그 24줄에서 틀리기 쉬운 곳 세 군데',
       lead: (
         <>
           패널 1이 이름 붙인 다섯 군데 중 <b>셋을 직접 틀려 봅니다.</b> 코드가 잘못돼서가
@@ -261,19 +261,19 @@ export const COPY: Record<Lang, Copy> = {
       ),
       captions: [
         <>
-          <b>첫 렌더.</b> <code>update()</code> 한 줄을 빼면 슬라이더가 빕니다. 영상을
+          <b>첫 렌더에 값이 안 들어옵니다.</b> <code>update()</code> 한 줄을 빼면 슬라이더가 빕니다. 영상을
           스크롤해야 살아납니다. 다 불러온 검사에서는 <b>아무 이벤트도 오지 않습니다.</b>
         </>,
         <>
-          <b>마운트 순서.</b> 뷰어가 먼저 열리고 영상이 나중에 왔습니다. 흔한 순서인데,
+          <b>영상이 나중에 오면 영영 못 읽습니다.</b> 뷰어가 먼저 열리고 영상이 나중에 왔습니다. 흔한 순서인데,
           직접 배선한 쪽은 <b>영영 비어 있습니다.</b>
         </>,
         <>
-          <b>같은 코드, 반대 순서.</b> 이번엔 영상이 먼저 있었고 검사를 닫았습니다. 직접
+          <b>검사를 닫아도 숫자가 남습니다.</b> 이번엔 영상이 먼저 있었고, 그다음 닫았습니다. 직접
           배선한 쪽이 <b>없는 영상의 숫자</b>를 붙잡고 있습니다.
         </>,
         <>
-          <b>사본이 여럿.</b> 위젯을 하나 더 붙이면, 같은 엔진을 보는데 <b>서로 다른 답</b>을
+          <b>위젯마다 사본이 따로 생깁니다.</b> 하나 더 붙이면 같은 엔진을 보는데 <b>서로 다른 답</b>을
           합니다. 영상을 스크롤하면 그제서야 맞춰집니다.
         </>,
       ],
@@ -322,7 +322,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel3: {
       eyebrow: '3',
-      title: '복사를 없앴더니, 이번엔 화면이 아예 안 그려집니다',
+      title: 'useSyncExternalStore로 바꿨을 때 생기는 문제',
       lead: (
         <>
           React 18에는 <b>복사하지 않고 구독해서 읽는</b> 공식 훅{' '}
@@ -336,11 +336,11 @@ export const COPY: Record<Lang, Copy> = {
           브라우저 기본값 100이라 손잡이가 엉뚱한 데 있습니다.
         </>,
         <>
-          <b>전체 장수도 읽어 봅시다.</b> 두 값을 객체 하나로 묶어 돌려주는, 가장 자연스러운
-          방법입니다. <b>눌러 보세요.</b>
+          <b>전체 장수도 같이 읽습니다.</b> 두 값을 객체 하나로 묶어 돌려주는 방법이 제일
+          자연스럽습니다. <b>눌러 보세요.</b>
         </>,
         <>
-          <b>왜 죽었는지.</b> React가 매 렌더에서 받은 것을 그대로 찍었습니다. 값은 전부 같은데{' '}
+          <b>객체가 매번 새것이라 멈췄습니다.</b> React가 매 렌더에서 받은 것을 그대로 찍었습니다. 값은 전부 같은데{' '}
           <b>객체는 매번 새것</b>입니다.
         </>,
       ],
@@ -378,7 +378,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel4: {
       eyebrow: '4',
-      title: '값이 실제로 바뀔 때만 새 객체를 만들면 됩니다',
+      title: 'useViewportState는 값이 바뀔 때만 알립니다',
       lead: (
         <>
           <code>useViewportState</code>는 엔진 이벤트가 올 때만 Snapshot을 다시 만들고,{' '}
@@ -387,7 +387,7 @@ export const COPY: Record<Lang, Copy> = {
       ),
       captions: [
         <>
-          <b>같은 표, 다른 결과.</b> 슬라이스를 옮기는 동안 기록했습니다. 값이 바뀌니 객체도
+          <b>슬라이스를 옮기는 동안 기록했습니다.</b> 값이 바뀌니 객체도
           바뀝니다. 여기까지는 패널 3과 같아 보입니다.
         </>,
         <>
@@ -395,7 +395,7 @@ export const COPY: Record<Lang, Copy> = {
           3에서는 여기서 <code>#1 #2 #3</code>이 나왔습니다.
         </>,
         <>
-          <b>그리고 selector.</b> Snapshot을 통째로 읽으면 카메라가 움직여도 리렌더됩니다.
+          <b>selector로 한 값만 읽습니다.</b> 스냅샷을 통째로 읽으면 카메라가 움직여도 리렌더됩니다.
           한 값만 읽으면 그 값이 바뀔 때만 리렌더됩니다. <b>카메라를 흔들어 보세요.</b>
         </>,
       ],
@@ -457,7 +457,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel5: {
       eyebrow: '5',
-      title: '어떤 이벤트를 들어야 하는지는 아무도 알려주지 않습니다',
+      title: '어떤 이벤트를 들어야 할까',
       lead: (
         <>
           여기까지는 <b>어떻게 읽는가</b>였습니다. 남은 질문은{' '}
@@ -466,16 +466,16 @@ export const COPY: Record<Lang, Copy> = {
       ),
       captions: [
         <>
-          <b>이름이 맞는 이벤트를 골랐는데.</b> <code>STACK_NEW_IMAGE</code>는 엔진이{' '}
-          <b>이미지 로드에 성공했을 때만</b> 발사합니다. 캐시를 비우고 슬라이더를 빠르게 끌어
-          보세요. 손잡이가 뒤에서 따라옵니다.
+          <b>이벤트 이름은 맞는데 타이밍이 틀립니다.</b> <code>STACK_NEW_IMAGE</code>는{' '}
+          <b>이미지를 다 받은 뒤에</b> 나옵니다. 캐시를 비우고 슬라이더를 빠르게 끌어 보세요.
+          손잡이가 뒤에서 따라옵니다.
         </>,
         <>
-          <b>그래서 라이브러리가 이걸 집니다.</b> 어떤 getter를 어떤 이벤트에 묶을지, 다시
+          <b>라이브러리가 대신 정합니다.</b> 어떤 getter를 어떤 이벤트에 묶을지, 다시
           만든 게 정말 달라졌는지, 한 프레임에 몇 번 알릴지.
         </>,
         <>
-          <b>대신 아무거나 주지는 않습니다.</b> 값을 읽을 getter와, 값이 움직였다고 알려줄
+          <b>아무 값이나 주지는 않습니다.</b> 값을 읽을 getter와, 값이 움직였다고 알려줄
           이벤트가 둘 다 있어야 필드가 됩니다. <b>딱 한 줄만 빼고요.</b>
         </>,
       ],
@@ -491,12 +491,11 @@ export const COPY: Record<Lang, Copy> = {
         purge: '캐시 비우기',
         purged: '비웠습니다. 이제 끌어 보세요',
         seeSource: '엔진 소스에서 확인하기',
-        scarsTitle: '우리만 그런 게 아닙니다. OHIF 코드',
+        scarsTitle: 'OHIF도 같은 자리에서 막혔습니다',
         scarsEnd: (
           <>
-            <b>모르고 있는 게 아닙니다.</b> 넷 다 같은 자리에서 싸운 기록입니다. 그런데도
-            손잡이는 여전히 로드 완료 이벤트에 묶여 있습니다. 상태가 React 밖에 있어서
-            그렇습니다.
+            <b>넷 다 같은 자리에서 싸운 기록입니다.</b> 그런데도 손잡이는 여전히 로드 완료
+            이벤트에 묶여 있습니다. 상태가 React 밖에 있어서 그렇습니다.
           </>
         ),
         cite: {
@@ -582,7 +581,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel6: {
       eyebrow: '6',
-      title: '그래서, 어떻게 쓰면 되는지 보겠습니다',
+      title: '쓰는 법',
       lead: (
         <>
           훅이 돌려주는 상태 객체가 <b>스냅샷</b>, 거기서 값만 골라 읽는 함수가{' '}
@@ -631,7 +630,7 @@ const voi = useViewportState(id, (s) => ({ ...s.voiRange }));`,
           ),
         },
         {
-          title: 'undefined는 오류가 아니라 정상 상태입니다',
+          title: 'undefined는 정상 상태입니다',
           label: '없음 다루기',
           mark: 'slice === undefined',
           code: `const slice = useViewportState(id, (s) => s.sliceIndex);
@@ -649,7 +648,7 @@ return <span>{slice + 1}</span>;`,
           ),
         },
         {
-          title: 'Provider가 없습니다. 엔진은 앱 것입니다',
+          title: 'Provider 없이 씁니다',
           label: '붙이는 법',
           mark: "useViewportState('ct-axial')",
           code: `// 앱이 이미 만들어 쓰던 엔진 그대로
@@ -688,7 +687,7 @@ if (state?.kind === 'stack') { /* ... */ }`,
           ),
         },
         {
-          title: '읽을 수 있는 건 뷰포트 상태만이 아닙니다',
+          title: '뷰포트 말고 캐시도 읽을 수 있습니다',
           label: '다른 훅',
           mark: 'useImageLoadState',
           code: `// 슬라이스 하나가 캐시에 있는지
@@ -729,7 +728,7 @@ const { imageBytes } = useCacheState();`,
           ),
         },
         {
-          title: 'cleanup을 안 써서 새는 일이 없습니다',
+          title: 'cleanup을 빠뜨릴 일이 없습니다',
           body: (
             <>
               StrictMode는 마운트를 두 번 합니다. 직접 배선한 위젯에서{' '}
