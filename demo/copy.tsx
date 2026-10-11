@@ -218,7 +218,7 @@ export const COPY: Record<Lang, Copy> = {
     failed: 'DICOM 데이터를 불러오지 못했습니다',
     panel1: {
       eyebrow: '1',
-      title: '슬라이더 하나에 배선 24줄, 훅으로는 2줄',
+      title: '24줄 vs 2줄',
       lead: (
         <>
           아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤로 슬라이스를,{' '}
