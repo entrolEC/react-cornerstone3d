@@ -42,7 +42,16 @@ export function Panel5({ imageIds, theme }: { imageIds: string[]; theme: 'light'
   return (
     <Panel eyebrow={t.eyebrow} title={t.title} lead={t.lead} alt>
       {step === 0 && <Wall imageIds={slow} theme={theme} />}
-      {step === 1 && <Diagram />}
+      {/* The OHIF evidence sits with "the library decides this", not with the
+          wall. Step 1 is for feeling the lag; one piece of evidence under it
+          is enough, and two folded blocks side by side only ask the reader to
+          choose between them. */}
+      {step === 1 && (
+        <>
+          <Diagram />
+          <Scars theme={theme} />
+        </>
+      )}
       {step === 2 && <Fields />}
 
       <div className="stepbar">
@@ -116,7 +125,6 @@ function Wall({ imageIds, theme }: { imageIds: string[]; theme: 'light' | 'dark'
               </Cite>
             </div>
           </details>
-          <Scars theme={theme} />
         </div>
       </div>
     </div>

@@ -11,16 +11,16 @@ const stackOf = (viewportId: string) =>
 function useSliceByEvents(viewportId: string) {
   // STACK_NEW_IMAGE: the event whose name matches "the slice changed". It is
   // also the one the Engine fires only after the image has finished loading.
-  // #region subscribe
   const subscribe = useCallback(
     (onChange: () => void) => {
       const element = stackOf(viewportId)?.element;
+      // #region subscribe
       element?.addEventListener(Enums.Events.STACK_NEW_IMAGE, onChange);
       return () => element?.removeEventListener(Enums.Events.STACK_NEW_IMAGE, onChange);
+      // #endregion subscribe
     },
     [viewportId],
   );
-  // #endregion subscribe
 
   return {
     slice: useSyncExternalStore(subscribe, () => stackOf(viewportId)?.getSliceIndex()),

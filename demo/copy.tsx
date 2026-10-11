@@ -468,7 +468,6 @@ export const COPY: Record<Lang, Copy> = {
         <>
           <b>이벤트 이름은 맞는데 타이밍이 틀립니다.</b> <code>STACK_NEW_IMAGE</code>는{' '}
           <b>이미지를 다 받은 뒤에</b> 나옵니다. 캐시를 비우고 슬라이더를 빠르게 끌어 보세요.
-          손잡이가 뒤에서 따라옵니다.
         </>,
         <>
           <b>라이브러리가 대신 정합니다.</b> 어떤 getter를 어떤 이벤트에 묶을지, 다시
@@ -487,7 +486,7 @@ export const COPY: Record<Lang, Copy> = {
         </>
       ),
       wall: {
-        slowNote: '이 단계만 슬라이스 도착을 450ms 늦춰 뒀습니다. 빠른 회선에서도 보이게 하려고요. 엔진 동작은 그대로입니다.',
+        slowNote: '이 단계만 슬라이스를 450ms 늦춰 뒀습니다. 엔진 동작은 그대로입니다.',
         purge: '캐시 비우기',
         purged: '비웠습니다',
         seeSource: '엔진 소스에서 확인하기',
