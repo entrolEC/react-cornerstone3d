@@ -378,7 +378,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel4: {
       eyebrow: '4',
-      title: 'useViewportState는 값이 바뀔 때만 알립니다',
+      title: '이벤트는 쌓이고 리렌더는 그대로',
       lead: (
         <>
           <code>useViewportState</code>는 엔진 이벤트가 올 때만 Snapshot을 다시 만들고,{' '}
@@ -457,7 +457,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel5: {
       eyebrow: '5',
-      title: '이벤트 고르기가 제일 어렵습니다',
+      title: '이벤트를 잘못 고르면 생기는 일',
       lead: (
         <>
           여기까지는 <b>어떻게 읽는가</b>였습니다. 남은 질문은{' '}
