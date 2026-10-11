@@ -100,7 +100,6 @@ function Wall({ imageIds, theme }: { imageIds: string[]; theme: 'light' | 'dark'
               >
                 {purged ? t.purged : t.purge}
               </button>
-              <p className="lab__note">{t.drag}</p>
             </div>
           </div>
           <Code

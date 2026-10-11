@@ -54,7 +54,9 @@ export function Panel3({ imageIds, theme }: { imageIds: string[]; theme: 'light'
             showOverlay={false}
             control={step === 0 ? <HalfSlider viewportId={VIEWPORT_ID} /> : undefined}
           />
-          <p className="stage__note">{t.notes[step]}</p>
+          {/* Only where the image needs a word the step caption cannot give.
+              Steps 1 and 3 had one that restated the caption outright. */}
+          {step === 1 && <p className="stage__note">{t.notes[step]}</p>}
         </div>
 
         <div className="focus">
@@ -160,7 +162,6 @@ function Identity({
         empty={t.empty}
         count={t.objects(ids.length ? Math.max(...ids) : 0)}
       />
-      <p className="ident__verdict">{t.naiveVerdict}</p>
     </div>
   );
 }

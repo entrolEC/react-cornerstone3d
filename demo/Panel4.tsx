@@ -32,7 +32,9 @@ export function Panel4({ imageIds, theme: _theme }: { imageIds: string[]; theme:
         <div className="stage">
           <div className="stage__image">
             <CtViewport viewportId={VIEWPORT_ID} imageIds={imageIds} showOverlay={false} />
-            <p className="stage__note">{step === 0 ? t.dragNote : t.holdNote}</p>
+            {/* Step 1 is the only one that needs an instruction here; step 2
+                has the button's own hint right beside it. */}
+            {step === 0 && <p className="stage__note">{t.dragNote}</p>}
           </div>
           <div className="focus">
             {step === 0 ? (

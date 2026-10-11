@@ -18,7 +18,6 @@ export function Fields() {
 
   return (
     <div className="fields">
-      <p className="fields__rule">{t.rule}</p>
       <ul className="fields__list">
         {t.rows.map((row) => (
           <li className={`fields__row${row.field ? ' fields__row--in' : ''}`} key={row.name}>

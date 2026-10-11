@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Code, Panel, Steps, useCopy } from './ui';
 import { CtViewport } from './CtViewport';
 import { SliderWithSeed } from './gap';
@@ -6,7 +6,7 @@ import { SliderByHand, BY_HAND_SOURCE } from './slider-by-hand';
 import { SliderBySnapshot } from './slider-by-snapshot';
 
 const VIEWPORT_ID = 'demo-copy';
-const STEPS = 3;
+const STEPS = 4;
 
 /**
  * What is actually in those 24 lines. Panel 1 named five places; this one gets
@@ -26,8 +26,12 @@ export function Panel2({ imageIds, theme }: { imageIds: string[]; theme: 'light'
   return (
     <Panel eyebrow={t.eyebrow} title={t.title} lead={t.lead} alt>
       {step === 0 && <Gap theme={theme} imageIds={imageIds} />}
-      {step === 1 && <Order imageIds={imageIds} />}
-      {step === 2 && <Divergence imageIds={imageIds} />}
+      {/* One story per step. They used to be two tabs with their own next and
+          restart inside a step that already had both, so the screen carried six
+          buttons and two things called "next". */}
+      {step === 1 && <Order imageIds={imageIds} story={0} />}
+      {step === 2 && <Order imageIds={imageIds} story={1} />}
+      {step === 3 && <Divergence imageIds={imageIds} />}
 
       <div className="stepbar">
         <Steps
@@ -67,7 +71,6 @@ function Gap({ theme, imageIds }: { theme: 'light' | 'dark'; imageIds: string[] 
         {/* Keyed on `seed`: taking the line out means mounting the component
             without it, which is the thing being shown. */}
         <SliderWithSeed key={String(seed)} viewportId={VIEWPORT_ID} seed={seed} />
-        <p className="stage__note">{seed ? t.withSeed : t.withoutSeed}</p>
       </div>
       <div className="focus">
         <div className="focus__stack">
@@ -79,7 +82,6 @@ function Gap({ theme, imageIds }: { theme: 'light' | 'dark'; imageIds: string[] 
               >
                 {seed ? t.remove : t.restore}
               </button>
-              <p className="lab__note">{t.hint}</p>
             </div>
           </div>
           <Code
@@ -111,89 +113,63 @@ const STORIES: readonly { readonly imageFirst: boolean; readonly scenes: readonl
   { imageFirst: true, scenes: [{ image: true, sliders: true }, { image: false, sliders: true }] },
 ];
 
-function Order({ imageIds }: { imageIds: string[] }) {
+/**
+ * One mount order, played out. The scenes advance on their own: the setup
+ * beat is not something to ask the reader to click through, and the step they
+ * pressed to get here is the action that starts it. Under
+ * `prefers-reduced-motion` it opens on the finding with no beat at all.
+ */
+function Order({ imageIds, story }: { imageIds: string[]; story: number }) {
   const t = useCopy().panel2.order;
-  const [story, setStory] = useState(0);
-  const [scene, setScene] = useState(-1);
-  const [run, setRun] = useState(0);
-
   const current = STORIES[story];
-  const at = current.scenes[scene];
-  const last = scene === current.scenes.length - 1;
+  const still = useRef(
+    typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
+  ).current;
+  const [scene, setScene] = useState(still ? current.scenes.length - 1 : -1);
 
   // Before the first scene the image sits where the story needs it and the
   // sliders do not exist yet. That one beat is the whole point: which of the
   // two was there first.
   useEffect(() => {
-    setScene(-1);
-    const id = setTimeout(() => setScene(0), 450);
-    return () => clearTimeout(id);
-  }, [story, run]);
+    if (still) return;
+    const beats = current.scenes.map((_, i) =>
+      setTimeout(() => setScene(i), 450 + i * 1700),
+    );
+    return () => beats.forEach(clearTimeout);
+  }, [current, still]);
 
+  const at = current.scenes[scene];
   const image = at ? at.image : current.imageFirst;
   const sliders = at?.sliders ?? false;
 
   return (
-    <>
-      <div className="tabs" role="tablist">
-        {t.tabs.map((tab, i) => (
-          <button
-            key={tab}
-            className="tab"
-            role="tab"
-            aria-selected={i === story}
-            onClick={() => setStory(i)}
-          >
-            {tab}
-          </button>
-        ))}
+    <div className="stage">
+      <div className="stage__image">
+        {image ? (
+          <CtViewport viewportId={VIEWPORT_ID} imageIds={imageIds} showOverlay={false} />
+        ) : (
+          <div className="vp vp--off">{t.noImage}</div>
+        )}
+        <p className="stage__note">{at ? t.scenes[story][scene] : t.settling}</p>
       </div>
 
-      <div className="stage">
-        <div className="stage__image">
-          {image ? (
-            <CtViewport viewportId={VIEWPORT_ID} imageIds={imageIds} showOverlay={false} />
-          ) : (
-            <div className="vp vp--off">{t.noImage}</div>
-          )}
-          <p className="stage__note">{at ? t.scenes[story][scene] : t.settling}</p>
-        </div>
-
-        <div className="focus">
-          <div className="lab">
-            <div className="lab__row">
-              <span className="lab__name">
-                {t.byHand} <span className="badge badge--bad">useState</span>
-              </span>
-              {sliders ? <SliderByHand viewportId={VIEWPORT_ID} /> : <Waiting />}
-            </div>
-            <div className="lab__row">
-              <span className="lab__name">
-                {t.hook} <span className="badge badge--ok">useViewportState</span>
-              </span>
-              {sliders ? <SliderBySnapshot viewportId={VIEWPORT_ID} /> : <Waiting />}
-            </div>
-            <div className="lab__foot">
-              <div className="lab__controls">
-                <button
-                  className="button button--primary button--sm"
-                  disabled={!at || last}
-                  onClick={() => setScene((n) => n + 1)}
-                >
-                  {t.nextScene}
-                </button>
-                <button
-                  className="button button--secondary button--sm"
-                  onClick={() => setRun((n) => n + 1)}
-                >
-                  {t.again}
-                </button>
-              </div>
-            </div>
+      <div className="focus">
+        <div className="lab">
+          <div className="lab__row">
+            <span className="lab__name">
+              {t.byHand} <span className="badge badge--bad">useState</span>
+            </span>
+            {sliders ? <SliderByHand viewportId={VIEWPORT_ID} /> : <Waiting />}
+          </div>
+          <div className="lab__row">
+            <span className="lab__name">
+              {t.hook} <span className="badge badge--ok">useViewportState</span>
+            </span>
+            {sliders ? <SliderBySnapshot viewportId={VIEWPORT_ID} /> : <Waiting />}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -217,7 +193,6 @@ function Divergence({ imageIds }: { imageIds: string[] }) {
     <div className="stage">
       <div className="stage__image">
         <CtViewport viewportId={VIEWPORT_ID} imageIds={imageIds} showOverlay={false} />
-        <p className="stage__note">{t.note}</p>
       </div>
       <div className="focus">
         <div className="lab">
@@ -241,7 +216,6 @@ function Divergence({ imageIds }: { imageIds: string[] }) {
               >
                 {t.add}
               </button>
-              <p className="lab__note">{t.hint}</p>
             </div>
           </div>
         </div>

@@ -57,14 +57,11 @@ export interface Copy {
     captions: ReactNode[];
     verdict: ReactNode;
     gap: {
-      withSeed: ReactNode;
-      withoutSeed: ReactNode;
       remove: string;
       restore: string;
       hint: ReactNode;
     };
     order: {
-      tabs: string[];
       /** One line per scene, per story. */
       scenes: ReactNode[][];
       settling: string;
@@ -72,8 +69,6 @@ export interface Copy {
       notYet: string;
       byHand: string;
       hook: string;
-      nextScene: string;
-      again: string;
     };
     split: {
       first: string;
@@ -109,7 +104,6 @@ export interface Copy {
     captions: ReactNode[];
     verdict: ReactNode;
     dragNote: ReactNode;
-    holdNote: ReactNode;
     identity: {
       hookTitle: string;
       objects: (n: number) => string;
@@ -140,7 +134,6 @@ export interface Copy {
     verdict: ReactNode;
     wall: {
       slowNote: ReactNode;
-      drag: ReactNode;
       purge: string;
       purged: string;
       seeSource: string;
@@ -170,8 +163,6 @@ export interface Copy {
       caption: ReactNode;
     };
     fields: {
-      /** The rule, stated once before anything is checked against it. */
-      rule: ReactNode;
       rows: {
         name: string;
         getter: string;
@@ -230,10 +221,9 @@ export const COPY: Record<Lang, Copy> = {
       title: '슬라이더 하나의 배선이 24줄에서 2줄이 됩니다',
       lead: (
         <>
-          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤하거나 슬라이더를 끌면 슬라이스가,{' '}
-          <b>영상을 드래그하면 W/L</b>이 바뀝니다. 탭을 바꾸면{' '}
-          <b>지금 화면 아래에서 실제로 돌고 있는 슬라이더</b>가 바뀝니다 — 코드 패널만 바뀌는 게
-          아닙니다.
+          아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤로 슬라이스를,{' '}
+          <b>드래그로 W/L</b>을 바꿀 수 있습니다. 탭은 <b>실제로 돌고 있는 슬라이더</b>를
+          바꿉니다.
         </>
       ),
       tabHook: 'useViewportState',
@@ -269,23 +259,27 @@ export const COPY: Record<Lang, Copy> = {
       title: '길어서가 아닙니다. 저 24줄이 틀릴 수 있어서입니다',
       lead: (
         <>
-          패널 1이 이름 붙인 다섯 군데 중 <b>세 군데를 직접 틀려 보겠습니다.</b> 셋 다 코드가
-          잘못돼서가 아니라, <b>엔진이 이미 갖고 있는 값을 React state로 한 번 더 복사</b>했기
-          때문에 생깁니다.
+          패널 1이 이름 붙인 다섯 군데 중 <b>셋을 직접 틀려 봅니다.</b> 코드가 잘못돼서가
+          아니라 <b>엔진의 값을 React state로 복사</b>했기 때문입니다.
         </>
       ),
       captions: [
         <>
-          <b>첫 렌더.</b> <code>update()</code> 한 줄을 빼 보세요. 코드는 여전히 세 이벤트를
-          구독하고 있지만, 다 불러온 검사에서는 <b>아무 이벤트도 오지 않습니다.</b>
+          <b>첫 렌더.</b> <code>update()</code> 한 줄을 빼면 슬라이더가 빕니다. 영상을
+          스크롤해야 살아납니다 — 다 불러온 검사에서는 <b>아무 이벤트도 오지 않기</b>{' '}
+          때문입니다.
         </>,
         <>
-          <b>마운트 순서.</b> 영상과 위젯 중 무엇이 먼저 생기느냐를 앱이 정하지 못합니다 —
-          네트워크와 사용자가 정합니다. 두 순서를 다 해 보세요.
+          <b>마운트 순서.</b> 뷰어가 먼저 열리고 영상이 나중에 왔습니다. 흔한 순서인데,
+          직접 배선한 쪽은 <b>영영 비어 있습니다.</b>
         </>,
         <>
-          <b>사본이 여럿.</b> 같은 파일로 만든 위젯을 하나 더 붙여 보세요. 같은 엔진을 보고
-          있는데 <b>서로 다른 답</b>을 합니다.
+          <b>같은 코드, 반대 순서.</b> 이번엔 영상이 먼저 있었고 검사를 닫았습니다. 직접
+          배선한 쪽이 <b>없는 영상의 숫자</b>를 붙잡고 있습니다.
+        </>,
+        <>
+          <b>사본이 여럿.</b> 위젯을 하나 더 붙이면, 같은 엔진을 보는데 <b>서로 다른 답</b>을
+          합니다. 영상을 스크롤하면 그제서야 맞춰집니다.
         </>,
       ],
       verdict: (
@@ -300,19 +294,11 @@ export const COPY: Record<Lang, Copy> = {
         </>
       ),
       gap: {
-        withSeed: <><code>update()</code> 있음 — 붙자마자 맞습니다.</>,
-        withoutSeed: (
-          <>
-            <code>update()</code> 없음 — 슬라이더가 비어 있습니다. 영상을 스크롤하면 그제서야
-            첫 이벤트가 와서 채워집니다.
-          </>
-        ),
         remove: 'update() 한 줄 빼기',
         restore: 'update() 되돌리기',
         hint: <>빼고 나서 <b>영상을 스크롤</b>해 보세요 — 이벤트가 와야만 살아납니다.</>,
       },
       order: {
-        tabs: ['상황 1. 영상이 화면보다 늦게 온다', '상황 2. 보던 검사를 닫는다'],
         scenes: [
           [
             <>뷰어 화면이 먼저 열렸습니다. 슬라이더 두 개도 이때 만들어졌고, 읽을 영상이 없습니다.</>,
@@ -335,8 +321,6 @@ export const COPY: Record<Lang, Copy> = {
         notYet: '아직 화면에 없음',
         byHand: '직접 배선',
         hook: '훅',
-        nextScene: '다음 장면 →',
-        again: '다시',
       },
       split: {
         first: '처음부터 있던 위젯',
@@ -351,9 +335,8 @@ export const COPY: Record<Lang, Copy> = {
       title: '복사를 없앴더니, 이번엔 화면이 아예 안 그려집니다',
       lead: (
         <>
-          React 18에는 밖에 있는 상태를 <b>복사하지 않고 구독해서 읽는</b> 공식 훅이 있습니다 —{' '}
-          <code>useSyncExternalStore</code>. 패널 2의 세 가지가 한 번에 없어집니다. 그런데 값이
-          하나에서 둘이 되는 순간 막힙니다.
+          React 18에는 <b>복사하지 않고 구독해서 읽는</b> 공식 훅이 있습니다 —{' '}
+          <code>useSyncExternalStore</code>. 값이 둘이 되는 순간 막힙니다.
         </>
       ),
       captions: [
@@ -409,9 +392,8 @@ export const COPY: Record<Lang, Copy> = {
       title: '값이 실제로 바뀔 때만 새 객체를 만들면 됩니다',
       lead: (
         <>
-          <code>useViewportState</code>가 하는 일이 정확히 그것입니다. 엔진 이벤트가 올 때만
-          Snapshot을 다시 만들고, <b>다시 만든 결과가 이전과 같으면 아무에게도 알리지
-          않습니다.</b> 3단계와 같은 로그를 훅으로 다시 돌려 보겠습니다.
+          <code>useViewportState</code>는 엔진 이벤트가 올 때만 Snapshot을 다시 만들고,{' '}
+          <b>같으면 아무에게도 알리지 않습니다.</b> 패널 3의 로그를 훅으로 다시 돌립니다.
         </>
       ),
       captions: [
@@ -420,9 +402,8 @@ export const COPY: Record<Lang, Copy> = {
           바뀝니다 — 여기까지는 패널 3과 같아 보입니다.
         </>,
         <>
-          <b>이번엔 엔진에 값을 쓰되, 방금 읽은 값을 그대로 씁니다.</b> 버튼을 여러 번 눌러
-          보세요. 엔진 이벤트는 계속 올라가는데 <b>훅이 알린 횟수는 0</b>입니다. 패널 3에서는
-          여기서 <code>#1 #2 #3</code>이 나왔습니다.
+          <b>이번엔 값을 안 바꾸고 엔진에만 씁니다.</b> 버튼을 여러 번 눌러 보세요. 패널
+          3에서는 여기서 <code>#1 #2 #3</code>이 나왔습니다.
         </>,
         <>
           <b>그리고 selector.</b> Snapshot을 통째로 읽으면 카메라가 움직여도 리렌더됩니다.
@@ -430,7 +411,6 @@ export const COPY: Record<Lang, Copy> = {
         </>,
       ],
       dragNote: <>영상을 스크롤하거나 끌어 보세요. 옆의 로그가 실시간으로 쌓입니다.</>,
-      holdNote: <>값은 그대로입니다. 엔진만 이벤트를 냅니다.</>,
       verdict: (
         <>
           패널 3의 <code>#1 #2 #3</code>과 위 <code>#1 #1 #1</code>이 같은 표입니다. 차이는
@@ -442,7 +422,7 @@ export const COPY: Record<Lang, Copy> = {
         </>
       ),
       identity: {
-        hookTitle: '옮기는 중 — 값이 바뀌니 객체도 새것입니다',
+        hookTitle: '옮기는 중',
         objects: (n) => `서로 다른 객체 ${n}개`,
         empty: '아직 없음',
         engineNote: (events) => (
@@ -495,9 +475,8 @@ export const COPY: Record<Lang, Copy> = {
       title: '어떤 이벤트를 들어야 하는지는 아무도 알려주지 않습니다',
       lead: (
         <>
-          여기까지는 <b>어떻게 읽는가</b>였습니다. 남은 질문은 <b>무엇을 언제 읽는가</b>입니다.
-          패널 3의 슬라이더를 원시값 두 개로 완성해 보겠습니다 — 무한 루프는 없습니다.
-          그런데도 손잡이가 손가락을 안 따라옵니다.
+          여기까지는 <b>어떻게 읽는가</b>였습니다. 남은 질문은{' '}
+          <b>무엇을 언제 읽는가</b>입니다.
         </>
       ),
       captions: [
@@ -511,8 +490,8 @@ export const COPY: Record<Lang, Copy> = {
           만든 게 정말 달라졌는지, 한 프레임에 몇 번 알릴지.
         </>,
         <>
-          <b>대신 아무거나 주지는 않습니다.</b> getter와 이벤트가 둘 다 있어야 필드가 됩니다 —{' '}
-          <b>한 줄만 빼고</b>. 그 한 줄이 규칙의 진짜 모양을 말해 줍니다.
+          <b>대신 아무거나 주지는 않습니다.</b> 값을 읽을 getter와, 값이 움직였다고 알려줄
+          이벤트가 둘 다 있어야 필드가 됩니다 — <b>한 줄만 빼고</b>.
         </>,
       ],
       verdict: (
@@ -524,7 +503,6 @@ export const COPY: Record<Lang, Copy> = {
       ),
       wall: {
         slowNote: '이 단계의 뷰포트는 슬라이스 도착을 450ms 의도적으로 늦춥니다 — 빠른 회선에서도 보이게 하기 위해서입니다. 엔진 동작은 그대로입니다.',
-        drag: <>캐시를 비우고 <b>슬라이더를 빠르게 끌어</b> 보세요.</>,
         purge: '캐시 비우기',
         purged: '비웠습니다 — 이제 끌어 보세요',
         seeSource: '엔진 소스에서 확인하기',
@@ -567,12 +545,6 @@ export const COPY: Record<Lang, Copy> = {
         ),
       },
       fields: {
-        rule: (
-          <>
-            값을 읽을 <b>getter</b>가 있고, 값이 움직였다고 알려줄 <b>이벤트</b>가 있어야
-            Snapshot 필드가 됩니다.
-          </>
-        ),
         rows: [
           {
             name: '슬라이스, 장수, W/L, 카메라',
@@ -628,9 +600,8 @@ export const COPY: Record<Lang, Copy> = {
       title: '그래서, 어떻게 쓰면 되는지 보겠습니다',
       lead: (
         <>
-          훅이 돌려주는 그 상태 객체를 <b>스냅샷</b>, 스냅샷에서 필요한 값만 골라 읽는 함수를{' '}
-          <b>셀렉터</b>라고 부릅니다. 알아둘 규칙은 몇 가지 안 되고, 대부분 앞의 다섯 패널에서 이미
-          본 것들입니다. 순서대로 훑어보세요.
+          훅이 돌려주는 상태 객체가 <b>스냅샷</b>, 거기서 값만 골라 읽는 함수가{' '}
+          <b>셀렉터</b>입니다. 규칙은 대부분 앞에서 이미 봤습니다.
         </>
       ),
       items: [
@@ -837,9 +808,9 @@ const { imageBytes } = useCacheState();`,
       title: 'One slider: 24 lines of wiring become 2',
       lead: (
         <>
-          The CT below is a real Cornerstone3D engine. Scroll it or drag the slider to change
-          the slice; <b>drag the image itself for window/level</b>. Switching tabs switches{' '}
-          <b>the slider actually running under the image</b> — not just the listing beside it.
+          The CT below is a real Cornerstone3D engine. Scroll for the slice,{' '}
+          <b>drag for window/level</b>. The tabs switch{' '}
+          <b>the slider actually running under it</b>.
         </>
       ),
       tabHook: 'useViewportState',
@@ -875,24 +846,27 @@ const { imageBytes } = useCacheState();`,
       title: 'Not because it is long. Because those 24 lines can be wrong',
       lead: (
         <>
-          Panel 1 named five places. <b>Here you get three of them wrong yourself.</b> None of
-          them is a typo: all three come from <b>copying state the Engine already holds</b> into
-          React state.
+          Panel 1 named five places. <b>Here you get three of them wrong yourself</b> — not by
+          mistyping, but by <b>copying state the Engine already holds</b>.
         </>
       ),
       captions: [
         <>
-          <b>First render.</b> Take out the <code>update()</code> line. The code still subscribes
-          to three events — but on a study that has finished loading,{' '}
-          <b>no event ever arrives.</b>
+          <b>First render.</b> Take out the <code>update()</code> line and the slider empties.
+          Scrolling the image brings it back — on a study that has finished loading,{' '}
+          <b>no event ever arrives</b> on its own.
         </>,
         <>
-          <b>Mount order.</b> Your app does not decide whether the image or the widget exists
-          first. The network and the user do. Try it both ways.
+          <b>Mount order.</b> The viewer opened first and the image came later. The common
+          order — and the hand-rolled one stays <b>empty forever.</b>
         </>,
         <>
-          <b>More than one copy.</b> Add a second widget built from the same file. Both are
-          watching the same engine, and they <b>give different answers.</b>
+          <b>Same code, opposite order.</b> This time the image was there and the study gets
+          closed. The hand-rolled one holds <b>a number for an image that is gone.</b>
+        </>,
+        <>
+          <b>More than one copy.</b> Add a second widget and they give <b>different answers</b>{' '}
+          about the same engine. Scrolling the image brings them together.
         </>,
       ],
       verdict: (
@@ -909,19 +883,11 @@ const { imageBytes } = useCacheState();`,
         </>
       ),
       gap: {
-        withSeed: <><code>update()</code> present — correct the moment it mounts.</>,
-        withoutSeed: (
-          <>
-            No <code>update()</code> — the slider is empty. Scroll the image and the first event
-            finally fills it.
-          </>
-        ),
         remove: 'remove the update() line',
         restore: 'put update() back',
         hint: <>Then <b>scroll the image</b> — only an event brings it back.</>,
       },
       order: {
-        tabs: ['1. The image arrives after the screen', '2. The study gets closed'],
         scenes: [
           [
             <>The viewer opened first. Both sliders were made now, with no image to read.</>,
@@ -945,8 +911,6 @@ const { imageBytes } = useCacheState();`,
         notYet: 'not on screen yet',
         byHand: 'by hand',
         hook: 'hook',
-        nextScene: 'next scene →',
-        again: 'again',
       },
       split: {
         first: 'the widget that was here',
@@ -961,9 +925,8 @@ const { imageBytes } = useCacheState();`,
       title: 'The copy is gone. Now nothing renders at all',
       lead: (
         <>
-          React 18 ships a hook for state that lives outside React:{' '}
-          <code>useSyncExternalStore</code> <b>subscribes and reads</b> instead of copying, and
-          all three of panel 2's problems go with it. Then you need a second value.
+          React 18 ships a hook that <b>subscribes and reads</b> instead of copying —{' '}
+          <code>useSyncExternalStore</code>. Then you need a second value.
         </>
       ),
       captions: [
@@ -1019,9 +982,8 @@ const { imageBytes } = useCacheState();`,
       title: 'Build a new object only when the values actually change',
       lead: (
         <>
-          That is what <code>useViewportState</code> does. It rebuilds the Snapshot when an
-          Engine event says to, and <b>if the rebuild says the same thing, nobody is told.</b>{' '}
-          Here is panel 3's log again, with the hook.
+          <code>useViewportState</code> rebuilds the Snapshot on an Engine event, and{' '}
+          <b>if it says the same thing, nobody is told.</b> Here is panel 3's log again.
         </>
       ),
       captions: [
@@ -1030,9 +992,8 @@ const { imageBytes } = useCacheState();`,
           changes, so the object does — so far this looks like panel 3.
         </>,
         <>
-          <b>Now write to the Engine — but write back the value you just read.</b> Press the
-          button a few times. The event count climbs and <b>the hook never tells React
-          anything.</b> In panel 3 this is where <code>#1 #2 #3</code> came from.
+          <b>Now write to the Engine without changing a value.</b> Press the button a few
+          times. In panel 3 this is where <code>#1 #2 #3</code> came from.
         </>,
         <>
           <b>And the selector.</b> Read the whole Snapshot and a camera move re-renders you. Read
@@ -1040,7 +1001,6 @@ const { imageBytes } = useCacheState();`,
         </>,
       ],
       dragNote: <>Scroll or drag the image. The log beside it fills as it happens.</>,
-      holdNote: <>The values do not move. Only the Engine does.</>,
       verdict: (
         <>
           Panel 3's <code>#1 #2 #3</code> and the <code>#1 #1 #1</code> above are the same table.
@@ -1052,7 +1012,7 @@ const { imageBytes } = useCacheState();`,
         </>
       ),
       identity: {
-        hookTitle: 'While it moves — the value changes, so the object does',
+        hookTitle: 'While it moves',
         objects: (n) => `${n} distinct objects`,
         empty: 'nothing yet',
         engineNote: (events) => (
@@ -1073,7 +1033,7 @@ const { imageBytes } = useCacheState();`,
         hint: (
           <>
             Each press is <code>setCamera(viewport.getCamera())</code> — a write that reads the
-            camera and hands it straight back. The Engine fires <code>CAMERA_MODIFIED</code>
+            camera and hands it straight back. The Engine fires <code>CAMERA_MODIFIED</code>{' '}
             anyway, and <b>not one value is different.</b>
           </>
         ),
@@ -1106,9 +1066,8 @@ const { imageBytes } = useCacheState();`,
       title: 'Nobody tells you which event to listen to',
       lead: (
         <>
-          So far this was <b>how to read</b>. What is left is <b>what to read, and when</b>.
-          Here is panel 3's slider finished with two primitives — no loop, correct React. And
-          the thumb still does not follow your finger.
+          So far this was <b>how to read</b>. What is left is{' '}
+          <b>what to read, and when</b>.
         </>
       ),
       captions: [
@@ -1122,9 +1081,8 @@ const { imageBytes } = useCacheState();`,
           rebuild actually says something new, and how often to tell React in one frame.
         </>,
         <>
-          <b>It does not hand you everything, though.</b> A value needs both a getter and an
-          event to become a field — <b>except one row</b>, and that row is where the real shape
-          of the rule shows.
+          <b>It does not hand you everything, though.</b> A value needs a getter to read it and
+          an event to say it moved — <b>except one row</b>.
         </>,
       ],
       verdict: (
@@ -1136,7 +1094,6 @@ const { imageBytes } = useCacheState();`,
       ),
       wall: {
         slowNote: "This step's viewport delays each slice by 450ms on purpose, so the lag shows on a fast connection too. The Engine behaves exactly as it always does.",
-        drag: <>Purge the cache, then <b>drag the slider fast.</b></>,
         purge: 'purge the cache',
         purged: 'purged — now drag',
         seeSource: 'check it in the Engine source',
@@ -1179,12 +1136,6 @@ const { imageBytes } = useCacheState();`,
         ),
       },
       fields: {
-        rule: (
-          <>
-            A value becomes a Snapshot field when there is a <b>getter</b> to read it and an{' '}
-            <b>event</b> to say it moved.
-          </>
-        ),
         rows: [
           {
             name: 'slice, count, W/L, camera',
@@ -1240,9 +1191,8 @@ const { imageBytes } = useCacheState();`,
       title: 'So how do you use it?',
       lead: (
         <>
-          The state object the hook returns is the <b>snapshot</b>; a function that picks just the
-          values you need out of it is a <b>selector</b>. There aren’t many rules, and most of them
-          you have already seen in the five panels above. Here they are in order.
+          The object the hook returns is the <b>snapshot</b>; a function that picks values out
+          of it is a <b>selector</b>. Most of these you have already seen.
         </>
       ),
       items: [
