@@ -218,7 +218,7 @@ export const COPY: Record<Lang, Copy> = {
     failed: 'DICOM 데이터를 불러오지 못했습니다',
     panel1: {
       eyebrow: '1',
-      title: '같은 슬라이더, 배선 24줄과 2줄',
+      title: '슬라이더 하나에 배선 24줄, 훅으로는 2줄',
       lead: (
         <>
           아래 CT는 진짜 Cornerstone3D 엔진입니다. 스크롤로 슬라이스를,{' '}
@@ -252,7 +252,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel2: {
       eyebrow: '2',
-      title: '그 24줄에서 틀리기 쉬운 곳 세 군데',
+      title: '24줄에서 틀리기 쉬운 세 가지',
       lead: (
         <>
           패널 1이 이름 붙인 다섯 군데 중 <b>셋을 직접 틀려 봅니다.</b> 코드가 잘못돼서가
@@ -265,7 +265,7 @@ export const COPY: Record<Lang, Copy> = {
           스크롤해야 살아납니다. 다 불러온 검사에서는 <b>아무 이벤트도 오지 않습니다.</b>
         </>,
         <>
-          <b>영상이 나중에 오면 영영 못 읽습니다.</b> 뷰어가 먼저 열리고 영상이 나중에 왔습니다. 흔한 순서인데,
+          <b>영상이 나중에 오면 값을 못 읽습니다.</b> 뷰어가 먼저 열리고 영상이 나중에 왔습니다. 흔한 순서인데,
           직접 배선한 쪽은 <b>영영 비어 있습니다.</b>
         </>,
         <>
@@ -322,7 +322,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel3: {
       eyebrow: '3',
-      title: 'useSyncExternalStore로 바꿨을 때 생기는 문제',
+      title: 'useSyncExternalStore로 바꾸면 생기는 문제',
       lead: (
         <>
           React 18에는 <b>복사하지 않고 구독해서 읽는</b> 공식 훅{' '}
@@ -354,7 +354,7 @@ export const COPY: Record<Lang, Copy> = {
           <b>슬라이더가 없습니다.</b> 컴포넌트가 던졌고, 자기 화면을 들고 같이 사라졌습니다.
         </>
       ),
-      decode: '이 코드가 무슨 뜻인지',
+      decode: '에러 코드 설명 보기',
       identity: {
         naiveTitle: (renders) => `React가 포기하기까지 ${renders}번 렌더했습니다`,
         noRun: '아직 실행 전입니다. 2단계에서 버튼을 눌러 주세요.',
@@ -372,7 +372,7 @@ export const COPY: Record<Lang, Copy> = {
         <>
           엔진의 getter는 부를 때마다 새 객체를 줍니다. <code>getCamera()</code>를 두 번
           불러도 서로 다른 객체입니다. 그래서 <b>값이 진짜 바뀌었을 때만 새 객체를 만드는
-          무언가</b>가 중간에 필요합니다. 다음 패널이 그겁니다. ↓
+          무언가</b>가 중간에 필요합니다. 다음 패널에서 다룹니다. ↓
         </>
       ),
     },
@@ -387,16 +387,16 @@ export const COPY: Record<Lang, Copy> = {
       ),
       captions: [
         <>
-          <b>슬라이스를 옮기는 동안 기록했습니다.</b> 값이 바뀌니 객체도
+          <b>값이 바뀌면 객체도 바뀝니다.</b> 값이 바뀌니 객체도
           바뀝니다. 여기까지는 패널 3과 같아 보입니다.
         </>,
         <>
-          <b>이번엔 값을 안 바꾸고 엔진에만 씁니다.</b> 버튼을 여러 번 눌러 보세요. 패널
+          <b>같은 값을 다시 써도 엔진은 이벤트를 냅니다.</b> 버튼을 여러 번 눌러 보세요. 패널
           3에서는 여기서 <code>#1 #2 #3</code>이 나왔습니다.
         </>,
         <>
           <b>selector로 한 값만 읽습니다.</b> 스냅샷을 통째로 읽으면 카메라가 움직여도 리렌더됩니다.
-          한 값만 읽으면 그 값이 바뀔 때만 리렌더됩니다. <b>카메라를 흔들어 보세요.</b>
+          한 값만 읽으면 그 값이 바뀔 때만 리렌더됩니다. <b>카메라를 움직여 보세요.</b>
         </>,
       ],
       dragNote: <>영상을 스크롤하거나 끌어 보세요. 옆의 로그가 실시간으로 쌓입니다.</>,
@@ -430,7 +430,7 @@ export const COPY: Record<Lang, Copy> = {
         hint: (
           <>
             누를 때마다 <code>setCamera(viewport.getCamera())</code>를 부릅니다. 방금 읽은
-            카메라를 그대로 다시 쓰는 겁니다. 그래도 엔진은 이벤트를 내고,{' '}
+            카메라를 그대로 다시 씁니다. 그래도 엔진은 이벤트를 내고,{' '}
             <b>값은 한 군데도 달라지지 않습니다.</b>
           </>
         ),
@@ -439,7 +439,7 @@ export const COPY: Record<Lang, Copy> = {
         verdict: (
           <>
             왼쪽만 올라갑니다. <b>리렌더는 일어나지 않았습니다.</b> 값이 그대로라서
-            훅이 React에 알리지 않은 겁니다.
+            훅이 React에 알리지 않았습니다.
             <br />
             이번엔 슬라이더를 움직여 보세요. 값이 진짜 바뀌니 오른쪽도 올라갑니다.
           </>
@@ -449,7 +449,7 @@ export const COPY: Record<Lang, Copy> = {
         withSelector: 'selector로 한 값만',
         withoutSelector: 'Snapshot 통째로',
         renders: (n) => `렌더 ${n}회`,
-        nudge: '카메라 흔들기',
+        nudge: '카메라 움직이기',
         nudgeHint: (
           'Snapshot의 camera가 바뀌니 통째로 읽는 쪽은 리렌더됩니다. selector 쪽 숫자는 그대로입니다.'
         ),
@@ -457,7 +457,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel5: {
       eyebrow: '5',
-      title: '어떤 이벤트를 들어야 할까',
+      title: '이벤트 고르기가 제일 어렵습니다',
       lead: (
         <>
           여기까지는 <b>어떻게 읽는가</b>였습니다. 남은 질문은{' '}
@@ -475,7 +475,7 @@ export const COPY: Record<Lang, Copy> = {
           만든 게 정말 달라졌는지, 한 프레임에 몇 번 알릴지.
         </>,
         <>
-          <b>아무 값이나 주지는 않습니다.</b> 값을 읽을 getter와, 값이 움직였다고 알려줄
+          <b>아무 값이나 주지 않습니다.</b> 값을 읽을 getter와, 값이 움직였다고 알려줄
           이벤트가 둘 다 있어야 필드가 됩니다. <b>딱 한 줄만 빼고요.</b>
         </>,
       ],
@@ -489,7 +489,7 @@ export const COPY: Record<Lang, Copy> = {
       wall: {
         slowNote: '이 단계만 슬라이스 도착을 450ms 늦춰 뒀습니다. 빠른 회선에서도 보이게 하려고요. 엔진 동작은 그대로입니다.',
         purge: '캐시 비우기',
-        purged: '비웠습니다. 이제 끌어 보세요',
+        purged: '비웠습니다',
         seeSource: '엔진 소스에서 확인하기',
         scarsTitle: 'OHIF도 같은 자리에서 막혔습니다',
         scarsEnd: (
@@ -581,7 +581,7 @@ export const COPY: Record<Lang, Copy> = {
     },
     panel6: {
       eyebrow: '6',
-      title: '쓰는 법',
+      title: '자주 쓰는 패턴',
       lead: (
         <>
           훅이 돌려주는 상태 객체가 <b>스냅샷</b>, 거기서 값만 골라 읽는 함수가{' '}
@@ -648,7 +648,7 @@ return <span>{slice + 1}</span>;`,
           ),
         },
         {
-          title: 'Provider 없이 씁니다',
+          title: 'Provider가 필요 없습니다',
           label: '붙이는 법',
           mark: "useViewportState('ct-axial')",
           code: `// 앱이 이미 만들어 쓰던 엔진 그대로
@@ -668,7 +668,7 @@ const state = useViewportState('ct-axial');
           ),
         },
         {
-          title: 'Stack과 Volume을 같은 코드로',
+          title: 'Stack과 Volume을 같은 코드로 다룹니다',
           label: '뷰포트 종류',
           mark: 'state.kind',
           code: `// Slice Position은 모든 뷰포트 종류에 공통입니다
@@ -681,13 +681,13 @@ if (state?.kind === 'stack') { /* ... */ }`,
           body: (
             <>
               슬라이스 컨트롤 하나로 Stack과 MPR을 함께 다룹니다. 직접 짜면 Volume에서
-              갱신이 멈춥니다. Volume에는 <code>STACK_NEW_IMAGE</code>가 안 오고 슬라이스가
-              카메라에서 나오거든요. 훅이 그 차이를 알아서 처리합니다.
+              갱신이 멈춥니다. Volume에는 <code>STACK_NEW_IMAGE</code>가 안 오고, 슬라이스가
+              카메라에서 나옵니다. 훅이 그 차이를 알아서 처리합니다.
             </>
           ),
         },
         {
-          title: '뷰포트 말고 캐시도 읽을 수 있습니다',
+          title: '캐시 상태도 읽을 수 있습니다',
           label: '다른 훅',
           mark: 'useImageLoadState',
           code: `// 슬라이스 하나가 캐시에 있는지
