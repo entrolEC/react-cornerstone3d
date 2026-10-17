@@ -5,7 +5,7 @@ React bindings that expose Cornerstone3D's live engine state to React components
 ## Language
 
 **Engine**:
-The running Cornerstone3D instance (rendering engine, viewports, tools). The single source of truth for all synced state.
+The running Cornerstone3D instance (rendering engine, viewports, cache, and the tools package's ToolGroups and annotation state). The single source of truth for all synced state.
 _Avoid_: store, backend
 
 **Viewport State**:
@@ -32,6 +32,14 @@ _Avoid_: loading status, ready, rendered, cached flag
 The totals the cache module reports. Today, the bytes held by images (`imageBytes`, the cache's own count — volumes are not in it). It is the cache's word, not any viewport's.
 _Avoid_: memory usage, cache info
 
+**Tool State**:
+What `@cornerstonejs/tools` reports for a viewport's ToolGroup: today, the Active Tool — the tool active on the primary mouse button, as the group names it. Read from a separate entry (`react-cornerstone3d/tools`) so an app without the tools package loads none of it (ADR 0010).
+_Avoid_: tool mode, current tool, toolbar state
+
+**Annotation State**:
+The annotations on a viewport's frame of reference, as the tools package's annotation state reports them: for each, its id, tool, referenced image, lock / visibility / selection, and a plain frozen copy of its data. An entry is rebuilt when the tools package said that annotation changed; `highlighted` and `invalidated` change silently and are not in it.
+_Avoid_: measurements (a tool's word, not the state's), annotation list, markup
+
 **Binding**:
-A subscription connecting one Engine event source to Snapshot rebuilding, keyed by what its getters take — a viewportId, or an imageId; the cache's takes nothing, there being one cache. Exactly one Binding exists per key while it has consumers (the keyless one always exists, and hears the Engine only while it has consumers); hooks are surfaces over Bindings and one hook may read several. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
+A subscription connecting one Engine event source to Snapshot rebuilding, keyed by what its getters take — a viewportId, an imageId, or a (viewportId, toolName) pair; the cache's takes nothing, there being one cache. Exactly one Binding exists per key while it has consumers (the keyless one always exists, and hears the Engine only while it has consumers); hooks are surfaces over Bindings and one hook may read several. Every Binding made dirty in one frame rebuilds in the same synchronous pass, so two hooks in one component never see different frames.
 _Avoid_: sync, connector, store

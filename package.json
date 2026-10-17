@@ -8,7 +8,13 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "import": "./dist/tools/index.js",
+      "default": "./dist/tools/index.js"
     }
   },
   "files": [
@@ -24,11 +30,18 @@
   },
   "peerDependencies": {
     "@cornerstonejs/core": "^5.0.0",
+    "@cornerstonejs/tools": "^5.0.0",
     "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@cornerstonejs/tools": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@cornerstonejs/core": "^5.7.0",
     "@cornerstonejs/dicom-image-loader": "^5.10.7",
+    "@cornerstonejs/tools": "^5.10.7",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

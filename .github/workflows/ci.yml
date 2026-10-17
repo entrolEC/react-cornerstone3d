@@ -41,15 +41,17 @@ jobs:
           echo "@cornerstonejs/core ${{ matrix.cornerstone }} -> $version"
 
       - name: Install @cornerstonejs/* ${{ steps.cs.outputs.version }} over the lockfile
-        # core pins metadata as an exact peer, and dicom-image-loader (used by the
-        # browser tests) pins core and metadata exactly — so all three move together.
+        # core pins metadata as an exact peer; dicom-image-loader (used by the
+        # browser tests) and tools (the /tools entry) pin core exactly — so all
+        # four move together.
         env:
           V: ${{ steps.cs.outputs.version }}
         run: |
           npm i --no-save \
             "@cornerstonejs/core@$V" \
             "@cornerstonejs/metadata@$V" \
-            "@cornerstonejs/dicom-image-loader@$V"
+            "@cornerstonejs/dicom-image-loader@$V" \
+            "@cornerstonejs/tools@$V"
           node -p "'installed @cornerstonejs/core ' + require('@cornerstonejs/core/package.json').version"
 
       - run: npx playwright install --with-deps chromium
