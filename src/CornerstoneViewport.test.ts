@@ -53,8 +53,29 @@ function createFakeEngine(id = 'engine') {
       );
       registry.delete(viewportId);
     }),
+    resize: vi.fn(),
+    hasBeenDestroyed: false,
   };
 }
+
+// jsdom has no ResizeObserver; this one hands its callback out so a test can
+// pretend the div changed size.
+const observers: { callback: ResizeObserverCallback; observed: Element[]; disconnected: boolean }[] = [];
+class FakeResizeObserver {
+  observed: Element[] = [];
+  disconnected = false;
+  constructor(public callback: ResizeObserverCallback) {
+    observers.push(this);
+  }
+  observe(element: Element) {
+    this.observed.push(element);
+  }
+  unobserve() {}
+  disconnect() {
+    this.disconnected = true;
+  }
+}
+vi.stubGlobal('ResizeObserver', FakeResizeObserver);
 
 type FakeEngine = ReturnType<typeof createFakeEngine>;
 let engine: FakeEngine;
@@ -75,6 +96,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   registry.clear();
+  observers.splice(0);
   vi.mocked(getEnabledElementByViewportId).mockReset();
   vi.mocked(getRenderingEngines).mockReset();
   vi.mocked(getRenderingEngine).mockReset();
@@ -166,6 +188,27 @@ describe('CornerstoneViewport', () => {
 
     expect(second.enableElement).toHaveBeenCalledTimes(1);
     expect(engine.enableElement).not.toHaveBeenCalled();
+  });
+
+  test('a resized div calls engine.resize; unmount stops watching', () => {
+    const view = render(viewportEl({ viewportId: 'vp-resize', type: Enums.ViewportType.STACK }));
+    const observer = observers[0];
+    expect(observer.observed[0]).toBe(engine.enableElement.mock.calls[0][0].element);
+
+    observer.callback([], observer as unknown as ResizeObserver);
+    expect(engine.resize).toHaveBeenCalledWith(true, true);
+
+    view.unmount();
+    expect(observer.disconnected).toBe(true);
+  });
+
+  test('a parent that destroyed the Engine first: cleanup neither throws nor calls disableElement', () => {
+    const view = render(viewportEl({ viewportId: 'vp-gone', type: Enums.ViewportType.STACK }));
+    // React runs cleanups parent-first; the Engine-owning parent already ran.
+    engine.hasBeenDestroyed = true;
+
+    expect(() => view.unmount()).not.toThrow();
+    expect(engine.disableElement).not.toHaveBeenCalled();
   });
 
   test('throws when no Engine is registered — the app must create it first', () => {

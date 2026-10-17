@@ -39,8 +39,9 @@ function resolveEngine(renderingEngineId?: string): Types.IRenderingEngine {
 
 /**
  * Thin optional layer over the hook core: enables its own `<div>` as a
- * viewport on mount and disables it on unmount. The Engine stays app-owned
- * and app-created; this component only resolves it through the CS3D registry.
+ * viewport on mount, keeps the Engine's canvas sized to the div, and
+ * disables the viewport on unmount. The Engine stays app-owned and
+ * app-created; this component only resolves it through the CS3D registry.
  *
  * Unlike viewport absence in hooks (a normal state, ADR 0002), a missing
  * Engine at mount is a mount-ordering bug — the component throws rather
@@ -58,13 +59,31 @@ export function CornerstoneViewport({
   useEffect(() => {
     const engine = resolveEngine(renderingEngineId);
     // elementRef is always set here: the div below renders before effects run.
-    engine.enableElement({
-      viewportId,
-      type,
-      element: elementRef.current as HTMLDivElement,
-      defaultOptions,
-    });
-    return () => engine.disableElement(viewportId);
+    const element = elementRef.current as HTMLDivElement;
+    engine.enableElement({ viewportId, type, element, defaultOptions });
+
+    // CS3D sizes the canvas once, at enable; a div that grows or shrinks
+    // afterwards (a layout change, a resized window) keeps the old canvas
+    // unless the app calls `engine.resize()`. Watch the div and do it here.
+    // The first callback fires right after observe(), when nothing has
+    // changed yet — resize() reads the same size and is a no-op.
+    // ponytail: resize() re-measures every viewport of the Engine, not only
+    // this one; per-viewport sizing is not in CS3D's public API.
+    const observer =
+      typeof ResizeObserver === 'undefined'
+        ? undefined
+        : new ResizeObserver(() => {
+            if (!engine.hasBeenDestroyed) engine.resize(true, true);
+          });
+    observer?.observe(element);
+
+    return () => {
+      observer?.disconnect();
+      // React runs cleanups parent-first: a parent that owns the Engine and
+      // destroys it in its own cleanup has already taken this viewport down,
+      // and disableElement on a destroyed Engine throws.
+      if (!engine.hasBeenDestroyed) engine.disableElement(viewportId);
+    };
     // defaultOptions is enable-time-only by CS3D contract — re-enabling on
     // its change would destroy and recreate the viewport.
   }, [viewportId, type, renderingEngineId]);
