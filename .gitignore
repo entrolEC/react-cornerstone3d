@@ -17,5 +17,10 @@ yarn-error.log*
 /.idea
 demo/dist
 
-# local-only: Playwright MCP console logs
+# local-only: Playwright measurement shots and MCP console logs, tooling output
+/*.png
+/shots
 /.playwright-mcp
+/.agents
+/skills-lock.json
+/docs/demo.gif

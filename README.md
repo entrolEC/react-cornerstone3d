@@ -18,27 +18,29 @@ function SliceIndicator() {
 }
 ```
 
-[**Run it →**](https://entrolec.github.io/react-cornerstone3d/) — a real CT stack, the hook and the hand-rolled version side by side, and the mount-order bug the hand-rolled one still has.
+[**Run it →**](https://entrolec.github.io/react-cornerstone3d/) — a real CT stack with the same slice slider wired both ways, live, and the mount-order bug the hand-rolled one still has: open the study after the widget and its handle never leaves the left edge.
 
-That one hook call replaces the ~25 lines of `useEffect` + `addEventListener` + `setState` plumbing every Cornerstone3D + React app writes per widget today.
+That one hook call replaces the 24 lines of `useEffect` + `addEventListener` + `setState` wiring every Cornerstone3D + React app writes per widget today. The demo counts both sides off the files it is running, so the number cannot drift from the code.
 
 <details>
 <summary>See what you'd write without the hook</summary>
 
 ```tsx
 function SliceIndicator() {
-  const [state, setState] = useState<{ imageIdIndex: number }>();
+  const [state, setState] = useState<{ slice: number; total: number }>();
 
   useEffect(() => {
     const enabled = getEnabledElementByViewportId('ct-axial');
-    if (!enabled) return; // viewport not enabled yet? enabled later? — unhandled
-    const { element } = enabled.viewport;
+    if (!enabled) return; // no viewport yet? then never, even once it exists
+    const viewport = enabled.viewport as Types.IStackViewport;
+    const { element } = viewport;
 
-    const update = () => {
-      const viewport = enabled.viewport as Types.IStackViewport;
-      setState({ imageIdIndex: viewport.getCurrentImageIdIndex() });
-    };
-    update(); // patch the gap between first render and subscription — easy to forget
+    const update = () =>
+      setState({
+        slice: viewport.getSliceIndex(),
+        total: viewport.getNumberOfSlices(),
+      });
+    update(); // patch the gap between first render and subscription
 
     element.addEventListener(Enums.Events.CAMERA_MODIFIED, update);
     element.addEventListener(Enums.Events.VOI_MODIFIED, update);
@@ -51,11 +53,11 @@ function SliceIndicator() {
   }, []);
 
   if (!state) return null;
-  return <span>slice {state.imageIdIndex + 1}</span>;
+  return <span>slice {state.slice + 1} / {state.total}</span>;
 }
 ```
 
-And after all 27 lines, you still have: the mount-order race (a viewport enabled later stays `undefined` forever), tearing under concurrent rendering, a re-render per event during drags (no batching) — repeated in every widget. The library solves these centrally.
+That is 29 lines, 24 of them wiring — the same 24 the demo counts off `demo/slider-by-hand.tsx` — and after all of it you still have: the mount-order race (a viewport enabled later stays `undefined` forever), the stale copy a closed study leaves behind, tearing under concurrent rendering, and a re-render per engine event during drags — repeated in every widget. The library solves these centrally.
 
 </details>
 

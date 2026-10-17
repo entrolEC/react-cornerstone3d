@@ -18,24 +18,28 @@ function SliceIndicator() {
 }
 ```
 
-이 훅 한 줄이, 오늘날 모든 Cornerstone3D + React 앱이 위젯마다 작성하는 ~25줄의 `useEffect` + `addEventListener` + `setState` 배관을 대체합니다.
+[**데모 보기 →**](https://entrolec.github.io/react-cornerstone3d/) — 진짜 CT 스택 위에서 같은 슬라이스 슬라이더를 두 방식으로 배선해 나란히 돌립니다. 직접 배선한 쪽에 남아 있는 마운트 순서 버그도 그대로 보입니다 — 위젯이 먼저 생기고 검사가 나중에 열리면 손잡이가 왼쪽 끝에서 움직이지 않습니다.
+
+이 훅 한 줄이, 오늘날 모든 Cornerstone3D + React 앱이 위젯마다 작성하는 24줄의 `useEffect` + `addEventListener` + `setState` 배선을 대체합니다. 데모는 양쪽 줄 수를 실제로 돌고 있는 파일에서 세므로, 숫자가 코드와 어긋날 수 없습니다.
 
 <details>
 <summary>훅이 없다면 어떤 코드를 쓰게 되는지 펼쳐보기</summary>
 
 ```tsx
 function SliceIndicator() {
-  const [state, setState] = useState<{ imageIdIndex: number }>();
+  const [state, setState] = useState<{ slice: number; total: number }>();
 
   useEffect(() => {
     const enabled = getEnabledElementByViewportId('ct-axial');
-    if (!enabled) return; // 뷰포트가 아직 enable 전이면? 나중에 생기면? — 처리 안 됨
-    const { element } = enabled.viewport;
+    if (!enabled) return; // 뷰포트가 아직 없으면? 나중에 생겨도 영영 구독하지 않는다
+    const viewport = enabled.viewport as Types.IStackViewport;
+    const { element } = viewport;
 
-    const update = () => {
-      const viewport = enabled.viewport as Types.IStackViewport;
-      setState({ imageIdIndex: viewport.getCurrentImageIdIndex() });
-    };
+    const update = () =>
+      setState({
+        slice: viewport.getSliceIndex(),
+        total: viewport.getNumberOfSlices(),
+      });
     update(); // 첫 렌더 ~ 구독 시작 사이의 갭 보정 — 잊기 쉬운 줄
 
     element.addEventListener(Enums.Events.CAMERA_MODIFIED, update);
@@ -49,11 +53,11 @@ function SliceIndicator() {
   }, []);
 
   if (!state) return null;
-  return <span>slice {state.imageIdIndex + 1}</span>;
+  return <span>slice {state.slice + 1} / {state.total}</span>;
 }
 ```
 
-이 27줄을 쓰고도 남는 문제들: 마운트 순서 경합(뷰포트가 나중에 enable되면 영영 `undefined`), concurrent 렌더링에서의 tearing, 드래그 중 이벤트마다 리렌더(배칭 없음), 그리고 이 전부를 위젯마다 반복. 라이브러리는 이것들을 중앙에서 해결합니다.
+29줄이고 그중 24줄이 배선입니다 — 데모가 `demo/slider-by-hand.tsx`에서 세는 바로 그 24줄입니다. 그러고도 남는 문제들: 마운트 순서 경합(뷰포트가 나중에 enable되면 영영 `undefined`), 검사를 닫아도 사본이 붙잡고 있는 유령 값, concurrent 렌더링에서의 tearing, 드래그 중 엔진 이벤트마다 리렌더. 그리고 이 전부를 위젯마다 반복. 라이브러리는 이것들을 중앙에서 해결합니다.
 
 </details>
 

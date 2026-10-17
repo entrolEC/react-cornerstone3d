@@ -1,6 +1,6 @@
 import { Enums, getEnabledElementByViewportId, type Types } from '@cornerstonejs/core';
-import { CornerstoneViewport, useImageLoadStates, useViewportState } from 'react-cornerstone3d';
-import { useEffect, useRef } from 'react';
+import { CornerstoneViewport, useViewportState } from 'react-cornerstone3d';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { renderingEngineId } from './cornerstone';
 
 const stackOf = (viewportId: string) =>
@@ -17,10 +17,13 @@ export function CtViewport({
   viewportId,
   imageIds,
   showOverlay = true,
+  control,
 }: {
   viewportId: string;
   imageIds: string[];
   showOverlay?: boolean;
+  /** Sits inside the frame, the way a workstation puts its scrub bar. */
+  control?: ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +58,62 @@ export function CtViewport({
     return () => element.removeEventListener('wheel', onWheel);
   }, [viewportId]);
 
+  // Window/level, the way a workstation does it: drag across for width, down
+  // for centre. Hand-rolled with setProperties rather than pulling in
+  // @cornerstonejs/tools — a write here has to stay a plain Cornerstone3D call
+  // (ADR 0001), and the whole page is an argument about how its effect comes
+  // back. It also gives the reader a second value to move, so a log or a
+  // render counter is not waiting on the slice alone.
+  useEffect(() => {
+    const element = wrapRef.current;
+    if (!element) return;
+
+    let from: { x: number; y: number; width: number; centre: number } | undefined;
+
+    const down = (event: PointerEvent) => {
+      // The slider and the buttons live inside this frame; a drag on them is
+      // theirs.
+      if ((event.target as HTMLElement).closest('input, button, a, summary')) return;
+      const voi = stackOf(viewportId)?.getProperties().voiRange;
+      if (!voi) return;
+      from = {
+        x: event.clientX,
+        y: event.clientY,
+        width: voi.upper - voi.lower,
+        centre: (voi.upper + voi.lower) / 2,
+      };
+      element.setPointerCapture(event.pointerId);
+    };
+
+    const move = (event: PointerEvent) => {
+      if (!from) return;
+      const viewport = stackOf(viewportId);
+      if (!viewport) return;
+      // 4 HU per pixel: a drag across the frame covers roughly the range a
+      // chest window needs, and one pixel is still a visible step.
+      const width = Math.max(1, from.width + (event.clientX - from.x) * 4);
+      const centre = from.centre + (event.clientY - from.y) * 4;
+      viewport.setProperties({ voiRange: { lower: centre - width / 2, upper: centre + width / 2 } });
+      viewport.render();
+    };
+
+    const up = (event: PointerEvent) => {
+      from = undefined;
+      if (element.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+    };
+
+    element.addEventListener('pointerdown', down);
+    element.addEventListener('pointermove', move);
+    element.addEventListener('pointerup', up);
+    element.addEventListener('pointercancel', up);
+    return () => {
+      element.removeEventListener('pointerdown', down);
+      element.removeEventListener('pointermove', move);
+      element.removeEventListener('pointerup', up);
+      element.removeEventListener('pointercancel', up);
+    };
+  }, [viewportId]);
+
   return (
     <div className="vp" ref={wrapRef}>
       <CornerstoneViewport
@@ -63,8 +122,8 @@ export function CtViewport({
         renderingEngineId={renderingEngineId}
         style={{ width: '100%', height: '100%' }}
       />
-      {showOverlay && <div className="vp__hint">스크롤로 슬라이스 이동</div>}
       {showOverlay && <Overlay viewportId={viewportId} />}
+      {control && <div className="vp__control">{control}</div>}
     </div>
   );
 }
@@ -84,55 +143,15 @@ function Overlay({ viewportId }: { viewportId: string }) {
   );
 }
 
-/** A write path bound to read state: the slider position *is* Engine state. */
-export function SliceSlider({ viewportId }: { viewportId: string }) {
-  const slice = useViewportState(viewportId, (s) => s.sliceIndex);
-  const total = useViewportState(viewportId, (s) => s.numberOfSlices);
-  if (slice === undefined || !total) return null;
-
-  return (
-    <input
-      className="slider"
-      type="range"
-      min={0}
-      max={total - 1}
-      value={slice}
-      onChange={(event) => void stackOf(viewportId)?.setImageIdIndex(Number(event.target.value))}
-    />
-  );
-}
-
-/**
- * The load state of the whole stack, one cell per slice. `imageIds` and
- * `currentImageId` come from the viewport; whether each is in the cache comes
- * from the cache module, one Binding per image (ADR 0007). The join is the
- * app's — the library never combines the two. Drawing N cells is also the
- * app's: this one is a plain row of spans, fine for a few hundred slices.
- */
-export function LoadTrack({ viewportId }: { viewportId: string }) {
-  const imageIds = useViewportState(viewportId, (s) => (s.kind === 'stack' ? s.imageIds : undefined));
-  const current = useViewportState(viewportId, (s) => s.currentImageId);
-  const loaded = useImageLoadStates(imageIds);
-  if (!imageIds || !loaded) return null;
-
-  const count = loaded.filter((state) => state === 'loaded').length;
-  return (
-    <div className="track" aria-label="슬라이스별 로드 상태">
-      <div className="track__cells">
-        {imageIds.map((id, i) => (
-          <span
-            key={id}
-            className={
-              'track__cell' +
-              (loaded[i] === 'loaded' ? ' track__cell--loaded' : '') +
-              (id === current ? ' track__cell--current' : '')
-            }
-          />
-        ))}
-      </div>
-      <div className="track__caption">
-        <code>useImageLoadStates(imageIds)</code> — 캐시에 들어온 슬라이스 {count}/{imageIds.length}
-      </div>
-    </div>
-  );
+/** Pages through slices on a loop, so a readout can be seen following along. */
+export function useAutoScroll(viewportId: string, active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => {
+      const viewport = stackOf(viewportId);
+      if (!viewport) return;
+      void viewport.setImageIdIndex((viewport.getSliceIndex() + 1) % viewport.getNumberOfSlices());
+    }, 700);
+    return () => clearInterval(id);
+  }, [viewportId, active]);
 }
