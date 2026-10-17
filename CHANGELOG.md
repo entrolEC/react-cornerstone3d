@@ -6,6 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-17
+
+### Added
+
+- `react-cornerstone3d/tools` — a second entry for state that lives in `@cornerstonejs/tools`, which is now an optional peer dependency; the root entry never imports it. (ADR 0010)
+  - `useActiveTool(viewportId)` — the tool active on the primary mouse button for the viewport's ToolGroup (`getActivePrimaryMouseButtonTool`), or `undefined` when no group holds the viewport or none is active. Follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, `TOOLGROUP_VIEWPORT_ADDED` / `_REMOVED`.
+  - `useAnnotations(viewportId, toolName?)` — the annotations on the viewport's frame of reference as the annotation state reports them: `annotationUID`, `toolName`, `referencedImageId`, `isLocked` / `isVisible` / `isSelected`, and a plain frozen copy of `data`. An entry is replaced only when the tools package said that annotation changed or a flag moved; the array only when an entry did. `undefined` while the viewport is absent.
+- `<CornerstoneViewport />` watches its own `<div>` with a `ResizeObserver` and calls `engine.resize()` when it changes size, so a viewport in a resizable layout no longer needs the app to do it.
+- `package.json` `exports` carry a `default` condition (root and `./tools`), so resolvers that do not ask for `import` — Jest's among them — find the entry.
+- README: tested versions, package size, a limitations section (two Engines sharing a viewportId, `suppressEvents`, `removeVolumeActors`, background tabs, annotation events), a window/level readout and a Volume example.
+
+### Fixed
+
+- `<CornerstoneViewport />` no longer throws on unmount when a parent already destroyed the Engine in its own cleanup (React runs cleanups parent-first; `disableElement` on a destroyed Engine throws). The cleanup checks `hasBeenDestroyed` first.
+- Demo: the rebuilt site (six panels, English by default with a Korean switch, wiring counted off the running files) is on `main`. Panel 5 no longer purges the image cache at page load, the OHIF citations name one commit, ADRs are links, and the hero can jump straight to usage.
+- README: the Status table and the 1.0 criteria no longer contradict each other, and no public text points at a local `.scratch/` file.
+
+### Changed
+
+- Documentation describes the OHIF comparison the way the demo does — as evidence the problem is hard, with one pinned permalink — instead of a list of their guards.
+
 ## [0.5.0] - 2026-10-09
 
 ### Added
@@ -77,7 +98,8 @@ First published release, as `react-cornerstone3d`.
 
 - Snapshot invalidated on `PRE_STACK_NEW_IMAGE`, so `imageIdIndex` is the requested slice during a load and after a failed load, not one slice behind. (ADR 0003)
 
-[Unreleased]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/entrolEC/react-cornerstone3d/compare/v0.2.0...v0.3.0
