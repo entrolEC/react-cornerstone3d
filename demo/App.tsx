@@ -125,6 +125,9 @@ function Page({ lang, onLang }: { lang: 'ko' | 'en'; onLang: (next: 'ko' | 'en')
               <a className="button button--secondary" href={REPO}>
                 {t.hero.github}
               </a>
+              <a className="button button--secondary" href="#how">
+                {t.hero.howTo}
+              </a>
             </div>
 
             <Proof />

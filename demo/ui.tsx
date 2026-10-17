@@ -348,16 +348,19 @@ export function Panel({
   title,
   lead,
   alt = false,
+  id,
   children,
 }: {
   eyebrow: string;
   title: string;
   lead: ReactNode;
   alt?: boolean;
+  /** An anchor, for a jump link from the hero. */
+  id?: string;
   children: ReactNode;
 }) {
   return (
-    <section className={`panel${alt ? ' panel--alt' : ''}`}>
+    <section className={`panel${alt ? ' panel--alt' : ''}`} id={id}>
       <div className="wrap">
         <header className="panel__head">
           <div className="panel__eyebrow">{eyebrow}</div>

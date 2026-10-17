@@ -24,6 +24,8 @@ export interface Copy {
     sub: ReactNode;
     demo: string;
     github: string;
+    /** Jumps past the walkthrough to the usage reference (panel 6). */
+    howTo: string;
     /** Three facts a reader can check on this page, before any prose. */
     proof: {
       lines: (byHand: number, hook: number) => string;
@@ -213,6 +215,7 @@ export const COPY: Record<Lang, Copy> = {
       waiting: '읽는 중',
       demo: '데모 보기',
       github: 'GitHub',
+      howTo: '사용법 바로 보기',
     },
     loading: 'CT 시리즈를 불러오는 중…',
     failed: 'DICOM 데이터를 불러오지 못했습니다',
@@ -498,7 +501,7 @@ export const COPY: Record<Lang, Copy> = {
           </>
         ),
         cite: {
-          ohif: 'OHIF/Viewers @ 41c03bcfd8ac',
+          ohif: 'OHIF/Viewers @ 9753879',
           cs3d: 'cornerstone3D/StackViewport.ts @ 264ca707f481',
         },
       },
@@ -783,6 +786,7 @@ const { imageBytes } = useCacheState();`,
       waiting: 'reading',
       demo: 'See the demo',
       github: 'GitHub',
+      howTo: 'Skip to usage',
     },
     loading: 'Loading the CT series…',
     failed: 'Could not load the DICOM data',
@@ -858,7 +862,7 @@ const { imageBytes } = useCacheState();`,
           (2), and once there are several there is no way to keep them in step (3). Under
           concurrent rendering this shows up as <b>tearing</b> — two components disagreeing inside
           one frame. The demo never enters that mode, so it is not staged here; the reasoning is
-          in <code>docs/adr/0005</code>.
+          in <a href="https://github.com/entrolEC/react-cornerstone3d/blob/main/docs/adr/0005-use-sync-external-store-accepts-time-slicing-deopt.md">ADR 0005</a>.
           <br />
           Stop copying and <b>subscribe and read</b> instead, and all three go at once. React 18
           ships the hook for it — <code>useSyncExternalStore</code>. Next panel builds the slider
@@ -1089,7 +1093,7 @@ const { imageBytes } = useCacheState();`,
           </>
         ),
         cite: {
-          ohif: 'OHIF/Viewers @ 41c03bcfd8ac',
+          ohif: 'OHIF/Viewers @ 9753879',
           cs3d: 'cornerstone3D/StackViewport.ts @ 264ca707f481',
         },
       },
@@ -1334,7 +1338,7 @@ const { imageBytes } = useCacheState();`,
             <>
               During a drag, engine events arrive dozens of times a second. Every binding dirtied
               in a frame is handled in one pass, and that is not an option — two hooks reading
-              different frames is exactly what tearing is (<code>docs/adr/0006</code>).
+              different frames is exactly what tearing is (<a href="https://github.com/entrolEC/react-cornerstone3d/blob/main/docs/adr/0006-the-frame-is-the-unit-of-consistency.md">ADR 0006</a>).
             </>
           ),
         },

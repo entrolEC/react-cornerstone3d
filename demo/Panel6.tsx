@@ -13,7 +13,7 @@ export function Panel6({ theme }: { theme: 'light' | 'dark' }) {
   const t = useCopy().panel6;
 
   return (
-    <Panel eyebrow={t.eyebrow} title={t.title} lead={t.lead} alt>
+    <Panel eyebrow={t.eyebrow} title={t.title} lead={t.lead} alt id="how">
       <ol className="recs">
         {t.items.map((item, index) => (
           <li className="rec" key={item.title}>

@@ -45,7 +45,7 @@ export const OHIF_SCARS: { code: string; quote: string; where: string; href: str
     code: "'use no memo'",
     quote:
       "The compiler's memoization assumes referential purity, so compiling them silently drops updates.",
-    // Eight files under Viewport/ carry this opt-out at 41c03bcfd8ac, not one.
+    // Eight files under Viewport/ carry this opt-out at 9753879, not one.
     where: 'hooks.ts:1 — and 7 more',
     href: ohif(HOOKS, 'L1-L5'),
   },

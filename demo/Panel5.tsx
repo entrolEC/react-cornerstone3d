@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { cache } from '@cornerstonejs/core';
 import { Cite, Code, Panel, Steps, useCopy } from './ui';
 import { CtViewport } from './CtViewport';
@@ -33,11 +33,6 @@ export function Panel5({ imageIds, theme }: { imageIds: string[]; theme: 'light'
   // This step loads its own copies of the series so the slow profile applies
   // here and nowhere else.
   const slow = useMemo(() => slowImageIds(imageIds), [imageIds]);
-
-  // Arriving with a warm cache shows nothing: cached slices skip the loader.
-  useEffect(() => {
-    if (step === 0) cache.purgeCache();
-  }, [step]);
 
   return (
     <Panel eyebrow={t.eyebrow} title={t.title} lead={t.lead} alt>
