@@ -177,7 +177,18 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
       // and draws the ones this viewport can show — on a stack, those whose
       // referencedImageId is in it. The stack stands in for the frame: the
       // list is per stack, not per image, as it is per frame, not per slice.
-      const scope = frame ?? (viewport as Partial<Types.IStackViewport>).getImageIds?.();
+      let scope: unknown = frame;
+      if (scope === undefined) {
+        // A legacy volume viewport before setVolumes and a WSIViewport before
+        // setWSI have no frame yet and throw from getImageIds: no stack to
+        // stand in, nothing listed. This runs in render (acquire) and in the
+        // ELEMENT_ENABLED listener, so it must not throw.
+        try {
+          scope = (viewport as Partial<Types.IStackViewport>).getImageIds?.();
+        } catch {
+          // no data set yet
+        }
+      }
       const unchanged =
         prev !== undefined &&
         scope === prevScope &&

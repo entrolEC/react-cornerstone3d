@@ -331,3 +331,27 @@ test('annotations: images without a frame of reference list the ones on the view
   await a.setStack(['cr:b0'], 0);
   await waitFor(() => expect(hookA.result.current?.map((x) => x.annotationUID)).toEqual([b0]));
 });
+
+test('annotations: volume and WSI viewports with no data yet list nothing and do not throw', async () => {
+  engine = new RenderingEngine('tools-engine');
+  // No frame of reference before setVolumes / setWSI, and their getImageIds
+  // throw until then: the mount-then-load order every app has.
+  const types = [
+    Enums.ViewportType.ORTHOGRAPHIC,
+    Enums.ViewportType.VOLUME_3D,
+    Enums.ViewportType.WHOLE_SLIDE,
+  ];
+  for (const type of types) {
+    engine.enableElement({ viewportId: type, type, element: makeElement() });
+    expect(renderHook(() => useAnnotations(type)).result.current).toEqual([]);
+  }
+  // Hook first, then the viewport: the rebuild runs in the ELEMENT_ENABLED listener.
+  const hook = renderHook(() => useAnnotations('later'));
+  expect(hook.result.current).toBeUndefined();
+  engine.enableElement({
+    viewportId: 'later',
+    type: Enums.ViewportType.ORTHOGRAPHIC,
+    element: makeElement(),
+  });
+  await waitFor(() => expect(hook.result.current).toEqual([]));
+});
