@@ -641,6 +641,51 @@ describe('useViewportState', () => {
       expect(result.current?.camera.focalPoint).toBe(before?.camera.focalPoint);
     });
 
+    // The Generic Viewport's camera nests plain objects (slice, displayArea
+    // two levels deep, orientation holding arrays), fresh on every call.
+    function createFakeNestedCameraViewport(viewportId: string) {
+      const engineState = { focalPoint: [0, 0, 0], imageIdIndex: 0 };
+      const viewport = {
+        element: document.createElement('div'),
+        getCurrentMode: () => 'unknown',
+        getCamera: () => ({
+          focalPoint: [...engineState.focalPoint],
+          slice: { kind: 'stackIndex', imageIdIndex: engineState.imageIdIndex },
+          displayArea: { imageCanvasPoint: { imagePoint: [0.5, 0.5], canvasPoint: [0.5, 0.5] } },
+          orientation: { viewPlaneNormal: [0, 0, 1] },
+        }),
+      };
+      return { engineState, ...wireFakeViewport(viewportId, viewport, true) };
+    }
+    type NestedCamera = Types.ICamera & { slice: object; displayArea: object; orientation: object };
+
+    test('an event that changed nothing keeps a camera with nested objects', () => {
+      const { fire } = createFakeNestedCameraViewport('vp-share-nested-noop');
+      const { result } = renderHook(() => useViewportState('vp-share-nested-noop'));
+      const before = result.current;
+
+      fire(Enums.Events.CAMERA_MODIFIED);
+
+      expect(result.current).toBe(before);
+    });
+
+    test('a nested change gives a new camera and keeps the siblings that held still', () => {
+      const { engineState, fire } = createFakeNestedCameraViewport('vp-share-nested');
+      const { result } = renderHook(() => useViewportState('vp-share-nested'));
+      const before = result.current?.camera as unknown as NestedCamera;
+
+      engineState.imageIdIndex = 1;
+      fire(Enums.Events.CAMERA_MODIFIED);
+      const after = result.current?.camera as unknown as NestedCamera;
+
+      expect(after).not.toBe(before);
+      expect(after.slice).not.toBe(before.slice);
+      expect(after.slice).toEqual({ kind: 'stackIndex', imageIdIndex: 1 });
+      expect(after.displayArea).toBe(before.displayArea);
+      expect(after.orientation).toBe(before.orientation);
+      expect(after.focalPoint).toBe(before.focalPoint);
+    });
+
     test('a shared sub-object is still frozen', () => {
       const { engineState, fire } = createFakeStackViewport('vp-share-frozen');
       const { result } = renderHook(() => useViewportState('vp-share-frozen'));

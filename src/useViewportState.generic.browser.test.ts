@@ -188,6 +188,37 @@ test('Generic Viewport (PLANAR_NEXT): a Volume reads as kind "volume", Slice Pos
   expect(result.current?.kind).toBe('volume');
 });
 
+test('Generic Viewport (PLANAR_NEXT): an event that changed nothing keeps the Snapshot, a VOI change keeps the camera', async () => {
+  // PlanarViewport's camera nests plain objects (slice, displayArea,
+  // orientation); compared by reference, every event would hand out a new
+  // camera.
+  engine = new RenderingEngine('smoke-engine');
+  engine.enableElement({
+    viewportId: 'planar-share-vp',
+    type: Enums.ViewportType.STACK,
+    element: makeElement(),
+  });
+  const viewport = engine.getViewport('planar-share-vp') as Types.IStackViewport;
+  await viewport.setStack(imageIds, 0);
+  viewport.render();
+
+  const { result } = renderHook(() => useViewportState('planar-share-vp'));
+  await waitFor(() => expect(result.current?.currentImageId).toBe('smoke:0'));
+  const before = result.current;
+
+  // A bare event, not setCamera(getCamera()): on PlanarViewport that really
+  // moves orientation and anchorWorld.
+  viewport.element.dispatchEvent(new CustomEvent(Enums.Events.CAMERA_MODIFIED));
+  await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
+  expect(result.current).toBe(before);
+
+  (viewport as unknown as Types.IGenericViewport).setDisplaySetPresentation({
+    voiRange: { lower: 30, upper: 40 },
+  });
+  await waitFor(() => expect(result.current?.voiRange).toEqual({ lower: 30, upper: 40 }));
+  expect(result.current?.camera).toBe(before?.camera);
+});
+
 test('Generic Viewport: classes without the legacy getters read as kind "volume" instead of throwing', () => {
   // Under useGenericViewport, VOLUME_3D / VIDEO / ECG / WHOLE_SLIDE become
   // legacy adapters that lack some of getCamera, getProperties,

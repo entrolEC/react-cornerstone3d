@@ -105,17 +105,21 @@ function readSlicePosition(viewport: object): {
   return { sliceIndex, numberOfSlices: sliced.getNumberOfSlices?.() ?? undefined };
 }
 
-function camerasEqual(a: Types.ICamera, b: Types.ICamera): boolean {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const key of keys) {
-    const av = a[key as keyof Types.ICamera];
-    const bv = b[key as keyof Types.ICamera];
-    if (Array.isArray(av) && Array.isArray(bv)) {
-      if (av.length !== bv.length || av.some((v, i) => v !== bv[i])) return false;
-    } else if (av !== bv) {
-      return false;
-    }
-  }
+// Structural equality at any depth: primitives by ===, arrays by length and
+// element, plain objects by key. The Generic Viewport's camera nests plain
+// objects (`slice`, `displayArea` two levels deep, an object `orientation`)
+// that structuredClone renews on every build; comparing those by reference
+// made every camera "moved". A key missing on one side equals one holding
+// undefined.
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a) && a.length !== (b as unknown[]).length) return false;
+  const ra = a as Record<string, unknown>;
+  const rb = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(ra), ...Object.keys(rb)]);
+  for (const key of keys) if (!sameValue(ra[key], rb[key])) return false;
   return true;
 }
 
@@ -133,7 +137,7 @@ function statesEqual(a: ViewportState, b: ViewportState): boolean {
   if (a.kind === 'stack' && b.kind === 'stack' && !sameStrings(a.imageIds, b.imageIds)) {
     return false;
   }
-  return voiRangesEqual(a.voiRange, b.voiRange) && camerasEqual(a.camera, b.camera);
+  return voiRangesEqual(a.voiRange, b.voiRange) && sameValue(a.camera, b.camera);
 }
 
 // Structural sharing. A Snapshot is replaced whenever *any* field moves, so
@@ -141,23 +145,18 @@ function statesEqual(a: ViewportState, b: ViewportState): boolean {
 // re-render a consumer whose value never changed. Unchanged parts keep the
 // previous Snapshot's references — those are objects we already cloned and
 // froze, so sharing them cannot expose the Engine's own mutable state.
-function shareCamera(next: Types.ICamera, prev: Types.ICamera | undefined): Types.ICamera {
-  if (prev === undefined) return next;
-  if (camerasEqual(next, prev)) return prev;
-  // The camera moved, but rarely in every axis: a zoom leaves `position`
-  // alone, a pan leaves `viewUp` alone. Share the arrays that held still.
-  const mutable = next as unknown as Record<string, unknown>;
-  for (const key of Object.keys(next)) {
-    const nv = mutable[key];
-    const pv = (prev as unknown as Record<string, unknown>)[key];
-    if (
-      Array.isArray(nv) &&
-      Array.isArray(pv) &&
-      nv.length === pv.length &&
-      nv.every((v, i) => v === pv[i])
-    ) {
-      mutable[key] = pv;
-    }
+//
+// The camera moved, but rarely in every part: a zoom leaves `position`
+// alone, a pan leaves `viewUp` alone, neither touches the Generic Viewport's
+// `slice`. Keep every subtree that held still, at any depth. Writing into
+// `next` is safe: it is our fresh, not-yet-frozen clone.
+function shareStructure<T>(next: T, prev: unknown): T {
+  if (sameValue(next, prev)) return prev as T;
+  const isRecord = (v: unknown) => typeof v === 'object' && v !== null && !Array.isArray(v);
+  if (isRecord(next) && isRecord(prev)) {
+    const n = next as Record<string, unknown>;
+    const p = prev as Record<string, unknown>;
+    for (const key of Object.keys(n)) n[key] = shareStructure(n[key], p[key]);
   }
   return next;
 }
@@ -194,7 +193,7 @@ function buildSnapshot(
   // ECG legacy adapters) reports an empty camera for good, which ICamera
   // allows (every field is optional); map its getViewState if those camera
   // fields are ever needed.
-  const camera = shareCamera(structuredClone(viewport.getCamera?.() ?? {}), prev?.camera);
+  const camera = shareStructure(structuredClone(viewport.getCamera?.() ?? {}), prev?.camera);
   if (isStackShaped(viewport)) {
     const stack = viewport as Types.IStackViewport;
     return deepFreeze<ViewportState>({
