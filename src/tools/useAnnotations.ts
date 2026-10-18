@@ -137,7 +137,8 @@ const key = (viewportId: string, toolName: string | undefined) =>
  * annotations on the viewport's frame of reference (or, for images without
  * one, its stack), as the tools package's annotation state reports them
  * (ADR 0010). An entry is rebuilt when the tools package said that
- * annotation changed, or when its lock, visibility or selection moved;
+ * annotation changed, or when its lock, visibility or selection moved, and
+ * every entry on VIEWPORT_NEW_IMAGE_SET, a re-enable or refreshAnnotations();
  * otherwise it keeps its reference.
  *
  * @internal Exported for tests.
@@ -311,11 +312,12 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
  *
  * The array is replaced only when an entry changed, and an entry only when
  * the tools package said so (`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` /
- * `REMOVED`) or its lock, visibility or selection moved — so a row keyed by
- * `annotationUID` and wrapped in `memo` does not re-render while a different
- * annotation is dragged. The component calling the hook does: the array is
- * replaced whenever any entry is. `MODIFIED` fires at drag rate; the frame
- * coalesces it to one render.
+ * `REMOVED`) or its lock, visibility or selection moved (every entry is
+ * replaced once on a new stack, a re-enable, or `refreshAnnotations()`) — so
+ * a row keyed by `annotationUID` and wrapped in `memo` does not re-render
+ * while a different annotation is dragged. The component calling the hook
+ * does: the array is replaced whenever any entry is. `MODIFIED` fires at drag
+ * rate; the frame coalesces it to one render.
  *
  * Writes stay the tools package's own calls (`annotation.state.addAnnotation`,
  * `removeAnnotation`, `selection.setAnnotationSelected`, …) and the tools
