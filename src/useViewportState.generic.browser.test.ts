@@ -187,3 +187,27 @@ test('Generic Viewport (PLANAR_NEXT): a Volume reads as kind "volume", Slice Pos
   await waitFor(() => expect(result.current?.sliceIndex).toBe(startIndex + step));
   expect(result.current?.kind).toBe('volume');
 });
+
+test('Generic Viewport: classes without the legacy getters read as kind "volume" instead of throwing', () => {
+  // Under useGenericViewport, VOLUME_3D / VIDEO / ECG / WHOLE_SLIDE become
+  // legacy adapters that lack some of getCamera, getProperties,
+  // getSliceIndex and getCurrentImageId; PLANAR_NEXT requested directly is
+  // the bare PlanarViewport (no getCamera, no getProperties). All answer
+  // getCurrentMode() 'empty' before data, and none takes a stack.
+  const T = Enums.ViewportType;
+  for (const type of [T.VOLUME_3D, T.VIDEO, T.ECG, T.WHOLE_SLIDE, T.PLANAR_NEXT]) {
+    const local = new RenderingEngine(`bare-engine-${type}`);
+    const viewportId = `bare-${type}`;
+    local.enableElement({ viewportId, type, element: makeElement() });
+    const { result, unmount } = renderHook(() => useViewportState(viewportId));
+    expect(result.current?.kind, type).toBe('volume');
+    expect(result.current?.camera, type).toBeTypeOf('object');
+    unmount();
+    // CS3D's own destroy throws for some of these classes before data.
+    try {
+      local.destroy();
+    } catch {
+      // not ours to test
+    }
+  }
+});

@@ -76,14 +76,18 @@ const ELEMENT_EVENTS = [
 // getSliceIndex — so the probes are the ones that do.
 function isStackShaped(viewport: object): boolean {
   // A Generic Viewport hosts both models in one class: ask which it holds.
-  // 'empty' reads as a stack — its stack getters already answer (an empty
-  // list, index 0), the same as a legacy Stack before setStack.
+  // 'empty' falls through to the stack probe: the Planar legacy adapter
+  // takes a stack and its stack getters already answer (an empty list,
+  // index 0), the same as a legacy Stack before setStack. The 3D, Video,
+  // ECG and WSI Generic classes answer 'empty' too, but have no stack
+  // getters to answer with.
   const generic = viewport as Partial<Types.IGenericViewport>;
   if (typeof generic.getCurrentMode === 'function') {
     const mode = generic.getCurrentMode();
-    return mode === 'stack' || mode === 'empty';
+    if (mode !== 'empty') return mode === 'stack';
   }
-  // Legacy classes hold one model each; only StackViewport takes a stack.
+  // Legacy classes hold one model each; only StackViewport (and, among the
+  // Generic ones, the Planar legacy adapter) takes a stack.
   return typeof (viewport as Partial<Types.IStackViewport>).setStack === 'function';
 }
 
@@ -184,7 +188,13 @@ function buildSnapshot(
   const { viewport } = enabled;
   // structuredClone: getter output may share nested arrays with the Engine;
   // freezing those in place would break Engine-side mutation.
-  const camera = shareCamera(structuredClone(viewport.getCamera()), prev?.camera);
+  // Optional calls: some Generic Viewport classes lack getCamera,
+  // getProperties or getCurrentImageId, and this runs during render.
+  // ponytail: a class without getCamera (a bare *_NEXT type, the Video and
+  // ECG legacy adapters) reports an empty camera for good, which ICamera
+  // allows (every field is optional); map its getViewState if those camera
+  // fields are ever needed.
+  const camera = shareCamera(structuredClone(viewport.getCamera?.() ?? {}), prev?.camera);
   if (isStackShaped(viewport)) {
     const stack = viewport as Types.IStackViewport;
     return deepFreeze<ViewportState>({
@@ -192,14 +202,14 @@ function buildSnapshot(
       camera,
       // Engine holds null between setStack and image arrival; our contract is undefined.
       voiRange: shareVoiRange(
-        structuredClone(stack.getProperties().voiRange) ?? undefined,
+        structuredClone(stack.getProperties?.()?.voiRange) ?? undefined,
         prev?.voiRange,
       ),
       sliceIndex: stack.getSliceIndex(),
       numberOfSlices: stack.getNumberOfSlices(),
       // Before setStack the Engine's list is empty and this reads undefined
       // (typed string in CS3D); our contract says so.
-      currentImageId: stack.getCurrentImageId() ?? undefined,
+      currentImageId: stack.getCurrentImageId?.() ?? undefined,
       // getImageIds returns the Engine's own array: copy before freezing.
       imageIds: shareImageIds(
         [...stack.getImageIds()],
@@ -214,13 +224,13 @@ function buildSnapshot(
     kind: 'volume',
     camera,
     voiRange: shareVoiRange(
-      structuredClone(volume.getProperties()?.voiRange) ?? undefined,
+      structuredClone(volume.getProperties?.()?.voiRange) ?? undefined,
       prev?.voiRange,
     ),
     // Engine reports undefined before setVolumes; our contract is undefined too.
     ...readSlicePosition(viewport),
     // The 3D class returns null (typed as string); ours is undefined either way.
-    currentImageId: volume.getCurrentImageId() ?? undefined,
+    currentImageId: volume.getCurrentImageId?.() ?? undefined,
   });
 }
 

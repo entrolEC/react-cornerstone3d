@@ -823,6 +823,106 @@ describe('useViewportState', () => {
     });
   });
 
+  // CS3D 5.x's Generic Viewport classes (a bare *_NEXT type, or the 3D,
+  // Video and ECG legacy adapters under useGenericViewport) lack some of the
+  // legacy getters. The first build runs during render: a missing getter
+  // must read as absent, never throw.
+  describe('viewport classes without the legacy getters', () => {
+    test('a Generic Viewport that answers "empty" and takes no stack reads as an empty Volume', () => {
+      // VolumeViewport3DLegacyAdapter before data: no stack getters at all.
+      wireFakeViewport(
+        'vp-bare-3d',
+        {
+          element: document.createElement('div'),
+          getCurrentMode: () => 'empty',
+          getCamera: () => ({ parallelScale: 1 }),
+          getProperties: () => ({}),
+        } as { element: HTMLDivElement },
+        true,
+      );
+      const { result } = renderHook(() => useViewportState('vp-bare-3d'));
+
+      expect(result.current).toEqual({
+        kind: 'volume',
+        camera: { parallelScale: 1 },
+        voiRange: undefined,
+        sliceIndex: undefined,
+        numberOfSlices: undefined,
+        currentImageId: undefined,
+      });
+    });
+
+    test('a Generic Viewport that answers "empty" and takes a stack still reads as an empty Stack', () => {
+      // PlanarViewportLegacyAdapter before data (ADR 0008).
+      wireFakeViewport(
+        'vp-bare-planar',
+        {
+          element: document.createElement('div'),
+          getCurrentMode: () => 'empty',
+          setStack: async () => undefined,
+          getSliceIndex: () => 0,
+          getNumberOfSlices: () => 0,
+          getImageIds: () => [],
+        } as { element: HTMLDivElement },
+        true,
+      );
+      const { result } = renderHook(() => useViewportState('vp-bare-planar'));
+
+      expect(result.current?.kind).toBe('stack');
+    });
+
+    test('a Volume without getCamera, getProperties or getCurrentImageId reads an empty camera', () => {
+      // VIDEO_NEXT / ECG_NEXT / VOLUME_3D_NEXT once data is bound.
+      const { fire } = wireFakeViewport(
+        'vp-bare-volume',
+        {
+          element: document.createElement('div'),
+          getCurrentMode: () => 'unknown',
+        } as { element: HTMLDivElement },
+        true,
+      );
+      const { result } = renderHook(() => useViewportState('vp-bare-volume'));
+      const before = result.current;
+
+      expect(before).toEqual({
+        kind: 'volume',
+        camera: {},
+        voiRange: undefined,
+        sliceIndex: undefined,
+        numberOfSlices: undefined,
+        currentImageId: undefined,
+      });
+      fire(Enums.Events.CAMERA_MODIFIED);
+      expect(result.current).toBe(before);
+    });
+
+    test('a Stack without getCamera, getProperties or getCurrentImageId reads them as absent', () => {
+      // A bare PLANAR_NEXT holding a stack: the stack getters are there.
+      wireFakeViewport(
+        'vp-bare-stack',
+        {
+          element: document.createElement('div'),
+          getCurrentMode: () => 'stack',
+          getSliceIndex: () => 1,
+          getNumberOfSlices: () => 2,
+          getImageIds: () => ['img:0', 'img:1'],
+        } as { element: HTMLDivElement },
+        true,
+      );
+      const { result } = renderHook(() => useViewportState('vp-bare-stack'));
+
+      expect(result.current).toEqual({
+        kind: 'stack',
+        camera: {},
+        voiRange: undefined,
+        sliceIndex: 1,
+        numberOfSlices: 2,
+        currentImageId: undefined,
+        imageIds: ['img:0', 'img:1'],
+      });
+    });
+  });
+
   // What the viewport points at: the current image and, for a Stack, its
   // image list. Both ride existing element events — no new subscription.
   describe('current image and image list', () => {
