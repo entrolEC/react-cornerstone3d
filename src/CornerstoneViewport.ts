@@ -1,6 +1,6 @@
 import type { Enums, Types } from '@cornerstonejs/core';
 import { getRenderingEngine, getRenderingEngines } from '@cornerstonejs/core';
-import { createElement, useEffect, useRef, type ComponentPropsWithoutRef } from 'react';
+import { createElement, useEffect, useRef, type ComponentPropsWithoutRef, type ReactElement } from 'react';
 
 export interface CornerstoneViewportProps extends ComponentPropsWithoutRef<'div'> {
   /** Viewport id to enable — the same id `useViewportState` observes. */
@@ -53,7 +53,7 @@ export function CornerstoneViewport({
   defaultOptions,
   renderingEngineId,
   ...divProps
-}: CornerstoneViewportProps) {
+}: CornerstoneViewportProps): ReactElement {
   const elementRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
