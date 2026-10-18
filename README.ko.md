@@ -299,7 +299,7 @@ refreshAnnotations();
 
 ### 서버 렌더링
 
-모든 훅은 서버(Next.js prerender, 스트리밍 SSR)에서 "아무것도 없음" 값으로 렌더됩니다: `useViewportState`, `useActiveTool`, `useAnnotations`는 `undefined`, `useImageLoadState`는 `'absent'`(id가 `undefined`면 `undefined`), `useImageLoadStates`는 `'absent'`로 채운 배열(`undefined`면 `undefined`), `useCacheState`는 `{ imageBytes: 0 }`. hydration 뒤에는 각자 클라이언트 값을 읽고, 값이 다른 곳만 다시 렌더합니다.
+모든 훅은 서버(Next.js prerender, 스트리밍 SSR)에서 "아무것도 없음" 값으로 렌더됩니다: `useViewportState`, `useActiveTool`, `useAnnotations`는 `undefined`, `useImageLoadState`는 `'absent'`(id가 `undefined`면 `undefined`), `useImageLoadStates`는 `'absent'`로 채운 배열(`undefined`면 `undefined`), `useCacheState`는 `{ imageBytes: 0 }`. hydration 뒤에는 각자 클라이언트 값을 읽고, 값이 다른 곳만 다시 렌더합니다. `node_modules`를 external로 두는 서버는 `@cornerstonejs/core`·`tools` 5.2.0 이상도 필요합니다(**요구사항** 참고).
 
 ## 현재 상태
 
@@ -335,7 +335,7 @@ v0.6 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 - breaking change 없는 minor 릴리스 한 번 — API가 자리 잡았다는 뜻
 - 저자의 것 말고 두 번째 제품 뷰어
 
-**요구사항:** React 18+, `@cornerstonejs/core` 5.1.1 이상의 5.x; `/tools` 엔트리에만 같은 범위의 `@cornerstonejs/tools` (선택적 peer, core와 같은 버전). ESM만 제공하며, 모든 상대 import에 `.js`가 붙어 있어 Node ESM, Vitest, webpack 5가 로드할 수 있고, 타입은 `node10`을 포함한 모든 `moduleResolution`에서 해석됩니다. `exports`에 `default` 조건이 있어 Jest 리졸버가 엔트리를 찾지만, 패키지에 대한 ESM 지원은 Jest 쪽에서 켜야 합니다. CI는 `@cornerstonejs/core` 5.1.1과 최신 5.x에서 돕니다.
+**요구사항:** React 18+, `@cornerstonejs/core` 5.1.1 이상의 5.x; `/tools` 엔트리에만 같은 범위의 `@cornerstonejs/tools` (선택적 peer, core와 같은 버전). ESM만 제공하며, 모든 상대 import에 `.js`가 붙어 있어 Node ESM, Vitest, webpack 5가 로드할 수 있습니다. 단, Node ESM — 따라서 패키지를 external로 두는 Vitest(기본값)·서버 — 에서는 `@cornerstonejs/core`·`tools` 5.2.0 이상이 필요합니다. 5.1.x는 자체 ESM에 Node가 거부하는 디렉터리 import가 있어(`ERR_UNSUPPORTED_DIR_IMPORT`) 이 패키지와 무관하게 실패합니다. 번들러는 5.1.1에서도 문제없고, 5.1.x에서 Vitest를 쓰면 inline하세요(`test.server.deps.inline: [/@cornerstonejs\//, 'react-cornerstone3d']`). 타입은 `node10`을 포함한 모든 `moduleResolution`에서 해석됩니다. `exports`에 `default` 조건이 있어 Jest 리졸버가 엔트리를 찾지만, 패키지에 대한 ESM 지원은 Jest 쪽에서 켜야 합니다. CI는 `@cornerstonejs/core` 5.1.1과 최신 5.x에서 돕니다.
 
 **안정성:** 메이저 버전이 0인 동안 breaking change는 minor 릴리스(0.x → 0.y)에서만 일어나고 [CHANGELOG.md](./CHANGELOG.md)에 기록됩니다. patch 릴리스는 그대로 받아도 안전합니다. 정확한 버전 또는 tilde 범위(`~0.6.0`)로 고정하기를 권장합니다.
 

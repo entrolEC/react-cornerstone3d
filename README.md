@@ -299,7 +299,7 @@ refreshAnnotations();
 
 ### Server rendering
 
-Every hook renders on the server (Next.js prerender, streaming SSR) with its nothing-there value: `undefined` from `useViewportState`, `useActiveTool` and `useAnnotations`; `'absent'` from `useImageLoadState` (`undefined` for an `undefined` id); an array of `'absent'` from `useImageLoadStates` (`undefined` for `undefined`); `{ imageBytes: 0 }` from `useCacheState`. After hydration each takes the client's value, re-rendering only where it differs.
+Every hook renders on the server (Next.js prerender, streaming SSR) with its nothing-there value: `undefined` from `useViewportState`, `useActiveTool` and `useAnnotations`; `'absent'` from `useImageLoadState` (`undefined` for an `undefined` id); an array of `'absent'` from `useImageLoadStates` (`undefined` for `undefined`); `{ imageBytes: 0 }` from `useCacheState`. After hydration each takes the client's value, re-rendering only where it differs. A server that leaves `node_modules` external also needs `@cornerstonejs/core` and `tools` 5.2.0 or later (see **Requires**).
 
 ## Status
 
@@ -335,7 +335,7 @@ v0.6 — sync only. The library's sole responsibility is state synchronization.
 - One minor release with no breaking change — the API has settled
 - A second production viewer on it besides the author's
 
-**Requires:** React 18+, `@cornerstonejs/core` 5.1.1 or a later 5.x; `@cornerstonejs/tools` the same, only for the `/tools` entry (optional peer, same version as core). Ships ESM only, with `.js` on every relative import, so Node ESM, Vitest and webpack 5 load it, and its types resolve under every `moduleResolution`, `node10` included. `exports` carries a `default` condition, so Jest's resolver finds the entry, but Jest still needs its ESM support turned on for the package. Tested in CI on `@cornerstonejs/core` 5.1.1 and the latest 5.x.
+**Requires:** React 18+, `@cornerstonejs/core` 5.1.1 or a later 5.x; `@cornerstonejs/tools` the same, only for the `/tools` entry (optional peer, same version as core). Ships ESM only, with `.js` on every relative import, so Node ESM, Vitest and webpack 5 load it. Under Node ESM — and so a Vitest or server that leaves it external, Vitest's default — that needs `@cornerstonejs/core` and `tools` 5.2.0 or later: the ESM of 5.1.x uses directory imports, which Node rejects (`ERR_UNSUPPORTED_DIR_IMPORT`) whatever this package does. Bundlers are fine on 5.1.1; on 5.1.x under Vitest, inline them (`test.server.deps.inline: [/@cornerstonejs\//, 'react-cornerstone3d']`). Its types resolve under every `moduleResolution`, `node10` included. `exports` carries a `default` condition, so Jest's resolver finds the entry, but Jest still needs its ESM support turned on for the package. Tested in CI on `@cornerstonejs/core` 5.1.1 and the latest 5.x.
 
 **Stability:** while the major version is 0, a breaking change lands only in a minor release (0.x → 0.y) and is recorded in [CHANGELOG.md](./CHANGELOG.md). Patch releases are safe to take. Pin the exact version or a tilde range (`~0.6.0`).
 
