@@ -300,10 +300,11 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
  *
  * The array is replaced only when an entry changed, and an entry only when
  * the tools package said so (`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` /
- * `REMOVED`) or its lock, visibility or selection moved — so a selector
- * such as `list => list.length` and a row keyed by `annotationUID` cost
- * nothing on a drag of some other annotation. `MODIFIED` fires at drag rate;
- * the frame coalesces it to one render.
+ * `REMOVED`) or its lock, visibility or selection moved — so a row keyed by
+ * `annotationUID` and wrapped in `memo` does not re-render while a different
+ * annotation is dragged. The component calling the hook does: the array is
+ * replaced whenever any entry is. `MODIFIED` fires at drag rate; the frame
+ * coalesces it to one render.
  *
  * Writes stay the tools package's own calls (`annotation.state.addAnnotation`,
  * `removeAnnotation`, `selection.setAnnotationSelected`, …) and the tools
