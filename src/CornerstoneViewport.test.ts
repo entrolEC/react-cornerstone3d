@@ -53,6 +53,7 @@ function createFakeEngine(id = 'engine') {
       );
       registry.delete(viewportId);
     }),
+    getViewport: (viewportId: string) => registry.get(viewportId)?.viewport,
     resize: vi.fn(),
     hasBeenDestroyed: false,
   };
@@ -209,6 +210,84 @@ describe('CornerstoneViewport', () => {
 
     expect(() => view.unmount()).not.toThrow();
     expect(engine.disableElement).not.toHaveBeenCalled();
+  });
+
+  test('onEnabled gets the enabled viewport once per enable, and is not passed to the div', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onEnabled = vi.fn();
+
+    const view = render(
+      viewportEl({ viewportId: 'vp-on', type: Enums.ViewportType.STACK, onEnabled }),
+    );
+
+    expect(onEnabled).toHaveBeenCalledTimes(1);
+    expect(onEnabled).toHaveBeenCalledWith(registry.get('vp-on')?.viewport);
+    expect(view.container.firstElementChild?.getAttribute('onEnabled')).toBeNull();
+    // React warns about unknown event handler props on a DOM element.
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  test('onEnabled runs again on every re-enable: StrictMode remount and a type change', () => {
+    const onEnabled = vi.fn();
+    const props = { viewportId: 'vp-re', type: Enums.ViewportType.STACK, onEnabled };
+
+    // StrictMode as the root element, not RTL's `wrapper`: under the wrapper
+    // React 19 runs the mount effects only once here.
+    const strict = (p: typeof props) => createElement(StrictMode, null, viewportEl(p));
+    const view = render(strict(props));
+    // StrictMode: enable, disable, enable — each enable reports a fresh viewport.
+    expect(engine.enableElement).toHaveBeenCalledTimes(2);
+    expect(onEnabled).toHaveBeenCalledTimes(2);
+    expect(onEnabled).toHaveBeenLastCalledWith(registry.get('vp-re')?.viewport);
+
+    view.rerender(strict({ ...props, type: Enums.ViewportType.ORTHOGRAPHIC }));
+
+    expect(engine.enableElement).toHaveBeenCalledTimes(3);
+    expect(onEnabled).toHaveBeenCalledTimes(3);
+    expect(onEnabled.mock.lastCall?.[0]).toMatchObject({ type: Enums.ViewportType.ORTHOGRAPHIC });
+  });
+
+  test('a new onEnabled every render does not re-enable; the next enable calls the latest one', () => {
+    const first = vi.fn();
+    const props = { viewportId: 'vp-inline', type: Enums.ViewportType.STACK };
+    const view = render(viewportEl({ ...props, onEnabled: (v) => first(v) }));
+
+    const latest = vi.fn();
+    view.rerender(viewportEl({ ...props, onEnabled: (v) => first(v) }));
+    view.rerender(viewportEl({ ...props, onEnabled: latest }));
+
+    expect(engine.enableElement).toHaveBeenCalledTimes(1);
+    expect(engine.disableElement).not.toHaveBeenCalled();
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(latest).not.toHaveBeenCalled();
+
+    view.rerender(
+      viewportEl({ ...props, type: Enums.ViewportType.ORTHOGRAPHIC, onEnabled: latest }),
+    );
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(latest).toHaveBeenCalledTimes(1);
+  });
+
+  test('an onEnabled that throws disables the viewport it was handed, then rethrows', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() =>
+      render(
+        viewportEl({
+          viewportId: 'vp-throw',
+          type: Enums.ViewportType.STACK,
+          onEnabled: () => {
+            throw new Error('setup failed');
+          },
+        }),
+      ),
+    ).toThrow('setup failed');
+
+    expect(engine.disableElement).toHaveBeenCalledWith('vp-throw');
+    expect(registry.has('vp-throw')).toBe(false);
+    expect(observers[0].disconnected).toBe(true);
+    consoleError.mockRestore();
   });
 
   test('throws when no Engine is registered — the app must create it first', () => {

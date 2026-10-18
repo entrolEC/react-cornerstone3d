@@ -14,6 +14,15 @@ export interface CornerstoneViewportProps extends ComponentPropsWithoutRef<'div'
    * Defaults to the app's single registered Engine.
    */
   renderingEngineId?: string;
+  /**
+   * Called right after each enable: first mount, StrictMode's remount, and
+   * the re-enable a viewportId/type/renderingEngineId change triggers. Each
+   * enable creates a new viewport, and CS3D drops the old one from its
+   * ToolGroup and synchronizers on disable — redo per-viewport setup here
+   * (`toolGroup.addViewport`, `setStack`). Only the latest callback is used;
+   * a new one alone does not re-enable.
+   */
+  onEnabled?: (viewport: Types.IViewport) => void;
 }
 
 function resolveEngine(renderingEngineId?: string): Types.IRenderingEngine {
@@ -52,9 +61,18 @@ export function CornerstoneViewport({
   type,
   defaultOptions,
   renderingEngineId,
+  onEnabled,
   ...divProps
 }: CornerstoneViewportProps): ReactElement {
   const elementRef = useRef<HTMLDivElement>(null);
+  // Kept in a ref, out of the enable effect's deps: an inline arrow is a new
+  // function every render and would re-enable (destroy and recreate) the
+  // viewport each time. Declared before the enable effect, so it runs first
+  // and the enable sees this render's callback.
+  const onEnabledRef = useRef(onEnabled);
+  useEffect(() => {
+    onEnabledRef.current = onEnabled;
+  });
 
   useEffect(() => {
     const engine = resolveEngine(renderingEngineId);
@@ -77,13 +95,24 @@ export function CornerstoneViewport({
           });
     observer?.observe(element);
 
-    return () => {
+    const cleanup = () => {
       observer?.disconnect();
       // React runs cleanups parent-first: a parent that owns the Engine and
       // destroys it in its own cleanup has already taken this viewport down,
       // and disableElement on a destroyed Engine throws.
       if (!engine.hasBeenDestroyed) engine.disableElement(viewportId);
     };
+
+    // Last, once the cleanup exists: a throwing callback would otherwise
+    // abort the effect before React gets the cleanup, leaving the viewport
+    // enabled on a div that is going away.
+    try {
+      onEnabledRef.current?.(engine.getViewport(viewportId));
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
+    return cleanup;
     // defaultOptions is enable-time-only by CS3D contract — re-enabling on
     // its change would destroy and recreate the viewport.
   }, [viewportId, type, renderingEngineId]);
