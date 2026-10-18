@@ -240,18 +240,21 @@ interface AnnotationState {
 }
 ```
 
-**`useActiveTool(viewportId)`** is the tool active on the primary mouse button for the viewport's ToolGroup — the name you passed to `setToolActive`, as `getActivePrimaryMouseButtonTool` reports it. `undefined` while no ToolGroup holds the viewport, or none of its tools is active on the primary button. It follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED` and a viewport joining or leaving a group; writes stay `toolGroup.setToolActive(...)`.
+**`useActiveTool(viewportId)`** is the tool active on the primary mouse button for the viewport's ToolGroup — the name you passed to `setToolActive`, as `getActivePrimaryMouseButtonTool` reports it. `undefined` while no ToolGroup holds the viewport, or none of its tools is active on the primary button. It follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED` and a viewport joining or leaving a group; writes stay `toolGroup.setToolActive(...)`, which does not take the primary button from the tool that held it, so set that one passive first.
 
 ```tsx
 import { Enums as ToolsEnums, ToolGroupManager } from '@cornerstonejs/tools';
 
 function ToolButton({ viewportId, tool }: { viewportId: string; tool: string }) {
   const active = useActiveTool(viewportId);
-  return (
-    <button aria-pressed={active === tool} onClick={() => ToolGroupManager.getToolGroupForViewport(viewportId)?.setToolActive(tool, { bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }] })}>
-      {tool}
-    </button>
-  );
+  const activate = () => {
+    const group = ToolGroupManager.getToolGroupForViewport(viewportId);
+    // setToolActive does not take Primary away from the previous tool: set that one passive first.
+    const current = group?.getActivePrimaryMouseButtonTool();
+    if (current && current !== tool) group!.setToolPassive(current);
+    group?.setToolActive(tool, { bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }] });
+  };
+  return <button aria-pressed={active === tool} onClick={activate}>{tool}</button>;
 }
 ```
 

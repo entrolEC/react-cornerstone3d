@@ -12,6 +12,7 @@ import {
   AnnotationTool,
   Enums as ToolsEnums,
   LengthTool,
+  PanTool,
   PlanarFreehandROITool,
   StackScrollTool,
   ToolGroupManager,
@@ -20,7 +21,8 @@ import {
   annotation,
   init as csToolsInit,
 } from '@cornerstonejs/tools';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { createElement } from 'react';
 import { afterEach, beforeAll, expect, test } from 'vitest';
 import { useActiveTool, useAnnotations } from './index';
 import {
@@ -52,6 +54,7 @@ beforeAll(async () => {
   metaData.addProvider(forLessMetaDataProvider);
   addTool(StackScrollTool);
   addTool(WindowLevelTool);
+  addTool(PanTool);
   addTool(LengthTool);
   addTool(PlanarFreehandROITool);
 });
@@ -113,6 +116,65 @@ test('active tool: a real ToolGroup, setToolActive and setToolPassive reach the 
 
   group.removeViewports(engine.id, 'vp');
   await waitFor(() => expect(result.current).toBeUndefined());
+});
+
+// The README's ToolButton, onClick as written there. setToolActive adds a
+// binding and never takes Primary from the tool that held it, so the button
+// sets that one passive first; without it the hook rightly keeps reporting
+// the first tool, which is also the one CS3D's mouse dispatch picks.
+function ToolButton({ viewportId, tool }: { viewportId: string; tool: string }) {
+  const active = useActiveTool(viewportId);
+  return createElement(
+    'button',
+    {
+      'aria-pressed': active === tool,
+      onClick: () => {
+        const group = ToolGroupManager.getToolGroupForViewport(viewportId);
+        const current = group?.getActivePrimaryMouseButtonTool();
+        if (current && current !== tool) group!.setToolPassive(current);
+        group?.setToolActive(tool, { bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }] });
+      },
+    },
+    tool,
+  );
+}
+
+test('active tool: the README toolbar switches between two tools and the hook follows', async () => {
+  await enableStack('vp');
+  const group = ToolGroupManager.createToolGroup('tg')!;
+  group.addTool(WindowLevelTool.toolName);
+  group.addTool(PanTool.toolName);
+  group.addTool(StackScrollTool.toolName);
+  group.addViewport('vp', engine.id);
+  group.setToolActive(StackScrollTool.toolName, {
+    bindings: [{ mouseButton: ToolsEnums.MouseBindings.Wheel }],
+  });
+  const { result } = renderHook(() => useActiveTool('vp'));
+  render(
+    createElement(
+      'div',
+      null,
+      createElement(ToolButton, { viewportId: 'vp', tool: WindowLevelTool.toolName }),
+      createElement(ToolButton, { viewportId: 'vp', tool: PanTool.toolName }),
+    ),
+  );
+  const primaryTools = () =>
+    [WindowLevelTool.toolName, PanTool.toolName].filter((name) => {
+      const options = group.getToolOptions(name);
+      return (
+        options?.mode === ToolsEnums.ToolModes.Active &&
+        options.bindings.some((b) => b.mouseButton === ToolsEnums.MouseBindings.Primary)
+      );
+    });
+
+  for (const tool of [WindowLevelTool.toolName, PanTool.toolName, WindowLevelTool.toolName]) {
+    fireEvent.click(screen.getByText(tool));
+    await waitFor(() => expect(result.current).toBe(tool));
+    expect(screen.getByText(tool).getAttribute('aria-pressed')).toBe('true');
+    expect(primaryTools()).toEqual([tool]); // one tool on Primary, not two
+  }
+  // setToolPassive took only the primary binding: the wheel tool stays.
+  expect(group.getToolOptions(StackScrollTool.toolName).mode).toBe(ToolsEnums.ToolModes.Active);
 });
 
 test('active tool: a viewport added to its group before enable resolves once enabled', async () => {

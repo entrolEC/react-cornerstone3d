@@ -240,18 +240,21 @@ interface AnnotationState {
 }
 ```
 
-**`useActiveTool(viewportId)`** — 그 뷰포트의 ToolGroup에서 주 마우스 버튼에 활성화된 도구입니다. `setToolActive`에 넘긴 이름 그대로, `getActivePrimaryMouseButtonTool`이 보고하는 값입니다. 어떤 ToolGroup도 뷰포트를 갖고 있지 않거나 주 버튼에 활성 도구가 없으면 `undefined`. `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, 뷰포트의 그룹 가입·탈퇴를 따라갑니다. 쓰기는 `toolGroup.setToolActive(...)` 그대로입니다.
+**`useActiveTool(viewportId)`** — 그 뷰포트의 ToolGroup에서 주 마우스 버튼에 활성화된 도구입니다. `setToolActive`에 넘긴 이름 그대로, `getActivePrimaryMouseButtonTool`이 보고하는 값입니다. 어떤 ToolGroup도 뷰포트를 갖고 있지 않거나 주 버튼에 활성 도구가 없으면 `undefined`. `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, 뷰포트의 그룹 가입·탈퇴를 따라갑니다. 쓰기는 `toolGroup.setToolActive(...)` 그대로입니다. 다만 `setToolActive`는 주 버튼을 쥐고 있던 도구에게서 그 버튼을 빼앗지 않으므로, 그 도구를 먼저 passive로 돌리세요.
 
 ```tsx
 import { Enums as ToolsEnums, ToolGroupManager } from '@cornerstonejs/tools';
 
 function ToolButton({ viewportId, tool }: { viewportId: string; tool: string }) {
   const active = useActiveTool(viewportId);
-  return (
-    <button aria-pressed={active === tool} onClick={() => ToolGroupManager.getToolGroupForViewport(viewportId)?.setToolActive(tool, { bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }] })}>
-      {tool}
-    </button>
-  );
+  const activate = () => {
+    const group = ToolGroupManager.getToolGroupForViewport(viewportId);
+    // setToolActive는 이전 도구에게서 Primary를 빼앗지 않습니다: 그 도구를 먼저 passive로.
+    const current = group?.getActivePrimaryMouseButtonTool();
+    if (current && current !== tool) group!.setToolPassive(current);
+    group?.setToolActive(tool, { bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }] });
+  };
+  return <button aria-pressed={active === tool} onClick={activate}>{tool}</button>;
 }
 ```
 
