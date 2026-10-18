@@ -17,7 +17,7 @@ The current slice index and the number of slices of a viewport, as the Engine re
 _Avoid_: current/total, slice info, slider state
 
 **Snapshot**:
-An immutable, referentially-stable copy of a piece of Engine state, rebuilt, at most once per frame, when a relevant Engine event fires. What `getSnapshot` returns. React compares what it gets back by `Object.is` and the Engine's getters return a fresh object on every call, so the Snapshot is what makes *unchanged* expressible at all. A rebuild shares structure with the Snapshot it replaces: the parts that did not move keep their previous references, so a selector reading one of them does not re-render because something else did.
+An immutable, referentially-stable copy of a piece of Engine state, rebuilt, at most once per frame, when a relevant Engine event fires. What `getSnapshot` returns. React compares what it gets back by `Object.is` and the Engine's getters build a new object on every call (`getCamera` always; of `getProperties`, only a Stack's `voiRange` comes back unchanged), so the Snapshot is what makes *unchanged* expressible at all. A rebuild shares structure with the Snapshot it replaces: the parts that did not move keep their previous references, so a selector reading one of them does not re-render because something else did.
 _Avoid_: state copy, cache object
 
 **Command**:
@@ -37,7 +37,7 @@ What `@cornerstonejs/tools` reports for a viewport's ToolGroup: today, the Activ
 _Avoid_: tool mode, current tool, toolbar state
 
 **Annotation State**:
-The annotations on a viewport's frame of reference, as the tools package's annotation state reports them: for each, its id, tool, referenced image, lock / visibility / selection, and a plain frozen copy of its data. An entry is rebuilt when the tools package said that annotation changed; `highlighted` and `invalidated` change silently and are not in it.
+The annotations on a viewport's frame of reference, as the tools package's annotation state reports them: for each, its id, tool, referenced image, lock / visibility / selection, and a plain frozen copy of its data (typed arrays as plain arrays; per-voxel samples, `pointsInShape` / `pointsInVolume`, left out). A viewport whose images have no frame of reference (CR, DX, US, SC, web images) lists the annotations the tools package draws on it: on a stack, those whose referenced image is one of the stack's; the stack stands in for the frame, so the list is per stack, not per image. An entry is rebuilt when the tools package said that annotation changed, or on `refreshAnnotations()` after a change it made silently; `highlighted` and `invalidated` change silently and are not in it.
 _Avoid_: measurements (a tool's word, not the state's), annotation list, markup
 
 **Binding**:

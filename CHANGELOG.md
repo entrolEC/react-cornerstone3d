@@ -6,26 +6,44 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-10-17
+## [0.6.0] - 2026-10-18
 
 ### Added
 
 - `react-cornerstone3d/tools` — a second entry for state that lives in `@cornerstonejs/tools`, which is now an optional peer dependency; the root entry never imports it. (ADR 0010)
-  - `useActiveTool(viewportId)` — the tool active on the primary mouse button for the viewport's ToolGroup (`getActivePrimaryMouseButtonTool`), or `undefined` when no group holds the viewport or none is active. Follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, `TOOLGROUP_VIEWPORT_ADDED` / `_REMOVED`.
-  - `useAnnotations(viewportId, toolName?)` — the annotations on the viewport's frame of reference as the annotation state reports them: `annotationUID`, `toolName`, `referencedImageId`, `isLocked` / `isVisible` / `isSelected`, and a plain frozen copy of `data`. An entry is replaced only when the tools package said that annotation changed or a flag moved; the array only when an entry did. `undefined` while the viewport is absent.
+  - `useActiveTool(viewportId)` — the tool active on the primary mouse button for the viewport's ToolGroup (`getActivePrimaryMouseButtonTool`), or `undefined` when no group holds the viewport or none is active. Follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, `TOOLGROUP_VIEWPORT_ADDED` / `_REMOVED`, and core's `ELEMENT_ENABLED` / `ELEMENT_DISABLED`.
+  - `useAnnotations(viewportId, toolName?)` — the annotations on the viewport's frame of reference (for images without one, on the viewport's stack) as the annotation state reports them: `annotationUID`, `toolName`, `referencedImageId`, `isLocked` / `isVisible` / `isSelected`, and a plain frozen copy of `data`. An entry is replaced only when the tools package said that annotation changed or a flag moved; the array only when an entry did. `undefined` while the viewport is absent.
+  - `refreshAnnotations()` — rebuilds every `useAnnotations` list in the next frame, for annotation changes that fire no event: the annotation manager's own `restoreAnnotations` / `addAnnotation` / `removeAnnotation`, `setAnnotationManager` / `resetAnnotationManager`, `cornerstoneTools.destroy()`. Call it once after such a change, e.g. after loading saved measurements with `restoreAnnotations`.
+- `<CornerstoneViewport onEnabled>` — `(viewport: Types.IViewport) => void`, called right after every enable (first mount, StrictMode's remount, the re-enable a `viewportId` / `type` / `renderingEngineId` change triggers), so per-viewport setup such as `toolGroup.addViewport` can be redone on the new viewport. Only the latest callback is used and a new one does not re-enable; if it throws, the viewport is disabled and the error rethrown.
 - `<CornerstoneViewport />` watches its own `<div>` with a `ResizeObserver` and calls `engine.resize()` when it changes size, so a viewport in a resizable layout no longer needs the app to do it.
-- `package.json` `exports` carry a `default` condition (root and `./tools`), so resolvers that do not ask for `import` — Jest's among them — find the entry.
-- README: tested versions, package size, a limitations section (two Engines sharing a viewportId, `suppressEvents`, `removeVolumeActors`, background tabs, annotation events), a window/level readout and a Volume example.
-
-### Fixed
-
-- `<CornerstoneViewport />` no longer throws on unmount when a parent already destroyed the Engine in its own cleanup (React runs cleanups parent-first; `disableElement` on a destroyed Engine throws). The cleanup checks `hasBeenDestroyed` first.
-- Demo: the rebuilt site (six panels, English by default with a Korean switch, wiring counted off the running files) is on `main`. Panel 5 no longer purges the image cache at page load, the OHIF citations name one commit, ADRs are links, and the hero can jump straight to usage.
-- README: the Status table and the 1.0 criteria no longer contradict each other, and no public text points at a local `.scratch/` file.
+- `useViewportState` has a third overload taking a selector that may be `undefined` (`selector?: (state) => T`), so a wrapper hook can forward an optional selector; an `undefined` selector means none, as at runtime before.
+- `package.json` `exports` carry a `default` condition (root and `./tools`), so resolvers that do not ask for `import` — Jest's among them — find the entry; `typesVersions` maps `tools`, so the `/tools` types resolve under `moduleResolution: node10`.
+- README: tested versions, bundle cost per entry, server rendering, a limitations section (two Engines sharing a viewportId, `suppressEvents`, Generic Viewport window/level, `removeVolumeActors`, background tabs, destroyed ToolGroups, annotation changes without events), a window/level readout and a Volume example.
 
 ### Changed
 
+- **Breaking:** the peer range for `@cornerstonejs/core` and `@cornerstonejs/tools` is `^5.1.1` (was `^5.0.0`). On 5.0.0–5.1.0 the Generic Viewport has no `getCurrentMode` and fires no `VOI_MODIFIED` from `setDisplaySetPresentation`, so a Generic volume read as kind `'stack'`; the floor also applies to apps that never turn the Generic Viewport on, and npm 7+ refuses those versions until they move to 5.1.1. CI now tests 5.1.1 and the latest 5.x (the old 5.0.0 leg never got past its install step).
+- **Breaking:** typed arrays in `AnnotationState.data` (a contour restored by undo, gl-matrix points) are plain arrays, so a point is always a `number[]`; a `DataView` becomes `[]`.
+- **Breaking:** `AnnotationState.data` leaves out `pointsInShape` and `pointsInVolume` at any depth (`storePointData`'s per-voxel samples, and the empty `pointsInShape` stored without it), as CS3D's own `safeStructuredClone` does. Read them from `annotation.state.getAnnotation(annotationUID)` when the entry changes.
+- **Breaking:** on images without a frame of reference (CR, DX, US, SC, web images) `useAnnotations` lists the annotations the tools package draws on the viewport — on a stack, those whose `referencedImageId` is in it — instead of a stable `[]`. The list is per stack, not per image.
+- `useViewportState` compares and shares the camera at any depth, so a Generic Viewport camera (nested `slice`, `displayArea`) keeps its reference while it holds still, and a field that did not move keeps its reference however deep it sits.
+- `<CornerstoneViewport />` disables its `viewportId` on unmount only while its own `<div>` still holds it, so a newer component that took the id keeps it.
 - Documentation describes the OHIF comparison the way the demo does — as evidence the problem is hard, with one pinned permalink — instead of a list of their guards.
+
+### Fixed
+
+- The package loads under Node ESM, a consumer's Vitest and plain webpack 5: every relative import in `dist` carries `.js` (they threw `ERR_MODULE_NOT_FOUND`; 0.4.0 has the same defect), and TypeScript consumers on `node16` / `nodenext` get real types instead of TS2835 or `any`.
+- Every hook renders on the server with its nothing-there value instead of throwing "Missing getServerSnapshot" (`next build` failed at prerender): `undefined` from `useViewportState`, `useActiveTool` and `useAnnotations`; `'absent'` from `useImageLoadState` (`undefined` for `undefined`); an array of `'absent'` from `useImageLoadStates`; `{ imageBytes: 0 }` from `useCacheState`. Hydration re-renders only where the client differs.
+- `CornerstoneViewport`'s declared return type is `ReactElement`, so its `.d.ts` no longer inlines every div prop of the `@types/react` it was built with (consumers with `skipLibCheck: false` and an older `@types/react` got errors inside it).
+- `useViewportState` no longer throws during render on viewport classes without the legacy getters (Generic Video, ECG and 3D adapters, a `*_NEXT` type requested directly): a missing `getCamera` reports `camera: {}`, a missing `getProperties` `voiRange: undefined`, and those classes read kind `'volume'` while empty.
+- `useAnnotations` no longer throws "Cannot freeze array buffer views with elements" when an annotation's `data` holds a typed array, and no longer recopies `storePointData`'s samples on every frame of a drag.
+- `useAnnotations` works with any tool name, including one with `@` or named `*`.
+- `useActiveTool` resolves a viewport added to its ToolGroup before it was enabled, and drops a group destroyed before its viewport was disabled. A group destroyed while its viewport stays enabled still fires nothing; call `removeViewports` first.
+- `useImageLoadStates` keeps a heard `'failed'` for an id that stays in the list when the list changes.
+- `<CornerstoneViewport />` no longer throws on unmount when a parent already destroyed the Engine in its own cleanup (React runs cleanups parent-first; `disableElement` on a destroyed Engine throws). The cleanup checks `hasBeenDestroyed` first.
+- `<CornerstoneViewport />`'s unmount no longer destroys the viewport of a newer component that took the same `viewportId` (an exit animation, a second React root).
+- README: the `ToolButton` example sets the previous primary tool passive before `setToolActive`, so a toolbar switches tools (`setToolActive` never takes the primary button from another tool). The Status table and the 1.0 criteria no longer contradict each other, and no public text points at a local `.scratch/` file.
+- Demo: the rebuilt site (six panels, English by default with a Korean switch, wiring counted off the running files) is on `main`. Panel 5 no longer purges the image cache at page load, the OHIF citations name one commit, ADRs are links, and the hero can jump straight to usage.
 
 ## [0.5.0] - 2026-10-09
 

@@ -22,7 +22,7 @@ function SliceIndicator() {
 
 이 훅 한 줄이, 오늘날 모든 Cornerstone3D + React 앱이 위젯마다 작성하는 24줄의 `useEffect` + `addEventListener` + `setState` 배선을 대체합니다. 데모는 양쪽 줄 수를 실제로 돌고 있는 파일에서 세므로, 숫자가 코드와 어긋날 수 없습니다.
 
-실제 의료영상 뷰어 제품에서 사용 중입니다. 런타임 의존성 0개, 패키지 34 kB, CI에서 `@cornerstonejs/core` 5.0.0과 최신 5.x에 대해 실제 엔진을 띄우는 브라우저 테스트로 검증합니다.
+실제 의료영상 뷰어 제품에서 사용 중입니다. 런타임 의존성 0개. 번들·minify·gzip 기준으로 루트 엔트리 3.0 kB, `/tools` 단독 2.2 kB, 둘 다 쓰면 4.2 kB입니다(공통 코어를 공유합니다. esbuild로 `react`와 `@cornerstonejs/*`를 external로 두고 측정). CI에서 `@cornerstonejs/core` 5.1.1과 최신 5.x에 대해 실제 엔진을 띄우는 브라우저 테스트로 검증합니다.
 
 <details>
 <summary>훅이 없다면 어떤 코드를 쓰게 되는지 펼쳐보기</summary>
@@ -73,7 +73,7 @@ Cornerstone3D가 잘못 만들어진 게 아닙니다 — **엔진**이지 스�
 - **Tearing** — React 18+ concurrent 렌더링에서 한 화면의 두 컴포넌트가 서로 다른 슬라이스 번호를 표시
 - **구독 누수** — StrictMode 이중 마운트에서
 - **마운트 순서 경합** — 뷰포트가 enable되기 전에 UI가 먼저 마운트될 때
-- **무한 루프 또는 깊은 비교 땜질** — Cornerstone3D getter는 매 호출 새 객체를 반환하므로 naive한 `getSnapshot`은 절대 안정되지 않음. 이건 누구에게나 어려운 문제입니다: OHIF의 뷰포트 훅들도 React Compiler를 끄면서 그 이유를 "메모이제이션이 참조 순수성을 가정하므로 컴파일하면 업데이트가 조용히 사라진다"고 적어 두었습니다 ([hooks.ts @ 9753879](https://github.com/OHIF/Viewers/blob/9753879/extensions/cornerstone/src/Viewport/Overlays/ViewportSliceProgressScrollbar/hooks.ts#L1-L5)). 데모 패널 5가 세 군데를 더 인용합니다.
+- **무한 루프 또는 깊은 비교 땜질** — Cornerstone3D getter는 매 호출 새 객체를 만들므로 — `getCamera()`는 언제나, `getProperties()`도 마찬가지(그 안의 Stack `voiRange`만 바뀌기 전까지 같은 객체로 돌아옴) — naive한 `getSnapshot`은 절대 안정되지 않음. 이건 누구에게나 어려운 문제입니다: OHIF의 뷰포트 훅들도 React Compiler를 끄면서 그 이유를 "메모이제이션이 참조 순수성을 가정하므로 컴파일하면 업데이트가 조용히 사라진다"고 적어 두었습니다 ([hooks.ts @ 9753879](https://github.com/OHIF/Viewers/blob/9753879/extensions/cornerstone/src/Viewport/Overlays/ViewportSliceProgressScrollbar/hooks.ts#L1-L5)). 데모 패널 5가 세 군데를 더 인용합니다.
 
 이 라이브러리는 그 버그 계층을 중앙에서 한 번에 해결합니다. UI 컴포넌트는 엔진 상태의 순수 함수가 됩니다.
 
@@ -98,10 +98,11 @@ Cornerstone3D가 잘못 만들어진 게 아닙니다 — **엔진**이지 스�
 ```ts
 function useViewportState(viewportId: string, selector?: undefined): ViewportState | undefined;
 function useViewportState<T>(viewportId: string, selector: (state: ViewportState) => T): T | undefined;
+function useViewportState<T>(viewportId: string, selector?: (state: ViewportState) => T): T | ViewportState | undefined;
 ```
 
 - **`viewportId`** — Cornerstone3D 전역 레지스트리로 뷰포트를 찾습니다. 해당 id의 뷰포트가 enable되어 있지 않으면 `undefined`를 반환합니다.
-- **`selector`** — 선택한 값이 `Object.is` 기준으로 바뀔 때만 컴포넌트가 리렌더됩니다. 뷰포트 부재 중에는 호출되지 않습니다. 원시값이나 이미 존재하는 필드를 고르세요(`s => s.voiRange`는 무관한 변경에도 참조가 유지됩니다). 값을 *만들어* 돌려주는 셀렉터 — `s => ({ index: s.sliceIndex })` — 는 직전 결과와 `Object.is`로 같을 수 없으므로 Engine 이벤트마다 리렌더됩니다 ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)).
+- **`selector`** — 선택한 값이 `Object.is` 기준으로 바뀔 때만 컴포넌트가 리렌더됩니다. 뷰포트 부재 중에는 호출되지 않습니다. 원시값이나 이미 존재하는 필드를 고르세요(`s => s.voiRange`는 무관한 변경에도 참조가 유지됩니다). 값을 *만들어* 돌려주는 셀렉터 — `s => ({ index: s.sliceIndex })` — 는 직전 결과와 `Object.is`로 같을 수 없으므로 Engine 이벤트마다 리렌더됩니다 ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)). `undefined` 셀렉터는 셀렉터 없음과 같으므로, 래퍼 훅이 선택적 셀렉터를 그대로 넘길 수 있습니다(세 번째 오버로드).
 
 Engine 이벤트는 애니메이션 프레임당 최대 한 번의 업데이트로 합쳐집니다. 드래그 중 이벤트마다가 아니라 프레임마다 한 번 렌더됩니다. 끄는 옵션은 없습니다: Snapshot은 이벤트 스트림이 아니라 *상태*이고, 이벤트 하나하나가 필요한 컴포넌트는 Cornerstone3D 리스너를 직접 쓰는 것이 맞습니다 ([ADR 0006](./docs/adr/0006-the-frame-is-the-unit-of-consistency.md)).
 
@@ -114,7 +115,7 @@ interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
-모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. 재구축은 직전 Snapshot과 구조를 공유하므로 움직이지 않은 필드는 참조가 그대로 유지됩니다 — 줌을 해도 `s => s.voiRange`에 새 객체가 가지 않고, 스크롤을 해도 `s => s.imageIds`에 새 배열이 가지 않습니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
+모든 상태 객체는 deep-frozen Snapshot이며, 상태가 실제로 바뀌기 전까지 참조가 유지됩니다. 재구축은 직전 Snapshot과 구조를 공유하므로 움직이지 않은 필드는 깊이와 상관없이 참조가 그대로 유지됩니다 — 줌을 해도 `s => s.voiRange`에 새 객체가 가지 않고, 스크롤을 해도 `s => s.imageIds`에 새 배열이 가지 않습니다. Stack에서 `sliceIndex`는 *요청된* 슬라이스입니다 — 이미지 로드가 끝날 때가 아니라 스크롤이 일어난 순간 갱신됩니다 ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). Volume에서는 카메라에서 파생되므로 화면보다 앞서가지 않습니다. 슬라이스가 없는 뷰포트(3D, `setVolumes` 전의 Volume)는 두 필드 모두 `undefined`입니다.
 
 `currentImageId`는 뷰포트가 가리키는 이미지입니다: Stack에서는 요청된 슬라이스의 id, Volume에서는 카메라에 가장 가까운 이미지, 가리키는 것이 없으면(`setStack` 전의 Stack, 데이터 전의 Volume, 3D) `undefined`. `imageIds`는 Stack의 이미지 목록으로, `setStack`이 내용을 바꿀 때만 교체됩니다. 이 둘이 아래 이미지 훅의 키가 됩니다.
 
@@ -200,13 +201,18 @@ function MemoryGauge({ maxBytes }: { maxBytes: number }) {
 
 ### `<CornerstoneViewport />`
 
-선택 사항. `<div>`를 렌더링하고 마운트 시 뷰포트로 enable하며, div 크기가 바뀌면 `ResizeObserver`로 `engine.resize()`를 호출해 캔버스를 맞추고, 언마운트 시 disable합니다. Engine은 앱이 만들고, 컴포넌트는 레지스트리로 찾기만 합니다. 부모가 자기 cleanup에서 Engine을 먼저 destroy했다면(React는 cleanup을 부모부터 실행합니다) 컴포넌트의 cleanup은 그걸 알아채고 아무것도 하지 않습니다.
+선택 사항. `<div>`를 렌더링하고 마운트 시 뷰포트로 enable하며, div 크기가 바뀌면 `ResizeObserver`로 `engine.resize()`를 호출해 캔버스를 맞추고, 언마운트 시 disable합니다 — 단 자기 div가 아직 그 `viewportId`를 쥐고 있을 때만이므로, 그 id를 가져간 더 새 컴포넌트(exit 애니메이션, 두 번째 root)는 그대로 유지됩니다. 계약은 여전히 마운트된 컴포넌트 하나당 `viewportId` 하나입니다: 겹친 두 컴포넌트 중 새 쪽이 먼저 언마운트되면, Cornerstone3D가 이미 id를 가져갔으므로 옛 쪽은 빈 화면으로 남습니다. Engine은 앱이 만들고, 컴포넌트는 레지스트리로 찾기만 합니다. 부모가 자기 cleanup에서 Engine을 먼저 destroy했다면(React는 cleanup을 부모부터 실행합니다) 컴포넌트의 cleanup은 그걸 알아채고 아무것도 하지 않습니다.
 
 ```tsx
 import { Enums } from '@cornerstonejs/core';
 import { CornerstoneViewport } from 'react-cornerstone3d';
 
-<CornerstoneViewport viewportId="ct-axial" type={Enums.ViewportType.STACK} style={{ width: 512, height: 512 }} />
+<CornerstoneViewport
+  viewportId="ct-axial"
+  type={Enums.ViewportType.STACK}
+  onEnabled={(viewport) => toolGroup.addViewport(viewport.id, viewport.renderingEngineId)}
+  style={{ width: 512, height: 512 }}
+/>
 ```
 
 | Prop | 설명 |
@@ -215,6 +221,7 @@ import { CornerstoneViewport } from 'react-cornerstone3d';
 | `type` | `Enums.ViewportType`, `enableElement`에 그대로 전달. |
 | `defaultOptions?` | `Types.ViewportInputOptions`, enable 시점에 한 번만 적용. 이후 변경해도 재-enable하지 않습니다. |
 | `renderingEngineId?` | enable할 Engine. 기본값은 앱에 등록된 유일한 Engine이며, 0개 또는 여러 개인데 id가 없으면 throw합니다. |
+| `onEnabled?` | `(viewport: Types.IViewport) => void`. enable할 때마다 직후에 호출됩니다: 첫 마운트, StrictMode의 재마운트, `viewportId` / `type` / `renderingEngineId` 변경이 일으키는 재-enable. enable마다 새 뷰포트가 생기고, Cornerstone3D는 disable 때 옛 뷰포트를 ToolGroup과 synchronizer에서 빼므로 뷰포트별 설정(`toolGroup.addViewport`, `setStack`)은 여기서 다시 하세요. 컴포넌트의 effect에서, 어떤 부모 effect보다 먼저 돌므로 여기서 쓰는 ToolGroup은 마운트 전에 있어야 합니다. 가장 최근 콜백만 쓰이며, 콜백이 바뀌는 것만으로는 재-enable하지 않습니다. 콜백이 throw하면 뷰포트를 disable하고 에러를 다시 던집니다. |
 | `...divProps` | 나머지는 모두 `<div>`로 전달. |
 
 마운트 시 Engine이 없는 것은 마운트 순서 버그이므로 컴포넌트는 조용히 넘어가지 않고 throw합니다 — 뷰포트 부재를 정상 상태로 보는 훅과 다른 점입니다.
@@ -224,10 +231,11 @@ import { CornerstoneViewport } from 'react-cornerstone3d';
 `@cornerstonejs/tools`에 있는 상태입니다. core만 쓰는 앱이 tools 패키지를 로드하지 않도록 별도 엔트리로 제공합니다 ([ADR 0010](./docs/adr/0010-tools-state-is-a-separate-entry.md)). `@cornerstonejs/tools`는 선택적 peer dependency이며, tools 패키지 자체가 요구하듯 core와 같은 버전으로 설치하세요.
 
 ```ts
-import { useActiveTool, useAnnotations, type AnnotationState } from 'react-cornerstone3d/tools';
+import { refreshAnnotations, useActiveTool, useAnnotations, type AnnotationState } from 'react-cornerstone3d/tools';
 
 function useActiveTool(viewportId: string): string | undefined;
 function useAnnotations(viewportId: string, toolName?: string): readonly AnnotationState[] | undefined;
+function refreshAnnotations(): void;
 
 interface AnnotationState {
   readonly annotationUID: string;
@@ -236,11 +244,11 @@ interface AnnotationState {
   readonly isLocked: boolean;
   readonly isVisible: boolean;
   readonly isSelected: boolean;
-  readonly data: Readonly<Record<string, unknown>>; // 평범한 frozen 사본: handles, cachedStats, label, …
+  readonly data: Readonly<Record<string, unknown>>; // 평범한 frozen 사본: handles, cachedStats, label, … (typed array는 일반 배열로)
 }
 ```
 
-**`useActiveTool(viewportId)`** — 그 뷰포트의 ToolGroup에서 주 마우스 버튼에 활성화된 도구입니다. `setToolActive`에 넘긴 이름 그대로, `getActivePrimaryMouseButtonTool`이 보고하는 값입니다. 어떤 ToolGroup도 뷰포트를 갖고 있지 않거나 주 버튼에 활성 도구가 없으면 `undefined`. `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, 뷰포트의 그룹 가입·탈퇴를 따라갑니다. 쓰기는 `toolGroup.setToolActive(...)` 그대로입니다. 다만 `setToolActive`는 주 버튼을 쥐고 있던 도구에게서 그 버튼을 빼앗지 않으므로, 그 도구를 먼저 passive로 돌리세요.
+**`useActiveTool(viewportId)`** — 그 뷰포트의 ToolGroup에서 주 마우스 버튼에 활성화된 도구입니다. `setToolActive`에 넘긴 이름 그대로, `getActivePrimaryMouseButtonTool`이 보고하는 값입니다. 어떤 ToolGroup도 뷰포트를 갖고 있지 않거나 주 버튼에 활성 도구가 없으면 `undefined`. `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, 뷰포트의 그룹 가입·탈퇴, 뷰포트의 enable·disable을 따라갑니다. 쓰기는 `toolGroup.setToolActive(...)` 그대로입니다. 다만 `setToolActive`는 주 버튼을 쥐고 있던 도구에게서 그 버튼을 빼앗지 않으므로, 그 도구를 먼저 passive로 돌리세요.
 
 ```tsx
 import { Enums as ToolsEnums, ToolGroupManager } from '@cornerstonejs/tools';
@@ -258,7 +266,7 @@ function ToolButton({ viewportId, tool }: { viewportId: string; tool: string }) 
 }
 ```
 
-**`useAnnotations(viewportId, toolName?)`** — 뷰포트의 frame of reference에 있는 어노테이션 목록을, tools 패키지의 어노테이션 상태가 보고하는 대로 돌려줍니다. 모든 도구의 것, 또는 도구 하나의 것. 뷰포트가 없으면 `undefined`, 아직 가리키는 것이 없거나 그린 것이 없으면 늘 같은 빈 배열. 항목은 tools 패키지가 그 어노테이션이 바뀌었다고 말했을 때(`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` / `REMOVED`)나 잠금·표시·선택이 바뀌었을 때만 교체되고, 배열은 어떤 항목이든 바뀌었을 때만 교체됩니다 — `annotationUID`를 key로 하고 `memo`로 감싼 행은 다른 어노테이션을 드래그하는 동안 리렌더되지 않습니다. `MODIFIED`는 드래그 속도로 오지만 프레임이 한 번의 렌더로 합칩니다. `data`는 평범한 사본입니다: 안에 든 클래스 인스턴스(contour의 `pointsManager`)는 빠지고, `highlighted` / `invalidated`는 이벤트 없이 바뀌므로 필드가 아닙니다.
+**`useAnnotations(viewportId, toolName?)`** — 뷰포트의 frame of reference에 있는 어노테이션 목록을, tools 패키지의 어노테이션 상태가 보고하는 대로 돌려줍니다. 모든 도구의 것, 또는 도구 하나의 것. frame of reference가 없는 이미지(CR, DX, US, SC, 웹 이미지)에서는 뷰포트 스택의 이미지들에 있는 어노테이션, 즉 tools 패키지가 거기에 그리는 것들입니다: 이미지별이 아니라 스택별이라 스크롤해도 배열이 유지되고, 이미지 하나만 보려면 `referencedImageId`로 거르세요. 뷰포트가 없으면 `undefined`, 아직 가리키는 것이 없거나 그린 것이 없으면 늘 같은 빈 배열. 항목은 tools 패키지가 그 어노테이션이 바뀌었다고 말했을 때(`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` / `REMOVED`)나 잠금·표시·선택이 바뀌었을 때만 교체되고, 배열은 어떤 항목이든 바뀌었을 때만 교체됩니다 — `annotationUID`를 key로 하고 `memo`로 감싼 행은 다른 어노테이션을 드래그하는 동안 리렌더되지 않습니다. `MODIFIED`는 드래그 속도로 오지만 프레임이 한 번의 렌더로 합칩니다. `data`는 평범한 사본입니다: typed array는 일반 배열이 되고, 안에 든 클래스 인스턴스(contour의 `pointsManager`)는 빠지며, `storePointData`의 복셀별 샘플(`pointsInShape`, `pointsInVolume`, 깊이 무관)도 빠집니다 — 필요하면 항목이 바뀔 때 `annotation.state.getAnnotation(annotationUID)`로 읽으세요. `highlighted` / `invalidated`는 이벤트 없이 바뀌므로 필드가 아닙니다.
 
 ```tsx
 import { LengthTool, annotation } from '@cornerstonejs/tools';
@@ -278,6 +286,21 @@ function Measurements({ viewportId }: { viewportId: string }) {
 }
 ```
 
+**`refreshAnnotations()`** — 다음 프레임에 모든 `useAnnotations` 목록을 어노테이션 상태에서 다시 만듭니다. tools 패키지가 이벤트 없이 바꾸는 경우를 위한 것입니다: 어노테이션 매니저 자신의 메서드(`restoreAnnotations`, `addAnnotation`, `removeAnnotation`. 이벤트를 내는 건 `annotation.state.*` 호출뿐입니다), `setAnnotationManager` / `resetAnnotationManager`, `cornerstoneTools.destroy()`. 모든 항목이 새 참조가 되므로 그런 변경 뒤에 한 번만 부르고, 매 프레임 부르지는 마세요.
+
+```ts
+import { annotation } from '@cornerstonejs/tools';
+import { refreshAnnotations } from 'react-cornerstone3d/tools';
+
+// 저장해 둔 측정을 불러오거나, 저장한 상태로 되돌릴 때:
+annotation.state.getAnnotationManager().restoreAnnotations(saved);
+refreshAnnotations();
+```
+
+### 서버 렌더링
+
+모든 훅은 서버(Next.js prerender, 스트리밍 SSR)에서 "아무것도 없음" 값으로 렌더됩니다: `useViewportState`, `useActiveTool`, `useAnnotations`는 `undefined`, `useImageLoadState`는 `'absent'`(id가 `undefined`면 `undefined`), `useImageLoadStates`는 `'absent'`로 채운 배열(`undefined`면 `undefined`), `useCacheState`는 `{ imageBytes: 0 }`. hydration 뒤에는 각자 클라이언트 값을 읽고, 값이 다른 곳만 다시 렌더합니다.
+
 ## 현재 상태
 
 v0.6 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기화입니다.
@@ -295,11 +318,13 @@ v0.6 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 | 셀렉터 (내가 쓰는 값이 바뀔 때만 리렌더) | ✅ |
 | 고빈도 이벤트 rAF 배칭 | ✅ |
 | 선택적 `<CornerstoneViewport />` 컴포넌트 | ✅ |
-| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; VOI는 `setDisplaySetPresentation`으로 쓰세요, 레거시 `setProperties`는 거기서 이벤트를 내지 않습니다 ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
+| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack·Volume 모두; 레거시 `setProperties`로 쓴 VOI는 Cornerstone3D 자체 `WindowLevelTool`을 포함해 거기서 이벤트를 내지 않으므로 `voiRange`가 놓칩니다 ([한계](#한계), [cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
 | Image Load State의 실패 보고 (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
 | Cache State (`useCacheState`: 캐시가 쥔 이미지 바이트) | ✅ |
 | 활성 도구 (`useActiveTool`, `react-cornerstone3d/tools`) | ✅ |
-| Annotation State (`useAnnotations`: frame of reference별 목록, 잠금·표시·선택, 평범한 `data`) | ✅ |
+| Annotation State (`useAnnotations`: frame of reference별 목록, 그것이 없는 이미지는 스택별, 잠금·표시·선택, 평범한 `data`) | ✅ |
+| 이벤트 없는 어노테이션 변경을 위한 `refreshAnnotations()` | ✅ |
+| 서버 렌더링 (훅마다 "아무것도 없음" 값) | ✅ |
 | `<CornerstoneViewport />`가 div 크기에 캔버스를 맞춤 | ✅ |
 | Volume `volumeIds` | 로드맵 |
 | 세그멘테이션 상태 (같은 엔트리, 같은 규칙) | 로드맵 |
@@ -310,7 +335,7 @@ v0.6 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 - breaking change 없는 minor 릴리스 한 번 — API가 자리 잡았다는 뜻
 - 저자의 것 말고 두 번째 제품 뷰어
 
-**요구사항:** React 18+, `@cornerstonejs/core` 5.x; `/tools` 엔트리에만 `@cornerstonejs/tools` 5.x (선택적 peer, core와 같은 버전). ESM만 제공합니다. `exports`에 `default` 조건이 있어 Jest 리졸버가 엔트리를 찾지만, 패키지에 대한 ESM 지원은 Jest 쪽에서 켜야 합니다. CI는 `@cornerstonejs/core` 5.0.0과 최신 5.x에서 돕니다.
+**요구사항:** React 18+, `@cornerstonejs/core` 5.1.1 이상의 5.x; `/tools` 엔트리에만 같은 범위의 `@cornerstonejs/tools` (선택적 peer, core와 같은 버전). ESM만 제공하며, 모든 상대 import에 `.js`가 붙어 있어 Node ESM, Vitest, webpack 5가 로드할 수 있고, 타입은 `node10`을 포함한 모든 `moduleResolution`에서 해석됩니다. `exports`에 `default` 조건이 있어 Jest 리졸버가 엔트리를 찾지만, 패키지에 대한 ESM 지원은 Jest 쪽에서 켜야 합니다. CI는 `@cornerstonejs/core` 5.1.1과 최신 5.x에서 돕니다.
 
 **안정성:** 메이저 버전이 0인 동안 breaking change는 minor 릴리스(0.x → 0.y)에서만 일어나고 [CHANGELOG.md](./CHANGELOG.md)에 기록됩니다. patch 릴리스는 그대로 받아도 안전합니다. 정확한 버전 또는 tilde 범위(`~0.6.0`)로 고정하기를 권장합니다.
 
@@ -319,11 +344,15 @@ v0.6 — 동기화만. 이 라이브러리의 유일한 책임은 상태 동기�
 Cornerstone3D가 말해주지 않아서 훅이 볼 수 없는 것들:
 
 - **같은 `viewportId`를 가진 Engine 두 개.** 훅은 `getEnabledElementByViewportId`로 찾는데, 이 함수는 그 id를 가진 첫 Engine을 돌려줍니다. 두 번째 Engine의 같은 id 뷰포트는 보이지 않고, 그쪽의 disable 이벤트가 첫 번째의 Snapshot을 비웁니다. 뷰포트 id는 Engine을 넘어 고유하게 지으세요.
-- **`defaultOptions.suppressEvents: true`**는 그 뷰포트의 `CAMERA_MODIFIED`를 막으므로 카메라와 Volume의 Slice Position이 갱신되지 않습니다. VOI와 stack 이벤트는 여전히 옵니다.
+- **`defaultOptions.suppressEvents: true`**는 레거시 뷰포트(GPU의 STACK, ORTHOGRAPHIC, PERSPECTIVE, VOLUME_3D. Generic Viewport는 이 옵션을 무시합니다)에서 `ELEMENT_ENABLED`, `CAMERA_MODIFIED`, `IMAGE_LOAD_ERROR`, `IMAGE_SPACING_CALIBRATED`를 막습니다. VOI와 stack 이벤트는 여전히 옵니다. 어떤 훅도 그런 뷰포트가 생기는 것을 듣지 못합니다: 그 `viewportId`의 첫 훅이 `enableElement` 전에, 또는 같은 id의 재-enable을 사이에 두고 구독했다면 그 id의 Binding은 `undefined`로 남고, 나중에 합류하는 훅도 모두 그렇습니다. 전부 언마운트될 때까지요 — 첫 훅은 enable 뒤에 구독하세요. 일단 보인 뒤에도 카메라와 Volume의 Slice Position은 다른 이벤트가 올 때만 갱신됩니다. Cornerstone3D의 tools도 그런 뷰포트는 무시합니다: 이 옵션은 썸네일과 오프스크린 렌더용입니다.
+- **Generic Viewport의 window/level.** `useGenericViewport`에서 STACK이나 ORTHOGRAPHIC 뷰포트는 Cornerstone3D의 레거시 어댑터이고, 그 `setProperties({ voiRange })`는 렌더만 하고 이벤트를 내지 않습니다 ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)). Cornerstone3D 자체 `WindowLevelTool`이 이 경로로 VOI를 쓰므로(`WindowLevelRegionTool`과 magnify 도구들도), W/L 드래그 중에도 끝난 뒤에도 다른 카메라·VOI 이벤트가 올 때까지 `voiRange`는 옛 값입니다. 앱 코드에서 쓰는 VOI는 `VOI_MODIFIED`를 내는 `setDisplaySetPresentation({ voiRange })`로 쓰세요. 기본값인 레거시 뷰포트는 해당 없습니다.
 - **`removeVolumeActors`**는 `ACTORS_CHANGED`만 발사하는데 훅은 그걸 듣지 않습니다. 다음 카메라·VOI 이벤트까지 Snapshot은 이전 슬라이스와 VOI를 유지합니다.
 - **백그라운드 탭.** 재구축은 `requestAnimationFrame`으로 도는데, 탭이 숨겨지면 브라우저가 이를 멈춥니다. 모든 Snapshot은 마지막으로 보인 값을 유지하다가 돌아오면 한 프레임에 따라잡습니다. 그동안에도 읽기는 서로 모순되지 않습니다.
+- **뷰포트가 enable된 채로 destroy된 ToolGroup.** `ToolGroupManager.destroyToolGroup`(그리고 `ToolGroupManager.destroy()`)은 아무 이벤트도 내지 않으므로, `useActiveTool`은 다음 tools 이벤트나 뷰포트의 disable까지 destroy된 그룹의 도구를 계속 돌려줍니다. 먼저 `toolGroup.removeViewports(engineId)`를 부르세요. 그건 들립니다.
+- **이벤트 없는 어노테이션 변경.** `getAnnotationManager().restoreAnnotations(...)`, 매니저 자신의 `addAnnotation` / `removeAnnotation`, `setAnnotationManager` / `resetAnnotationManager`, `cornerstoneTools.destroy()`는 모든 `useAnnotations` 목록을 그대로 둡니다. 그 뒤에 `refreshAnnotations()`를 부르세요. 도구가 자기 핸들러 안에서 이벤트 없이 하는 수정(Length 텍스트 박스 드래그 등)은 그 어노테이션의 다음 이벤트에 보입니다.
 - **frame of reference로 추가한 어노테이션**(`addAnnotation(annotation, FrameOfReferenceUID)`, element가 아닌)은 어떤 ToolGroup이 그 도구를 어떤 모드로든 갖고 있을 때만 `ANNOTATION_ADDED`를 발사합니다 — tools 패키지의 early return입니다. 그런 어노테이션은 다음 이벤트에서야 목록에 들어옵니다.
 - **ToolGroup 여러 개가 한 뷰포트를 가지면** `getToolGroupForViewport`가 throw합니다. Cornerstone3D가 금지하는 구성이므로 훅은 그대로 통과시킵니다.
+- **레거시 getter가 없는 뷰포트 클래스.** `getCamera`가 없는 클래스(Generic Video·ECG 어댑터, 직접 요청한 `*_NEXT` 타입)는 계속 `camera: {}`를, `getProperties`가 없는 클래스는 `voiRange: undefined`를 보고합니다. 레거시 `WHOLE_SLIDE` 뷰포트는 `setWSI` 전까지 Cornerstone3D 자체 `getCurrentImageId` 안에서 throw하므로, 그 위의 `useViewportState`도 throw합니다.
 
 ## 범위 밖
 

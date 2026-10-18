@@ -22,7 +22,7 @@ function SliceIndicator() {
 
 That one hook call replaces the 24 lines of `useEffect` + `addEventListener` + `setState` wiring every Cornerstone3D + React app writes per widget today. The demo counts both sides off the files it is running, so the number cannot drift from the code.
 
-Used in a production medical viewer. Zero runtime dependencies, 34 kB packed, tested in CI against `@cornerstonejs/core` 5.0.0 and the latest 5.x with real-engine browser tests.
+Used in a production medical viewer. Zero runtime dependencies. Bundled, minified and gzipped it costs 3.0 kB for the root entry and 2.2 kB for `/tools` alone, 4.2 kB for both (they share the core; measured with esbuild, `react` and `@cornerstonejs/*` external). Tested in CI against `@cornerstonejs/core` 5.1.1 and the latest 5.x with real-engine browser tests.
 
 <details>
 <summary>See what you'd write without the hook</summary>
@@ -73,7 +73,7 @@ Without that adapter, every React viewer hand-rolls the same event plumbing, and
 - **Tearing** under React 18+ concurrent rendering — two components showing two different slice numbers on one screen
 - **Subscription leaks** under StrictMode double-mounting
 - **Mount-order races** when UI mounts before a viewport is enabled
-- **Infinite loops or deep-compare hacks**, because Cornerstone3D getters return a fresh object on every call — a naive `getSnapshot` never stabilizes. This is hard for everyone: OHIF's own viewport hooks opt out of the React Compiler because, in their words, its memoization "assumes referential purity, so compiling them silently drops updates" ([hooks.ts @ 9753879](https://github.com/OHIF/Viewers/blob/9753879/extensions/cornerstone/src/Viewport/Overlays/ViewportSliceProgressScrollbar/hooks.ts#L1-L5)); the demo's panel 5 quotes three more.
+- **Infinite loops or deep-compare hacks**, because Cornerstone3D getters build a new object on every call — `getCamera()` always, `getProperties()` too (only a Stack's `voiRange` inside it comes back as the same object until it changes) — so a naive `getSnapshot` never stabilizes. This is hard for everyone: OHIF's own viewport hooks opt out of the React Compiler because, in their words, its memoization "assumes referential purity, so compiling them silently drops updates" ([hooks.ts @ 9753879](https://github.com/OHIF/Viewers/blob/9753879/extensions/cornerstone/src/Viewport/Overlays/ViewportSliceProgressScrollbar/hooks.ts#L1-L5)); the demo's panel 5 quotes three more.
 
 This library solves that bug layer once, centrally. UI components become pure functions of engine state.
 
@@ -98,10 +98,11 @@ On top of that, the Snapshot layer guarantees **referential stability** (unchang
 ```ts
 function useViewportState(viewportId: string, selector?: undefined): ViewportState | undefined;
 function useViewportState<T>(viewportId: string, selector: (state: ViewportState) => T): T | undefined;
+function useViewportState<T>(viewportId: string, selector?: (state: ViewportState) => T): T | ViewportState | undefined;
 ```
 
 - **`viewportId`** — resolved through Cornerstone3D's global registry. Returns `undefined` while no viewport with that id is enabled.
-- **`selector`** — the component re-renders only when the selected value changes by `Object.is`. Never called while the viewport is absent. Select a primitive or an existing field (`s => s.voiRange` is referentially stable across unrelated changes); a selector that *builds* a value — `s => ({ index: s.sliceIndex })` — can never be `Object.is`-equal to its last result, so it re-renders on every Engine event ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)).
+- **`selector`** — the component re-renders only when the selected value changes by `Object.is`. Never called while the viewport is absent. Select a primitive or an existing field (`s => s.voiRange` is referentially stable across unrelated changes); a selector that *builds* a value — `s => ({ index: s.sliceIndex })` — can never be `Object.is`-equal to its last result, so it re-renders on every Engine event ([ADR 0004](./docs/adr/0004-selector-memo-stays-hand-rolled.md)). An `undefined` selector means none, so a wrapper hook can forward an optional one (the third overload).
 
 Engine events are coalesced to at most one update per animation frame, so a drag produces one render per frame instead of one per event. There is no opt-out: the Snapshot is *state*, not an event stream, and a component that needs every event belongs on a Cornerstone3D listener ([ADR 0006](./docs/adr/0006-the-frame-is-the-unit-of-consistency.md)).
 
@@ -114,7 +115,7 @@ interface VolumeViewportState extends ViewportStateCommon { kind: 'volume' }
 type ViewportState = StackViewportState | VolumeViewportState;
 ```
 
-Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. A rebuild shares structure with the Snapshot it replaces, so a field that did not move keeps its reference — a zoom never hands `s => s.voiRange` a new object, and a scroll never hands `s => s.imageIds` a new array. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
+Every state object is a deep-frozen Snapshot, and the reference stays identical until the state actually changes. A rebuild shares structure with the Snapshot it replaces, so a field that did not move keeps its reference, at any depth — a zoom never hands `s => s.voiRange` a new object, and a scroll never hands `s => s.imageIds` a new array. On a Stack, `sliceIndex` is the *requested* slice — it updates the moment a scroll happens, not when the image finishes loading ([ADR 0003](./docs/adr/0003-image-id-index-is-the-requested-slice.md)). On a Volume it derives from the camera, so it never runs ahead of the pixels. A viewport without slices (3D, or a Volume before `setVolumes`) reports `undefined` for both fields.
 
 `currentImageId` is the image the viewport points at: on a Stack the requested slice's id, on a Volume the image closest to the camera, `undefined` when it points at nothing (a Stack before `setStack`, a Volume before data, 3D). `imageIds` is the Stack's list, replaced only when `setStack` changes its content. Together they are the key into the image hooks below.
 
@@ -200,13 +201,18 @@ One silent path: during progressive loading Cornerstone3D's `setPartialImage` lo
 
 ### `<CornerstoneViewport />`
 
-Optional. Renders a `<div>`, enables it as a viewport on mount, keeps the Engine's canvas sized to the div (a `ResizeObserver` calls `engine.resize()` when the div changes size), and disables the viewport on unmount. The Engine stays app-created — the component only resolves it through the registry, and if a parent destroyed the Engine in its own cleanup first (React runs cleanups parent-first), the component's cleanup notices and does nothing.
+Optional. Renders a `<div>`, enables it as a viewport on mount, keeps the Engine's canvas sized to the div (a `ResizeObserver` calls `engine.resize()` when the div changes size), and disables the viewport on unmount — only while its own div still holds the `viewportId`, so a newer component that took the id (an exit animation, a second root) keeps it. The contract stays one `viewportId` per mounted component at a time: if the newer of two overlapping components unmounts first, the older one stays blank, since Cornerstone3D already took the id from it. The Engine stays app-created — the component only resolves it through the registry, and if a parent destroyed the Engine in its own cleanup first (React runs cleanups parent-first), the component's cleanup notices and does nothing.
 
 ```tsx
 import { Enums } from '@cornerstonejs/core';
 import { CornerstoneViewport } from 'react-cornerstone3d';
 
-<CornerstoneViewport viewportId="ct-axial" type={Enums.ViewportType.STACK} style={{ width: 512, height: 512 }} />
+<CornerstoneViewport
+  viewportId="ct-axial"
+  type={Enums.ViewportType.STACK}
+  onEnabled={(viewport) => toolGroup.addViewport(viewport.id, viewport.renderingEngineId)}
+  style={{ width: 512, height: 512 }}
+/>
 ```
 
 | Prop | Description |
@@ -215,6 +221,7 @@ import { CornerstoneViewport } from 'react-cornerstone3d';
 | `type` | `Enums.ViewportType`, passed to `enableElement`. |
 | `defaultOptions?` | `Types.ViewportInputOptions`, applied once at enable time. Later changes do not re-enable. |
 | `renderingEngineId?` | Engine to enable on. Defaults to the app's single registered Engine; throws if there are zero or several and no id is given. |
+| `onEnabled?` | `(viewport: Types.IViewport) => void`, called right after every enable: first mount, StrictMode's remount, and the re-enable a `viewportId` / `type` / `renderingEngineId` change triggers. Each enable makes a new viewport, and on disable Cornerstone3D drops the old one from its ToolGroup and synchronizers: redo per-viewport setup here (`toolGroup.addViewport`, `setStack`). It runs in the component's effect, before any parent effect, so a ToolGroup it uses must exist before mount. Only the latest callback is used; a new one does not re-enable. If it throws, the viewport is disabled and the error rethrown. |
 | `...divProps` | Everything else goes to the `<div>`. |
 
 A missing Engine at mount is a mount-ordering bug, so the component throws instead of degrading — unlike hooks, where viewport absence is a normal state.
@@ -224,10 +231,11 @@ A missing Engine at mount is a mount-ordering bug, so the component throws inste
 State that lives in `@cornerstonejs/tools`, from a second entry so an app that uses only core never loads the tools package ([ADR 0010](./docs/adr/0010-tools-state-is-a-separate-entry.md)). `@cornerstonejs/tools` is an optional peer dependency; install it at the same version as core, as the tools package itself requires.
 
 ```ts
-import { useActiveTool, useAnnotations, type AnnotationState } from 'react-cornerstone3d/tools';
+import { refreshAnnotations, useActiveTool, useAnnotations, type AnnotationState } from 'react-cornerstone3d/tools';
 
 function useActiveTool(viewportId: string): string | undefined;
 function useAnnotations(viewportId: string, toolName?: string): readonly AnnotationState[] | undefined;
+function refreshAnnotations(): void;
 
 interface AnnotationState {
   readonly annotationUID: string;
@@ -236,11 +244,11 @@ interface AnnotationState {
   readonly isLocked: boolean;
   readonly isVisible: boolean;
   readonly isSelected: boolean;
-  readonly data: Readonly<Record<string, unknown>>; // a plain frozen copy: handles, cachedStats, label, …
+  readonly data: Readonly<Record<string, unknown>>; // a plain frozen copy: handles, cachedStats, label, … (typed arrays as plain arrays)
 }
 ```
 
-**`useActiveTool(viewportId)`** is the tool active on the primary mouse button for the viewport's ToolGroup — the name you passed to `setToolActive`, as `getActivePrimaryMouseButtonTool` reports it. `undefined` while no ToolGroup holds the viewport, or none of its tools is active on the primary button. It follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED` and a viewport joining or leaving a group; writes stay `toolGroup.setToolActive(...)`, which does not take the primary button from the tool that held it, so set that one passive first.
+**`useActiveTool(viewportId)`** is the tool active on the primary mouse button for the viewport's ToolGroup — the name you passed to `setToolActive`, as `getActivePrimaryMouseButtonTool` reports it. `undefined` while no ToolGroup holds the viewport, or none of its tools is active on the primary button. It follows `TOOL_MODE_CHANGED`, `TOOL_ACTIVATED`, a viewport joining or leaving a group, and the viewport's enable and disable; writes stay `toolGroup.setToolActive(...)`, which does not take the primary button from the tool that held it, so set that one passive first.
 
 ```tsx
 import { Enums as ToolsEnums, ToolGroupManager } from '@cornerstonejs/tools';
@@ -258,7 +266,7 @@ function ToolButton({ viewportId, tool }: { viewportId: string; tool: string }) 
 }
 ```
 
-**`useAnnotations(viewportId, toolName?)`** is the list of annotations on the viewport's frame of reference, as the tools package's annotation state reports it — every tool's, or one tool's. `undefined` while the viewport is absent; a stable empty array when it points at nothing yet or nothing is drawn. An entry is replaced only when the tools package said that annotation changed (`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` / `REMOVED`) or its lock, visibility or selection moved, and the array only when some entry did — so a row keyed by `annotationUID` and wrapped in `memo` does not re-render while a different annotation is being dragged. `MODIFIED` fires at drag rate; the frame coalesces it to one render. `data` is a plain copy: class instances inside it (a contour's `pointsManager`) are dropped, and `highlighted` / `invalidated` change without an event and are not fields.
+**`useAnnotations(viewportId, toolName?)`** is the list of annotations on the viewport's frame of reference, as the tools package's annotation state reports it — every tool's, or one tool's. On images without a frame of reference (CR, DX, US, SC, web images) it is the annotations on the images of the viewport's stack, the ones the tools package draws there: per stack, not per image, so scrolling keeps the array; filter by `referencedImageId` for one image. `undefined` while the viewport is absent; a stable empty array when it points at nothing yet or nothing is drawn. An entry is replaced only when the tools package said that annotation changed (`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` / `REMOVED`) or its lock, visibility or selection moved, and the array only when some entry did — so a row keyed by `annotationUID` and wrapped in `memo` does not re-render while a different annotation is being dragged. `MODIFIED` fires at drag rate; the frame coalesces it to one render. `data` is a plain copy: typed arrays become plain arrays, class instances inside it (a contour's `pointsManager`) are dropped, and so are `storePointData`'s per-voxel samples (`pointsInShape`, `pointsInVolume`, at any depth; read them from `annotation.state.getAnnotation(annotationUID)` when the entry changes). `highlighted` / `invalidated` change without an event and are not fields.
 
 ```tsx
 import { LengthTool, annotation } from '@cornerstonejs/tools';
@@ -278,6 +286,21 @@ function Measurements({ viewportId }: { viewportId: string }) {
 }
 ```
 
+**`refreshAnnotations()`** rebuilds every `useAnnotations` list from the annotation state in the next frame, for the changes the tools package makes without an event: the annotation manager's own methods (`restoreAnnotations`, `addAnnotation`, `removeAnnotation`; only the `annotation.state.*` calls fire events), `setAnnotationManager` / `resetAnnotationManager`, `cornerstoneTools.destroy()`. Every entry gets a new reference, so call it once after such a change, not per frame.
+
+```ts
+import { annotation } from '@cornerstonejs/tools';
+import { refreshAnnotations } from 'react-cornerstone3d/tools';
+
+// Load saved measurements, or undo to a saved state:
+annotation.state.getAnnotationManager().restoreAnnotations(saved);
+refreshAnnotations();
+```
+
+### Server rendering
+
+Every hook renders on the server (Next.js prerender, streaming SSR) with its nothing-there value: `undefined` from `useViewportState`, `useActiveTool` and `useAnnotations`; `'absent'` from `useImageLoadState` (`undefined` for an `undefined` id); an array of `'absent'` from `useImageLoadStates` (`undefined` for `undefined`); `{ imageBytes: 0 }` from `useCacheState`. After hydration each takes the client's value, re-rendering only where it differs.
+
 ## Status
 
 v0.6 — sync only. The library's sole responsibility is state synchronization.
@@ -295,11 +318,13 @@ v0.6 — sync only. The library's sole responsibility is state synchronization.
 | Selectors (re-render only when *your* value changes) | ✅ |
 | rAF batching for interaction-rate events | ✅ |
 | Optional `<CornerstoneViewport />` component | ✅ |
-| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack and Volume both; write VOI with `setDisplaySetPresentation`, the legacy `setProperties` fires no event there ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
+| Generic Viewport (PLANAR_NEXT, CS3D 5.x `useGenericViewport`) | ✅ — Stack and Volume both; VOI written through the legacy `setProperties`, Cornerstone3D's own `WindowLevelTool` included, fires no event there, so `voiRange` misses it (see [Limitations](#limitations), [cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)) |
 | Image Load State reports failure (`'absent' \| 'loaded' \| 'failed'`) | ✅ |
 | Cache State (`useCacheState`: image bytes held) | ✅ |
 | Active tool (`useActiveTool`, from `react-cornerstone3d/tools`) | ✅ |
-| Annotation State (`useAnnotations`: per-frame-of-reference list, lock / visibility / selection, plain `data`) | ✅ |
+| Annotation State (`useAnnotations`: per-frame-of-reference list, per stack for images without one, lock / visibility / selection, plain `data`) | ✅ |
+| `refreshAnnotations()` for annotation changes that fire no event | ✅ |
+| Server rendering (each hook's nothing-there value) | ✅ |
 | `<CornerstoneViewport />` keeps the canvas sized to its div | ✅ |
 | Volume `volumeIds` | roadmap |
 | Segmentation state (same entry, same rules) | roadmap |
@@ -310,7 +335,7 @@ v0.6 — sync only. The library's sole responsibility is state synchronization.
 - One minor release with no breaking change — the API has settled
 - A second production viewer on it besides the author's
 
-**Requires:** React 18+, `@cornerstonejs/core` 5.x; `@cornerstonejs/tools` 5.x only for the `/tools` entry (optional peer, same version as core). Ships ESM only; `exports` carries a `default` condition, so Jest's resolver finds the entry, but Jest still needs its ESM support turned on for the package. Tested in CI on `@cornerstonejs/core` 5.0.0 and the latest 5.x.
+**Requires:** React 18+, `@cornerstonejs/core` 5.1.1 or a later 5.x; `@cornerstonejs/tools` the same, only for the `/tools` entry (optional peer, same version as core). Ships ESM only, with `.js` on every relative import, so Node ESM, Vitest and webpack 5 load it, and its types resolve under every `moduleResolution`, `node10` included. `exports` carries a `default` condition, so Jest's resolver finds the entry, but Jest still needs its ESM support turned on for the package. Tested in CI on `@cornerstonejs/core` 5.1.1 and the latest 5.x.
 
 **Stability:** while the major version is 0, a breaking change lands only in a minor release (0.x → 0.y) and is recorded in [CHANGELOG.md](./CHANGELOG.md). Patch releases are safe to take. Pin the exact version or a tilde range (`~0.6.0`).
 
@@ -319,11 +344,15 @@ v0.6 — sync only. The library's sole responsibility is state synchronization.
 What the hooks cannot see, because Cornerstone3D does not say it:
 
 - **Two Engines with the same `viewportId`.** Hooks resolve through `getEnabledElementByViewportId`, which returns the first Engine that has the id; a second Engine's viewport with the same id is invisible, and its disable event empties the first's Snapshot. Give viewports unique ids across Engines.
-- **`defaultOptions.suppressEvents: true`** silences `CAMERA_MODIFIED` for that viewport, so the camera and a Volume's Slice Position stop updating; VOI and stack events still arrive.
+- **`defaultOptions.suppressEvents: true`** on a legacy viewport (STACK on the GPU, ORTHOGRAPHIC, PERSPECTIVE, VOLUME_3D; the Generic Viewport ignores the option) silences `ELEMENT_ENABLED`, `CAMERA_MODIFIED`, `IMAGE_LOAD_ERROR` and `IMAGE_SPACING_CALIBRATED` for it; VOI and stack events still arrive. No hook hears such a viewport arrive: if the first hook on its `viewportId` subscribed before `enableElement`, or across a re-enable of the id, that id's Binding stays `undefined`, and so does every hook that joins it, until all of them unmount — subscribe the first one after the enable. Once seen, the camera and a Volume's Slice Position update only when another event fires. Cornerstone3D's tools ignore such a viewport too: the option is for thumbnails and offscreen renders.
+- **Window/level on a Generic Viewport.** A STACK or ORTHOGRAPHIC viewport under `useGenericViewport` is Cornerstone3D's legacy adapter, and its `setProperties({ voiRange })` renders without firing an event ([cornerstone3D #2977](https://github.com/cornerstonejs/cornerstone3D/issues/2977)). Cornerstone3D's own `WindowLevelTool` writes VOI through that path (as do `WindowLevelRegionTool` and the magnify tools), so `voiRange` stays stale during and after a W/L drag, until another camera or VOI event. Write VOI from your own code with `setDisplaySetPresentation({ voiRange })`, which fires `VOI_MODIFIED`. Legacy viewports, the default, are not affected.
 - **`removeVolumeActors`** fires only `ACTORS_CHANGED`, which the hook does not subscribe to; the Snapshot keeps the old slice and VOI until the next camera or VOI event.
 - **Background tabs.** Rebuilds run on `requestAnimationFrame`, which the browser pauses when the tab is hidden; every Snapshot holds its last visible value and catches up in one frame on return. Reads stay self-consistent meanwhile.
+- **A ToolGroup destroyed while its viewport stays enabled.** `ToolGroupManager.destroyToolGroup` (and `ToolGroupManager.destroy()`) fire nothing, so `useActiveTool` keeps the destroyed group's tool until the next tools event or the viewport's disable. Call `toolGroup.removeViewports(engineId)` first; that is heard.
+- **Annotation changes that fire no event.** `getAnnotationManager().restoreAnnotations(...)`, the manager's own `addAnnotation` / `removeAnnotation`, `setAnnotationManager` / `resetAnnotationManager` and `cornerstoneTools.destroy()` leave every `useAnnotations` list as it was; call `refreshAnnotations()` after them. Edits a tool makes inside its own handlers without an event (a Length text-box drag, among others) show on that annotation's next event.
 - **Annotations added by frame of reference** (`addAnnotation(annotation, FrameOfReferenceUID)` rather than an element) fire `ANNOTATION_ADDED` only when some ToolGroup has that tool in a mode — a tools-package early return — so the hook lists such an annotation on its next event instead.
 - **Several ToolGroups claiming one viewport** make `getToolGroupForViewport` throw; the hook lets that through, since Cornerstone3D forbids the configuration.
+- **Viewport classes without the legacy getters.** A class without `getCamera` (the Generic Video and ECG adapters, a `*_NEXT` type requested directly) reports `camera: {}` for good, and one without `getProperties` reports `voiRange: undefined`. The legacy `WHOLE_SLIDE` viewport throws from inside Cornerstone3D's own `getCurrentImageId` until `setWSI`, so `useViewportState` on it throws too.
 
 ## Out of scope
 
