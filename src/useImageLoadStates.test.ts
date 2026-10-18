@@ -1,4 +1,5 @@
-import { renderHook } from '@testing-library/react';
+import { render, renderHook } from '@testing-library/react';
+import { Fragment, createElement } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { useImageLoadState, useImageLoadStates } from './index';
 import {
@@ -236,5 +237,50 @@ describe('useImageLoadStates', () => {
     rerender({ list: [...ids].reverse() });
 
     expect(result.current).toEqual(['absent', 'absent', 'loaded']);
+  });
+
+  test.each([
+    ['plain', undefined],
+    ['StrictMode', strictModeWrapper],
+  ])('%s: a heard failure survives the list growing, reordering and shrinking around it', (_, wrapper) => {
+    const { result, rerender, unmount } = renderHook(
+      ({ list }: { list: readonly string[] }) => useImageLoadStates(list),
+      { initialProps: { list: ['img:0', 'img:1'] as readonly string[] }, wrapper },
+    );
+    failed('img:0');
+    expect(result.current).toEqual(['failed', 'absent']);
+    const spy = spyCacheListeners();
+
+    rerender({ list: ['img:0', 'img:1', 'img:2'] });
+    expect(result.current).toEqual(['failed', 'absent', 'absent']);
+    rerender({ list: ['img:2', 'img:1', 'img:0'] });
+    expect(result.current).toEqual(['absent', 'absent', 'failed']);
+    rerender({ list: ['img:0'] });
+    expect(result.current).toEqual(['failed']);
+    expect(imageBindings.size).toBe(1);
+    // Kept Bindings never dropped to zero listeners: the dispatcher stayed on.
+    expect(spy.removed()).toBe(0);
+
+    unmount();
+    expect(imageBindings.size).toBe(0);
+    expect(spy.removed()).toBe(3);
+    spy.restore();
+  });
+
+  test('a failure survives a tick on the same id leaving in the commit that changes the list', () => {
+    let states: readonly string[] | undefined;
+    const Tick = () => (useImageLoadState('img:0'), null);
+    const List = ({ list }: { list: readonly string[] }) => ((states = useImageLoadStates(list)), null);
+    const view = (tick: boolean, list: readonly string[]) =>
+      createElement(Fragment, null, tick && createElement(Tick), createElement(List, { list }));
+    const { rerender, unmount } = render(view(true, ['img:0']));
+    failed('img:0');
+    expect(states).toEqual(['failed']);
+
+    rerender(view(false, ['img:0', 'img:1']));
+    expect(states).toEqual(['failed', 'absent']);
+
+    unmount();
+    expect(imageBindings.size).toBe(0);
   });
 });

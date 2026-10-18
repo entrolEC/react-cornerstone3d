@@ -1,4 +1,4 @@
-import { useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { sameStrings, type Binding } from './binding.js';
 import { imageBindings, type ImageLoadState } from './useImageLoadState.js';
 
@@ -11,7 +11,9 @@ function sameIds(a: readonly string[] | undefined, b: readonly string[] | undefi
 
 // What one list of ids subscribes to. Rebuilt only when the list's content
 // changes: useSyncExternalStore resubscribes whenever `subscribe` changes
-// identity, and here that is N unsubscribes and N subscribes.
+// identity, and here that is N unsubscribes and N subscribes — the old
+// list's released after the new list's, so a Binding in both never drops to
+// zero listeners and stays attached.
 interface Subscription {
   readonly ids: readonly string[] | undefined;
   readonly targets: readonly Binding<ImageLoadState>[] | undefined;
@@ -47,32 +49,44 @@ export function useImageLoadStates(
   imageIds: readonly string[] | undefined,
 ): readonly ImageLoadState[] | undefined {
   const sub = useRef<Subscription>(NONE);
+  // The previous list's release, held until the next list has subscribed:
+  // React runs the old cleanup before the new subscribe, and releasing first
+  // would take a Binding in both lists to zero listeners — detaching it and
+  // dropping the failure it heard (ADR 0009).
+  const parked = useRef<(() => void) | undefined>(undefined);
+  const release = () => {
+    const off = parked.current;
+    parked.current = undefined;
+    off?.();
+  };
   if (!sameIds(sub.current.ids, imageIds)) {
-    if (imageIds === undefined) {
-      sub.current = NONE;
-    } else {
-      // Bindings acquired here are the ones both subscribe and getSnapshot
-      // use; acquiring again per render could hand getSnapshot a Binding the
-      // subscription does not hold.
-      const targets = imageIds.map((id) => imageBindings.acquire(id));
-      sub.current = {
-        ids: [...imageIds], // the caller may mutate theirs
-        targets,
-        subscribe: (onChange) => {
-          const offs = targets.map((binding) => binding.subscribe(onChange));
-          return () => offs.forEach((off) => off());
-        },
-        server:
-          imageIds.length === 0 ? EMPTY : Object.freeze(imageIds.map(() => 'absent' as const)),
-      };
-    }
+    // Bindings acquired here are the ones both subscribe and getSnapshot
+    // use; acquiring again per render could hand getSnapshot a Binding the
+    // subscription does not hold.
+    const targets = imageIds?.map((id) => imageBindings.acquire(id));
+    sub.current = {
+      ids: imageIds && [...imageIds], // the caller may mutate theirs
+      targets,
+      // Even with no list (not the shared NONE): it is what releases the
+      // previous one.
+      subscribe: (onChange) => {
+        const offs = (targets ?? []).map((binding) => binding.subscribe(onChange));
+        release();
+        return () => {
+          parked.current = () => offs.forEach((off) => off());
+        };
+      },
+      server:
+        imageIds &&
+        (imageIds.length === 0 ? EMPTY : Object.freeze(imageIds.map(() => 'absent' as const))),
+    };
   }
   const { targets, subscribe, server } = sub.current;
 
   // Seeded with the server's array: a client whose images are all absent
   // returns that same array, so hydration has nothing to re-render.
   const memo = useRef<readonly ImageLoadState[]>(server ?? EMPTY);
-  return useSyncExternalStore(
+  const states = useSyncExternalStore(
     subscribe,
     () => {
       if (targets === undefined) return undefined;
@@ -90,4 +104,10 @@ export function useImageLoadStates(
     },
     () => server,
   );
+  // Unmount (and StrictMode's or Activity's simulated one): no next
+  // subscribe will come to release. Declared after useSyncExternalStore so
+  // its cleanup runs after that one's parks (React runs destroys in hook
+  // order).
+  useEffect(() => release, []);
+  return states;
 }
