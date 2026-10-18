@@ -24,15 +24,17 @@ export interface AnnotationState {
 
 const EMPTY: readonly AnnotationState[] = Object.freeze([]);
 
-// A copy of plain data only: primitives, arrays, typed arrays and plain
-// objects. Anything else (a class instance, a function) is dropped, so the
-// Snapshot never holds a live object of the Engine's (ADR 0001).
+// A copy of plain data only: primitives, arrays and plain objects; a typed
+// array becomes a plain array, since Object.freeze throws on a non-empty one
+// and a contour restored by CS3D undo holds Float32Array views. Anything else
+// (a class instance, a function) is dropped, so the Snapshot never holds a
+// live object of the Engine's (ADR 0001).
 function plainClone(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) {
     return typeof value === 'function' ? undefined : value;
   }
   if (Array.isArray(value)) return value.map(plainClone);
-  if (ArrayBuffer.isView(value)) return (value as unknown as { slice(): unknown }).slice();
+  if (ArrayBuffer.isView(value)) return Array.from(value as unknown as ArrayLike<number>);
   const proto = Object.getPrototypeOf(value);
   if (proto !== Object.prototype && proto !== null) return undefined;
   const out: Record<string, unknown> = {};

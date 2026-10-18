@@ -5,10 +5,13 @@ import {
   imageLoader,
   init as csInit,
   metaData,
+  utilities as csUtils,
 } from '@cornerstonejs/core';
 import {
+  AnnotationTool,
   Enums as ToolsEnums,
   LengthTool,
+  PlanarFreehandROITool,
   StackScrollTool,
   ToolGroupManager,
   WindowLevelTool,
@@ -37,6 +40,7 @@ beforeAll(async () => {
   addTool(StackScrollTool);
   addTool(WindowLevelTool);
   addTool(LengthTool);
+  addTool(PlanarFreehandROITool);
 });
 
 let engine: RenderingEngine;
@@ -134,4 +138,38 @@ test('annotations: added on the element, modified, and removed — on the viewpo
 
   annotation.state.removeAnnotation(uid);
   await waitFor(() => expect(result.current).toEqual([]));
+});
+
+test('annotations: a contour restored by undo holds Float32Array views; the hook lists it as plain arrays', async () => {
+  const { element } = await enableStack('vp');
+  const drawn = {
+    metadata: {
+      toolName: PlanarFreehandROITool.toolName,
+      FrameOfReferenceUID: 'smoke-FOR',
+      referencedImageId: imageIds[0],
+    },
+    data: {
+      handles: { points: [], textBox: { worldPosition: [0, 0, 0] } },
+      contour: { polyline: [[1, 1, 0], [20, 1, 0], [20, 20, 0]], closed: true },
+      label: '',
+    },
+  } as never;
+  const uid = annotation.state.addAnnotation(drawn, element);
+  const { result } = renderHook(() => useAnnotations('vp'));
+  await waitFor(() => expect(result.current).toHaveLength(1));
+
+  // What the Eraser does, then the app's Ctrl+Z.
+  AnnotationTool.createAnnotationMemo(element, annotation.state.getAnnotation(uid)!, {
+    deleting: true,
+  });
+  annotation.state.removeAnnotation(uid);
+  await waitFor(() => expect(result.current).toEqual([]));
+  csUtils.HistoryMemo.DefaultHistoryMemo.undo();
+  const restored = annotation.state.getAnnotation(uid)!.data as { contour: { polyline: unknown[] } };
+  expect(ArrayBuffer.isView(restored.contour.polyline[0])).toBe(true); // still the case under test
+
+  await waitFor(() => expect(result.current).toHaveLength(1));
+  const polyline = (result.current![0].data as { contour: { polyline: number[][] } }).contour.polyline;
+  expect(polyline[0]).toEqual([1, 1, 0]);
+  expect(Array.isArray(polyline[0]) && Object.isFrozen(polyline[0])).toBe(true);
 });

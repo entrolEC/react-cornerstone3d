@@ -190,6 +190,35 @@ describe('useAnnotations', () => {
     expect(annotationBindings.size).toBe(0);
   });
 
+  test('typed arrays in data become frozen plain arrays', () => {
+    enable('vp');
+    // A contour restored by CS3D undo holds Float32Array views of one buffer
+    // (PointsManager.points); Object.freeze throws on a non-empty one.
+    const buffer = new Float32Array([1, 2, 3, 4, 5, 6]);
+    act(() => {
+      annotation.state.addAnnotation(
+        {
+          metadata: { toolName: 'Length', FrameOfReferenceUID: FRAME, referencedImageId: 'img:0' },
+          data: {
+            handles: { points: [buffer.subarray(0, 3), buffer.subarray(3, 6)] },
+            cachedStats: { 'img:0': { samples: new Float32Array([7, 8]) } },
+          },
+        } as never,
+        FRAME,
+      );
+    });
+    const { result } = renderHook(() => useAnnotations('vp'));
+    const data = result.current![0].data as {
+      handles: { points: number[][] };
+      cachedStats: Record<string, { samples: number[] }>;
+    };
+    expect(data.handles.points).toEqual([[1, 2, 3], [4, 5, 6]]);
+    expect(Array.isArray(data.handles.points[0])).toBe(true);
+    expect(Object.isFrozen(data.handles.points[0])).toBe(true);
+    expect(data.cachedStats['img:0'].samples).toEqual([7, 8]);
+    expect(Object.isFrozen(data.cachedStats['img:0'].samples)).toBe(true);
+  });
+
   test('a disabled viewport empties the list; a re-enable fills it again', () => {
     const element = enable('vp');
     draw('Length');
