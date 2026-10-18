@@ -115,6 +115,43 @@ test('active tool: a real ToolGroup, setToolActive and setToolPassive reach the 
   await waitFor(() => expect(result.current).toBeUndefined());
 });
 
+test('active tool: a viewport added to its group before enable resolves once enabled', async () => {
+  engine = new RenderingEngine('tools-engine');
+  const group = ToolGroupManager.createToolGroup('tg')!;
+  group.addTool(WindowLevelTool.toolName);
+  group.setToolActive(WindowLevelTool.toolName, {
+    bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }],
+  });
+  group.addViewport('vp', engine.id); // no viewport yet: the lookup finds no group
+  const { result } = renderHook(() => useActiveTool('vp'));
+  expect(result.current).toBeUndefined();
+
+  engine.enableElement({ viewportId: 'vp', type: Enums.ViewportType.STACK, element: makeElement() });
+  await waitFor(() => expect(result.current).toBe(WindowLevelTool.toolName));
+});
+
+test('active tool: a destroyed group stays stale until its viewport is disabled', async () => {
+  await enableStack('vp');
+  const group = ToolGroupManager.createToolGroup('tg')!;
+  group.addTool(WindowLevelTool.toolName);
+  group.addViewport('vp', engine.id);
+  group.setToolActive(WindowLevelTool.toolName, {
+    bindings: [{ mouseButton: ToolsEnums.MouseBindings.Primary }],
+  });
+  const { result } = renderHook(() => useActiveTool('vp'));
+  await waitFor(() => expect(result.current).toBe(WindowLevelTool.toolName));
+
+  // destroyToolGroup fires nothing: the hook keeps the old name. This pins
+  // the upstream silence; if it fails, CS3D now fires an event — listen to it.
+  ToolGroupManager.destroyToolGroup('tg');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(result.current).toBe(WindowLevelTool.toolName);
+
+  // With the group gone, disable fires no TOOLGROUP_VIEWPORT_REMOVED.
+  engine.disableElement('vp');
+  await waitFor(() => expect(result.current).toBeUndefined());
+});
+
 test('annotations: added on the element, modified, and removed — on the viewport frame of reference', async () => {
   const { element } = await enableStack('vp');
   const { result } = renderHook(() => useAnnotations('vp', LengthTool.toolName));

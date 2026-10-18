@@ -1,16 +1,29 @@
-import { eventTarget } from '@cornerstonejs/core';
+import { Enums as CoreEnums, eventTarget } from '@cornerstonejs/core';
 import { Enums, ToolGroupManager } from '@cornerstonejs/tools';
 import { createRegistry, useBinding } from '../binding.js';
 
 // What `@cornerstonejs/tools` says when the answer can change (ADR 0010):
 // a mode change on any tool of any group, and a viewport joining or leaving
-// a group. ToolGroup creation and destruction are silent, but a group with
-// no viewport answers nothing anyway, and the viewport's arrival is heard.
+// a group. Plus core's enable and disable, for what tools leaves unsaid:
+// - a viewport added to its group before it is enabled resolves to no group
+//   until enable (getToolGroupForViewport finds the Engine by its
+//   viewports), so TOOLGROUP_VIEWPORT_ADDED came too early to count;
+// - a group destroyed before its viewport is disabled: the disable finds no
+//   group to leave, so TOOLGROUP_VIEWPORT_REMOVED never fires.
+// Both fire mid-change; the rebuild is a frame later and reads the result.
+// ToolGroup creation is silent, but a group with no viewport answers nothing
+// anyway. Destruction is silent too: a group destroyed while its viewport
+// stays enabled leaves the hook on its last tool until some later event.
+// ponytail: no event exists for that one; apps call `removeViewports` before
+// `destroyToolGroup` (heard as TOOLGROUP_VIEWPORT_REMOVED). Polling is the
+// upgrade if that ever won't do.
 const EVENTS = [
   Enums.Events.TOOL_MODE_CHANGED,
   Enums.Events.TOOL_ACTIVATED,
   Enums.Events.TOOLGROUP_VIEWPORT_ADDED,
   Enums.Events.TOOLGROUP_VIEWPORT_REMOVED,
+  CoreEnums.Events.ELEMENT_ENABLED,
+  CoreEnums.Events.ELEMENT_DISABLED,
 ];
 
 /**

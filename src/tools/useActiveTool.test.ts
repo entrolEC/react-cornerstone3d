@@ -1,4 +1,4 @@
-import { eventTarget } from '@cornerstonejs/core';
+import { Enums as CoreEnums, eventTarget } from '@cornerstonejs/core';
 import { Enums, ToolGroupManager } from '@cornerstonejs/tools';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -48,6 +48,29 @@ describe('useActiveTool', () => {
     groups.set('vp', { active: 'WindowLevel' });
     fire(Enums.Events.TOOLGROUP_VIEWPORT_ADDED, { viewportId: 'vp', toolGroupId: 'tg' });
     expect(result.current).toBe('WindowLevel');
+  });
+
+  test('a viewport added to its group before enable resolves on ELEMENT_ENABLED', () => {
+    const { result } = renderHook(() => useActiveTool('vp'));
+    expect(result.current).toBeUndefined();
+
+    // TOOLGROUP_VIEWPORT_ADDED fired before enable, when the lookup still
+    // found no group; enable is the first event that sees it.
+    groups.set('vp', { active: 'WindowLevel' });
+    fire(CoreEnums.Events.ELEMENT_ENABLED, { viewportId: 'vp' });
+    expect(result.current).toBe('WindowLevel');
+  });
+
+  test('a group destroyed before its viewport is disabled clears on ELEMENT_DISABLED', () => {
+    groups.set('vp', { active: 'WindowLevel' });
+    const { result } = renderHook(() => useActiveTool('vp'));
+    expect(result.current).toBe('WindowLevel');
+
+    // destroyToolGroup is silent, and with the group gone the disable fires
+    // no TOOLGROUP_VIEWPORT_REMOVED.
+    groups.delete('vp');
+    fire(CoreEnums.Events.ELEMENT_DISABLED, { viewportId: 'vp' });
+    expect(result.current).toBeUndefined();
   });
 
   test('follows TOOL_MODE_CHANGED: the name the group reports, or undefined when none is active', () => {
