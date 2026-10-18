@@ -105,7 +105,10 @@ const ELEMENT_EVENTS = [
   Enums.Events.CAMERA_MODIFIED,
 ];
 
-const key = (viewportId: string, toolName: string | undefined) => `${toolName ?? '*'}@${viewportId}`;
+// JSON, not a separator: any tool name round-trips (one with `@` in it, one
+// named `*`), and null — not a name — means every tool.
+const key = (viewportId: string, toolName: string | undefined) =>
+  JSON.stringify([viewportId, toolName ?? null]);
 
 /**
  * One Binding per (viewportId, toolName), alive while it has consumers: the
@@ -118,9 +121,8 @@ const key = (viewportId: string, toolName: string | undefined) => `${toolName ??
  */
 export const annotationBindings = createRegistry<readonly AnnotationState[] | undefined>(
   (bindingKey, binding) => {
-    const at = bindingKey.indexOf('@');
-    const toolName = bindingKey.slice(0, at) === '*' ? undefined : bindingKey.slice(0, at);
-    const viewportId = bindingKey.slice(at + 1);
+    const [viewportId, name] = JSON.parse(bindingKey) as [string, string | null];
+    const toolName = name ?? undefined;
 
     // What the next rebuild must redo. Entries not named here, with the same
     // flags, keep their reference; with nothing pending at all and the same

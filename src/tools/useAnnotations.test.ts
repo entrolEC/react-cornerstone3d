@@ -137,6 +137,25 @@ describe('useAnnotations', () => {
     expect(result.current?.map((e) => e.annotationUID)).toEqual([length]);
   });
 
+  test('any tool name keys its own Binding: one with @ in it, one named *', () => {
+    const group = ToolGroupManager.getToolGroup('tg')!;
+    for (const name of ['Length@v2', '*']) {
+      group.addToolInstance(name, LengthTool.toolName);
+      group.setToolPassive(name);
+    }
+    enable('vp');
+    const at = renderHook(() => useAnnotations('vp', 'Length@v2'));
+    const all = renderHook(() => useAnnotations('vp'));
+    const star = renderHook(() => useAnnotations('vp', '*'));
+    expect(annotationBindings.size).toBe(3);
+    const atUid = draw('Length@v2');
+    const starUid = draw('*');
+    const length = draw('Length');
+    expect(at.result.current?.map((e) => e.annotationUID)).toEqual([atUid]);
+    expect(star.result.current?.map((e) => e.annotationUID)).toEqual([starUid]);
+    expect(all.result.current?.map((e) => e.annotationUID)).toEqual([atUid, starUid, length]);
+  });
+
   test('lock, visibility and selection are fields; a flag change replaces only that entry', () => {
     enable('vp');
     const { result } = renderHook(() => useAnnotations('vp'));
