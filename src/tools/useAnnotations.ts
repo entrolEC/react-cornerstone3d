@@ -17,7 +17,10 @@ export interface AnnotationState {
   /**
    * A plain, frozen copy of the annotation's `data` (handles, cachedStats,
    * label, …). Class instances inside it — a contour's `pointsManager` —
-   * are not copied; read those from the tools package directly.
+   * are not copied, nor are `storePointData`'s per-voxel samples
+   * (`pointsInShape`, `pointsInVolume`, at any depth); read those from the
+   * tools package directly, `annotation.state.getAnnotation(annotationUID)`,
+   * when this entry's reference changes.
    */
   readonly data: Readonly<Record<string, unknown>>;
 }
@@ -29,6 +32,12 @@ const EMPTY: readonly AnnotationState[] = Object.freeze([]);
 // and a contour restored by CS3D undo holds Float32Array views. Anything else
 // (a class instance, a function) is dropped, so the Snapshot never holds a
 // live object of the Engine's (ADR 0001).
+// storePointData's per-voxel samples (cachedStats[target].pointsInShape, the
+// threshold tools' cachedStats.pointsInVolume) run to tens of thousands of
+// objects, and a drag would recopy and refreeze them every frame. Skipped by
+// key at any depth, as CS3D's own safeStructuredClone (OMIT_KEYS) does.
+const SKIPPED_KEYS = new Set(['pointsInShape', 'pointsInVolume']);
+
 function plainClone(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) {
     return typeof value === 'function' ? undefined : value;
@@ -39,6 +48,7 @@ function plainClone(value: unknown): unknown {
   if (proto !== Object.prototype && proto !== null) return undefined;
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
+    if (SKIPPED_KEYS.has(key)) continue;
     const copied = plainClone(child);
     if (copied !== undefined) out[key] = copied;
   }

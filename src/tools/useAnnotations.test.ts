@@ -219,6 +219,32 @@ describe('useAnnotations', () => {
     expect(Object.isFrozen(data.cachedStats['img:0'].samples)).toBe(true);
   });
 
+  test('storePointData samples (pointsInShape, pointsInVolume) are left out of the copy', () => {
+    enable('vp');
+    act(() => {
+      annotation.state.addAnnotation(
+        {
+          metadata: { toolName: 'Length', FrameOfReferenceUID: FRAME, referencedImageId: 'img:0' },
+          data: {
+            handles: { points: [[0, 0, 0]] },
+            cachedStats: {
+              'img:0': {
+                mean: 5,
+                pointsInShape: [{ value: 1, pointLPS: [0, 0, 0], pointIJK: [0, 0, 0] }],
+              },
+              pointsInVolume: [[{ value: 1 }]],
+            },
+          },
+        } as never,
+        FRAME,
+      );
+    });
+    const { result } = renderHook(() => useAnnotations('vp'));
+    const stats = result.current![0].data.cachedStats as Record<string, Record<string, unknown>>;
+    expect(stats['img:0']).toEqual({ mean: 5 });
+    expect(stats).not.toHaveProperty('pointsInVolume');
+  });
+
   test('a disabled viewport empties the list; a re-enable fills it again', () => {
     const element = enable('vp');
     draw('Length');
