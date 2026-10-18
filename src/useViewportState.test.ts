@@ -2,7 +2,7 @@ import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { createElement, StrictMode, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest';
 import {
   useViewportState,
   type StackViewportState,
@@ -571,6 +571,28 @@ describe('useViewportState', () => {
       disable();
 
       expect(result.current).toBeUndefined();
+    });
+
+    test('an optional selector passed through still compiles and returns the whole state when absent', () => {
+      // A wrapper hook forwarding `selector?` hands over a type that includes
+      // undefined; neither precise overload takes it. Typecheck is the test.
+      function useWrapped<T>(viewportId: string, selector?: (state: ViewportState) => T) {
+        return useViewportState(viewportId, selector);
+      }
+      const { engineState } = createFakeStackViewport('vp-sel-optional');
+      const { result } = renderHook(() => ({
+        whole: useWrapped('vp-sel-optional'),
+        index: useWrapped('vp-sel-optional', selectStackIndex),
+      }));
+
+      expectTypeOf(result.current.index).toEqualTypeOf<number | ViewportState | undefined>();
+      // The precise overloads still win for the direct call shapes (never called).
+      const whole = () => useViewportState('vp');
+      const selected = () => useViewportState('vp', selectStackIndex);
+      expectTypeOf(whole).returns.toEqualTypeOf<ViewportState | undefined>();
+      expectTypeOf(selected).returns.toEqualTypeOf<number | undefined>();
+      expect(result.current.whole).toEqual(expectedStackState(engineState));
+      expect(result.current.index).toBe(0);
     });
   });
 

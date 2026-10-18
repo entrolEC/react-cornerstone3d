@@ -316,6 +316,12 @@ export function useViewportState<T>(
   viewportId: string,
   selector: (state: ViewportState) => T,
 ): T | undefined;
+// A selector that may be undefined (a wrapper hook forwarding `selector?`)
+// fits neither overload above. Last, so those still win where they apply.
+export function useViewportState<T>(
+  viewportId: string,
+  selector?: (state: ViewportState) => T,
+): T | ViewportState | undefined;
 export function useViewportState<T>(
   viewportId: string,
   selector?: (state: ViewportState) => T,
