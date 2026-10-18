@@ -290,6 +290,26 @@ describe('CornerstoneViewport', () => {
     consoleError.mockRestore();
   });
 
+  test('unmounting an older pane leaves the viewportId to a newer pane that enabled it on its own div', () => {
+    const { result } = renderHook(() => useViewportState('vp-shared'));
+    const props = { viewportId: 'vp-shared', type: Enums.ViewportType.STACK };
+    // Separate commits: the newer pane mounts while the older is still up
+    // (an exit animation, a second root), and its enable takes the id.
+    const older = render(viewportEl(props));
+    const newer = render(viewportEl(props));
+    const newerDiv = newer.container.firstElementChild;
+    expect((registry.get('vp-shared')?.viewport as { element: Element }).element).toBe(newerDiv);
+
+    older.unmount();
+
+    expect(engine.disableElement).not.toHaveBeenCalled();
+    expect((registry.get('vp-shared')?.viewport as { element: Element }).element).toBe(newerDiv);
+    expect(result.current?.kind).toBe('stack');
+
+    newer.unmount();
+    expect(engine.disableElement).toHaveBeenCalledWith('vp-shared');
+  });
+
   test('throws when no Engine is registered — the app must create it first', () => {
     vi.mocked(getRenderingEngines).mockReturnValue([]);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});

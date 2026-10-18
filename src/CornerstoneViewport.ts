@@ -100,7 +100,14 @@ export function CornerstoneViewport({
       // React runs cleanups parent-first: a parent that owns the Engine and
       // destroys it in its own cleanup has already taken this viewport down,
       // and disableElement on a destroyed Engine throws.
-      if (!engine.hasBeenDestroyed) engine.disableElement(viewportId);
+      // CS3D resolves disableElement by id alone, so disable only what this
+      // div still owns: a newer pane that enabled the same id on its own div
+      // in a later commit (an exit animation, a second root) keeps it.
+      // ponytail: the reverse overlap — the newer pane unmounts first — still
+      // leaves the older pane blank; CS3D took the id from it at enable.
+      if (!engine.hasBeenDestroyed && engine.getViewport(viewportId)?.element === element) {
+        engine.disableElement(viewportId);
+      }
     };
 
     // Last, once the cleanup exists: a throwing callback would otherwise
