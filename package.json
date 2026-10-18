@@ -17,6 +17,13 @@
       "default": "./dist/tools/index.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "tools": [
+        "dist/tools/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],
