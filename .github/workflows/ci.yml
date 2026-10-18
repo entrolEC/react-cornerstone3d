@@ -22,7 +22,7 @@ jobs:
       # Every job installs Chromium, so a third version adds half again to
       # the cost without telling us anything the two ends do not.
       matrix:
-        cornerstone: ['5.0.0', '5.x']
+        cornerstone: ['5.1.1', '5.x']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,7 +52,9 @@ jobs:
             "@cornerstonejs/metadata@$V" \
             "@cornerstonejs/dicom-image-loader@$V" \
             "@cornerstonejs/tools@$V"
-          node -p "'installed @cornerstonejs/core ' + require('@cornerstonejs/core/package.json').version"
+          # Read by path: core exports ./package.json only from 5.2.0. Fail if
+          # the overwrite did not land, so a leg never tests the lockfile's core.
+          node -e "const v = require('./node_modules/@cornerstonejs/core/package.json').version; console.log('installed @cornerstonejs/core', v); if (v !== process.env.V) process.exit(1)"
 
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
