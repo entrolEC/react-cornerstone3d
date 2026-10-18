@@ -128,8 +128,10 @@ export function createRegistry<S>(
         // Registered at creation, not at first subscribe: two components
         // rendering the same key in one pass must share before either commits.
         // ponytail: a render that never commits leaves its Binding here until
-        // the key is acquired and released again.
-        bindings.set(key, binding);
+        // the key is acquired and released again. A server render never
+        // commits at all, so there it is not registered: nothing would ever
+        // subscribe and detach it, and the Map would grow with every key.
+        if (typeof window !== 'undefined') bindings.set(key, binding);
       }
       return binding;
     },
