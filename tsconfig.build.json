@@ -1,7 +1,13 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false
+    "noEmit": false,
+    // nodenext makes the emitted ESM's own rules the compiler's: a relative
+    // import without its .js fails the build (TS2835) instead of shipping a
+    // dist that Node, Vitest and plain webpack cannot load. The root config
+    // stays on bundler for the demo and the paths alias.
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/testing"]

@@ -1,6 +1,6 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, cache, eventTarget } from '@cornerstonejs/core';
-import { createRegistry, useBinding, type Binding } from './binding';
+import { createRegistry, useBinding, type Binding } from './binding.js';
 
 /**
  * One image's Image Load State: `'loaded'` when the cache has it, `'failed'`

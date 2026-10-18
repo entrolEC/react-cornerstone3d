@@ -1,5 +1,5 @@
 import { Enums, cache, eventTarget } from '@cornerstonejs/core';
-import { createBinding, useBinding, type Binding } from './binding';
+import { createBinding, useBinding, type Binding } from './binding.js';
 
 /** What the cache module reports holding (see `useCacheState`). */
 export interface CacheState {

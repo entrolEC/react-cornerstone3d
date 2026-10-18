@@ -1,5 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { scheduler } from './scheduler';
+import { scheduler } from './scheduler.js';
 
 /**
  * What a hook sees of a Binding: a useSyncExternalStore pair. One Binding

@@ -1,7 +1,7 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
 import { Enums as ToolsEnums, annotation as annotationApi } from '@cornerstonejs/tools';
-import { createRegistry, deepFreeze, useBinding } from '../binding';
+import { createRegistry, deepFreeze, useBinding } from '../binding.js';
 
 type Annotation = ReturnType<typeof annotationApi.state.getAllAnnotations>[number];
 

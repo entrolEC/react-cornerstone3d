@@ -1,6 +1,6 @@
 import { eventTarget } from '@cornerstonejs/core';
 import { Enums, ToolGroupManager } from '@cornerstonejs/tools';
-import { createRegistry, useBinding } from '../binding';
+import { createRegistry, useBinding } from '../binding.js';
 
 // What `@cornerstonejs/tools` says when the answer can change (ADR 0010):
 // a mode change on any tool of any group, and a viewport joining or leaving

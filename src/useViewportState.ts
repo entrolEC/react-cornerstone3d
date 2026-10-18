@@ -1,6 +1,6 @@
 import type { Types } from '@cornerstonejs/core';
 import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonejs/core';
-import { createRegistry, deepFreeze, sameStrings, useBinding } from './binding';
+import { createRegistry, deepFreeze, sameStrings, useBinding } from './binding.js';
 
 /** State shared by every viewport kind. */
 interface ViewportStateCommon {

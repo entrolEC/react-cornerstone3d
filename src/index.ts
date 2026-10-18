@@ -1,10 +1,10 @@
-export { CornerstoneViewport, type CornerstoneViewportProps } from './CornerstoneViewport';
-export { useCacheState, type CacheState } from './useCacheState';
-export { useImageLoadState, type ImageLoadState } from './useImageLoadState';
-export { useImageLoadStates } from './useImageLoadStates';
+export { CornerstoneViewport, type CornerstoneViewportProps } from './CornerstoneViewport.js';
+export { useCacheState, type CacheState } from './useCacheState.js';
+export { useImageLoadState, type ImageLoadState } from './useImageLoadState.js';
+export { useImageLoadStates } from './useImageLoadStates.js';
 export {
   useViewportState,
   type StackViewportState,
   type ViewportState,
   type VolumeViewportState,
-} from './useViewportState';
+} from './useViewportState.js';

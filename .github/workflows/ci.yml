@@ -58,3 +58,18 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+      # The packed output as a consumer sees it. Vite resolves leniently, so
+      # the demo and the tests above cannot catch a dist that Node ESM,
+      # Vitest's externalized deps or plain webpack refuse to load. publint
+      # passes such a dist, so it is not the check.
+      # 5.x only: CS3D 5.0/5.1 use directory imports in their own ESM, which
+      # Node cannot import whatever this package does.
+      - name: Import both entries under Node ESM
+        if: matrix.cornerstone == '5.x'
+        # Node resolves the package's own name through "exports" when run
+        # inside it.
+        run: node --input-type=module -e "await import('react-cornerstone3d'); await import('react-cornerstone3d/tools')"
+      - name: Check the packed types resolve (attw)
+        if: matrix.cornerstone == '5.x'
+        run: npx --yes @arethetypeswrong/cli@0.18.5 --pack . --profile esm-only

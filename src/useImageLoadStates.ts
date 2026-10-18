@@ -1,6 +1,6 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { sameStrings, type Binding } from './binding';
-import { imageBindings, type ImageLoadState } from './useImageLoadState';
+import { sameStrings, type Binding } from './binding.js';
+import { imageBindings, type ImageLoadState } from './useImageLoadState.js';
 
 const EMPTY: readonly ImageLoadState[] = Object.freeze([]);
 
