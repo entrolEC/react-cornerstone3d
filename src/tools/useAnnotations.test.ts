@@ -3,7 +3,7 @@ import { Enums, eventTarget, getEnabledElementByViewportId } from '@cornerstonej
 import { LengthTool, ProbeTool, ToolGroupManager, addTool, annotation } from '@cornerstonejs/tools';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { useAnnotations } from './index';
+import { refreshAnnotations, useAnnotations } from './index';
 import { annotationBindings } from './useAnnotations';
 
 // Real modules: the tools package's annotation state is the thing under
@@ -350,6 +350,38 @@ describe('useAnnotations', () => {
     const stats = result.current![0].data.cachedStats as Record<string, Record<string, unknown>>;
     expect(stats['img:0']).toEqual({ mean: 5 });
     expect(stats).not.toHaveProperty('pointsInVolume');
+  });
+
+  test('restoreAnnotations is silent; refreshAnnotations rebuilds the list in the next frame', () => {
+    refreshAnnotations(); // no live Binding: nothing to do
+    enable('vp');
+    const a = draw('Length', FRAME, 'a');
+    const { result } = renderHook(() => useAnnotations('vp'));
+    const saved = annotation.state.getAnnotationManager().saveAnnotations();
+    const live = annotation.state.getAnnotation(a)!;
+    live.data.label = 'edited';
+    act(() => {
+      annotation.state.triggerAnnotationModified(live);
+      vi.advanceTimersToNextFrame();
+    });
+    expect(result.current![0].data.label).toBe('edited');
+
+    // An app's undo: the saved state back, same uid, no event.
+    annotation.state.getAnnotationManager().restoreAnnotations(saved);
+    frame();
+    expect(result.current![0].data.label).toBe('edited');
+    act(() => {
+      refreshAnnotations();
+      vi.advanceTimersToNextFrame();
+    });
+    expect(result.current![0].data.label).toBe('a');
+
+    annotation.state.getAnnotationManager().restoreAnnotations({});
+    act(() => {
+      refreshAnnotations();
+      vi.advanceTimersToNextFrame();
+    });
+    expect(result.current).toEqual([]);
   });
 
   test('a disabled viewport empties the list; a re-enable fills it again', () => {

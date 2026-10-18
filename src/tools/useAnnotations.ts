@@ -71,6 +71,25 @@ const onAnnotation = (evt: Event) => {
   live.forEach((h) => h.annotation(uid));
 };
 const onFlags = () => live.forEach((h) => h.flags());
+
+/**
+ * Rebuilds every `useAnnotations` list from the tools package's annotation
+ * state in the next frame. For changes that state makes without an event:
+ * the annotation manager's own methods (`restoreAnnotations`,
+ * `addAnnotation`, `removeAnnotation`, …; only the `annotation.state.*`
+ * calls fire events), `setAnnotationManager` / `resetAnnotationManager`, or
+ * a recalibration of annotations off screen. Every entry gets a new
+ * reference, so call it once after such a change, not per frame.
+ *
+ * @example
+ * // Load saved measurements, or undo to a saved state:
+ * annotation.state.getAnnotationManager().restoreAnnotations(saved);
+ * refreshAnnotations();
+ */
+export function refreshAnnotations(): void {
+  // An event that names no annotation already means "redo every entry".
+  live.forEach((h) => h.annotation(undefined));
+}
 const LISTENERS = [
   [ToolsEnums.Events.ANNOTATION_ADDED, onAnnotation],
   [ToolsEnums.Events.ANNOTATION_MODIFIED, onAnnotation],
