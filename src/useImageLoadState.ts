@@ -132,7 +132,10 @@ const NONE: Binding<ImageLoadState | undefined> = {
  * there is no image to ask about (`imageId` is `undefined`, e.g. a Volume
  * pointing at nothing). Compare with `=== 'loaded'`: every state is truthy.
  * Loading-in-progress is not a state the cache can report (ADR 0007).
+ * A server render, which has no cache, reads `'absent'` for any image.
  */
 export function useImageLoadState(imageId: string | undefined): ImageLoadState | undefined {
-  return useBinding(imageId === undefined ? NONE : imageBindings.acquire(imageId), undefined);
+  const none = imageId === undefined;
+  // The server has no cache: every image it asks about is absent.
+  return useBinding(none ? NONE : imageBindings.acquire(imageId), undefined, none ? undefined : 'absent');
 }

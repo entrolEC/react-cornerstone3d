@@ -16,12 +16,15 @@ interface Subscription {
   readonly ids: readonly string[] | undefined;
   readonly targets: readonly Binding<ImageLoadState>[] | undefined;
   readonly subscribe: (onChange: () => void) => () => void;
+  /** The server's answer for this list: no cache there, so every image is absent. */
+  readonly server: readonly ImageLoadState[] | undefined;
 }
 
 const NONE: Subscription = {
   ids: undefined,
   targets: undefined,
   subscribe: () => () => {},
+  server: undefined,
 };
 
 /**
@@ -33,7 +36,7 @@ const NONE: Subscription = {
  * The array is replaced only when some entry changed; otherwise the previous
  * array is returned, so a consumer re-renders once per frame in which an
  * image arrived or left. `undefined` in, `undefined` out; an empty list
- * gives one stable empty array.
+ * gives one stable empty array. A server render reads `'absent'` per image.
  *
  * Cost, N = list length: N subscriptions per list change, one comparison
  * pass per read. ponytail: k arrivals in one frame notify k times and each
@@ -59,24 +62,32 @@ export function useImageLoadStates(
           const offs = targets.map((binding) => binding.subscribe(onChange));
           return () => offs.forEach((off) => off());
         },
+        server:
+          imageIds.length === 0 ? EMPTY : Object.freeze(imageIds.map(() => 'absent' as const)),
       };
     }
   }
-  const { targets, subscribe } = sub.current;
+  const { targets, subscribe, server } = sub.current;
 
-  const memo = useRef<readonly ImageLoadState[]>(EMPTY);
-  return useSyncExternalStore(subscribe, () => {
-    if (targets === undefined) return undefined;
-    if (targets.length === 0) return EMPTY;
-    const prev = memo.current;
-    if (
-      prev.length === targets.length &&
-      targets.every((binding, i) => binding.getSnapshot() === prev[i])
-    ) {
-      return prev;
-    }
-    const next = Object.freeze(targets.map((binding) => binding.getSnapshot()));
-    memo.current = next;
-    return next;
-  });
+  // Seeded with the server's array: a client whose images are all absent
+  // returns that same array, so hydration has nothing to re-render.
+  const memo = useRef<readonly ImageLoadState[]>(server ?? EMPTY);
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      if (targets === undefined) return undefined;
+      if (targets.length === 0) return EMPTY;
+      const prev = memo.current;
+      if (
+        prev.length === targets.length &&
+        targets.every((binding, i) => binding.getSnapshot() === prev[i])
+      ) {
+        return prev;
+      }
+      const next = Object.freeze(targets.map((binding) => binding.getSnapshot()));
+      memo.current = next;
+      return next;
+    },
+    () => server,
+  );
 }

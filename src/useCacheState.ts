@@ -13,6 +13,10 @@ const LISTENERS = [
   Enums.Events.IMAGE_CACHE_IMAGE_REMOVED,
 ] as const;
 
+// The empty cache, one object: the server's value (nothing is cached there)
+// and the client's whenever the size is 0, so hydration finds them equal.
+const EMPTY: CacheState = Object.freeze({ imageBytes: 0 });
+
 let attached = false;
 let rebuild!: () => void;
 
@@ -23,7 +27,8 @@ const inner = createBinding<CacheState>((self) => {
   return {
     build: (prev) => {
       const imageBytes = cache.getCacheSize();
-      return prev && prev.imageBytes === imageBytes ? prev : Object.freeze({ imageBytes });
+      if (prev && prev.imageBytes === imageBytes) return prev;
+      return imageBytes === 0 ? EMPTY : Object.freeze({ imageBytes });
     },
     attach: () => {
       attached = true;
@@ -57,7 +62,7 @@ const cacheBinding: Binding<CacheState> = {
  * the bytes of cached images as the cache counts them — volumes are not in it.
  * Rebuilt on `IMAGE_CACHE_IMAGE_ADDED` / `_REMOVED`, at most once a frame, and
  * replaced only when the number moved. Never `undefined`: the cache always
- * exists.
+ * exists; on the server, `{ imageBytes: 0 }`.
  *
  * Not here: the maximum (`setMaxCacheSize` fires no event — the app set it, so
  * the app knows it) and image or volume counts (no getter) — ADR 0007. One
@@ -66,5 +71,5 @@ const cacheBinding: Binding<CacheState> = {
  * event.
  */
 export function useCacheState(): CacheState {
-  return useBinding(cacheBinding, undefined) as CacheState;
+  return useBinding(cacheBinding, undefined, EMPTY) as CacheState;
 }

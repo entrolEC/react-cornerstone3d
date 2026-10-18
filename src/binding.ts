@@ -165,10 +165,16 @@ export function deepFreeze<T>(value: T): T {
  * hand-rolled rather than taken from use-sync-external-store/shim/with-selector
  * — ADR 0004, which is also where an isEqual option would go (one
  * comparison, right here).
+ *
+ * `server` is what a server render and the hydration pass return: there is
+ * no Engine on the server, so it is the hook's nothing-there value, already
+ * selected. It must be the same value on every call (React compares). After
+ * hydration React reads getSnapshot and re-renders only if it differs.
  */
 export function useBinding<S, T>(
   binding: Binding<S | undefined>,
   selector: ((snapshot: S) => T) | undefined,
+  server?: T | S,
 ): T | S | undefined {
   const { subscribe, getSnapshot } = binding;
   const memo = useRef<{
@@ -177,13 +183,17 @@ export function useBinding<S, T>(
     selected: T | S | undefined;
   }>(undefined);
 
-  return useSyncExternalStore(subscribe, () => {
-    const snapshot = getSnapshot();
-    const prev = memo.current;
-    if (prev && prev.snapshot === snapshot && prev.selector === selector) return prev.selected;
-    const selected =
-      snapshot === undefined ? undefined : selector ? selector(snapshot) : snapshot;
-    memo.current = { snapshot, selector, selected };
-    return selected;
-  });
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      const snapshot = getSnapshot();
+      const prev = memo.current;
+      if (prev && prev.snapshot === snapshot && prev.selector === selector) return prev.selected;
+      const selected =
+        snapshot === undefined ? undefined : selector ? selector(snapshot) : snapshot;
+      memo.current = { snapshot, selector, selected };
+      return selected;
+    },
+    () => server,
+  );
 }
