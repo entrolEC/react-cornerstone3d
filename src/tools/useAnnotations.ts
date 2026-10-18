@@ -99,10 +99,13 @@ const dispatcher = {
 // a new stack, a new volume, or on the Generic Viewport a setViewState,
 // which fires only CAMERA_MODIFIED (ADR 0008). Cheap: a rebuild with nothing
 // pending and the same frame of reference returns the previous Snapshot.
+// VIEWPORT_NEW_IMAGE_SET (setStack) rebuilds everything: without a frame of
+// reference the stack is the scope, and setStack may refill the same array.
 const ELEMENT_EVENTS = [
   Enums.Events.PRE_STACK_NEW_IMAGE,
   Enums.Events.VOLUME_VIEWPORT_NEW_VOLUME,
   Enums.Events.CAMERA_MODIFIED,
+  Enums.Events.VIEWPORT_NEW_IMAGE_SET,
 ];
 
 // JSON, not a separator: any tool name round-trips (one with `@` in it, one
@@ -112,10 +115,11 @@ const key = (viewportId: string, toolName: string | undefined) =>
 
 /**
  * One Binding per (viewportId, toolName), alive while it has consumers: the
- * annotations on the viewport's frame of reference, as the tools package's
- * annotation state reports them (ADR 0010). An entry is rebuilt when the
- * tools package said that annotation changed, or when its lock, visibility
- * or selection moved; otherwise it keeps its reference.
+ * annotations on the viewport's frame of reference (or, for images without
+ * one, its stack), as the tools package's annotation state reports them
+ * (ADR 0010). An entry is rebuilt when the tools package said that
+ * annotation changed, or when its lock, visibility or selection moved;
+ * otherwise it keeps its reference.
  *
  * @internal Exported for tests.
  */
@@ -126,11 +130,11 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
 
     // What the next rebuild must redo. Entries not named here, with the same
     // flags, keep their reference; with nothing pending at all and the same
-    // frame of reference, the whole array does.
+    // frame of reference (or stack), the whole array does.
     const dirty = new Set<string>();
     let flagsPending = false;
     let allPending = true;
-    let prevFrame: string | undefined;
+    let prevScope: unknown;
 
     const handlers: Handlers = {
       annotation: (uid) => {
@@ -147,24 +151,34 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
     const build = (prev: readonly AnnotationState[] | undefined) => {
       const enabled = getEnabledElementByViewportId(viewportId);
       if (!enabled) return undefined;
+      const { viewport } = enabled;
       const frame = enabled.FrameOfReferenceUID;
+      // An image without a frame of reference (CR/DX/US/SC, web images): the
+      // tools package files every such annotation under one `undefined` group
+      // and draws the ones this viewport can show — on a stack, those whose
+      // referencedImageId is in it. The stack stands in for the frame: the
+      // list is per stack, not per image, as it is per frame, not per slice.
+      const scope = frame ?? (viewport as Partial<Types.IStackViewport>).getImageIds?.();
       const unchanged =
         prev !== undefined &&
-        frame === prevFrame &&
+        scope === prevScope &&
         !allPending &&
         !flagsPending &&
         dirty.size === 0;
       if (unchanged) return prev;
-      prevFrame = frame;
+      prevScope = scope;
 
       const prevByUid = new Map(prev?.map((entry) => [entry.annotationUID, entry]));
       const next: AnnotationState[] = [];
-      if (frame !== undefined) {
+      if (scope !== undefined) {
         for (const annotation of annotationApi.state.getAllAnnotations()) {
           const uid = annotation.annotationUID;
           const meta = annotation.metadata;
           if (uid === undefined || meta === undefined) continue;
           if (meta.FrameOfReferenceUID !== frame) continue;
+          if (frame === undefined && !viewport.isReferenceViewable?.(meta, { withNavigation: true })) {
+            continue;
+          }
           if (toolName !== undefined && meta.toolName !== toolName) continue;
           const isLocked = annotationApi.locking.isAnnotationLocked(uid);
           // The visibility module keeps this field on the annotation itself;
@@ -209,7 +223,10 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
     };
 
     let element: HTMLDivElement | undefined;
-    const onElementEvent = () => binding.schedule();
+    const onElementEvent = (evt: Event) => {
+      if (evt.type === Enums.Events.VIEWPORT_NEW_IMAGE_SET) allPending = true;
+      binding.schedule();
+    };
     const attachElement = () => {
       element = getEnabledElementByViewportId(viewportId)?.viewport.element;
       for (const type of ELEMENT_EVENTS) element?.addEventListener(type, onElementEvent);
@@ -256,8 +273,11 @@ export const annotationBindings = createRegistry<readonly AnnotationState[] | un
 /**
  * The annotations on a viewport's frame of reference, as the tools package's
  * annotation state reports them — every tool's, or one tool's when
- * `toolName` is given. `undefined` while the viewport is absent; a stable
- * empty array when it points at nothing yet or nothing is drawn.
+ * `toolName` is given. On a stack of images without a frame of reference
+ * (CR, DX, US, SC, web images), the annotations on the stack's images, as
+ * the tools package draws them; filter by `referencedImageId` for one
+ * image. `undefined` while the viewport is absent; a stable empty array
+ * when it points at nothing yet or nothing is drawn.
  *
  * The array is replaced only when an entry changed, and an entry only when
  * the tools package said so (`ANNOTATION_ADDED` / `MODIFIED` / `COMPLETED` /

@@ -15,11 +15,31 @@ vi.mock('@cornerstonejs/core', async (importOriginal) => ({
 }));
 
 const FRAME = 'FOR-1';
-const registry = new Map<string, { viewport: { element: HTMLDivElement }; FrameOfReferenceUID?: string }>();
+interface FakeViewport {
+  element: HTMLDivElement;
+  getImageIds?: () => string[];
+  isReferenceViewable?: (ref: { referencedImageId?: string }) => boolean;
+}
+const registry = new Map<string, { viewport: FakeViewport; FrameOfReferenceUID?: string }>();
 
 function enable(viewportId: string, frame: string | undefined = FRAME) {
   const element = document.createElement('div');
   registry.set(viewportId, { viewport: { element }, FrameOfReferenceUID: frame });
+  return element;
+}
+
+// A stack of images without a frame of reference (CR/DX/US/SC): what the
+// tools package reads is the stack's imageIds and isReferenceViewable, which
+// on a StackViewport matches referencedImageId against the stack.
+function enableForLess(viewportId: string, stack: { imageIds: string[] }) {
+  const element = document.createElement('div');
+  registry.set(viewportId, {
+    viewport: {
+      element,
+      getImageIds: () => stack.imageIds,
+      isReferenceViewable: (ref) => stack.imageIds.includes(ref.referencedImageId!),
+    },
+  });
   return element;
 }
 
@@ -66,6 +86,23 @@ function draw(toolName: string, frame = FRAME, label = '') {
   let uid = '';
   act(() => {
     uid = annotation.state.addAnnotation(drawn, frame);
+    vi.advanceTimersToNextFrame();
+  });
+  return uid;
+}
+
+// A frame-of-reference-less annotation on one image: the tools package
+// files it under its `undefined` group.
+function drawOn(referencedImageId: string) {
+  let uid = '';
+  act(() => {
+    uid = annotation.state.addAnnotation(
+      {
+        metadata: { toolName: 'Length', referencedImageId },
+        data: { handles: { points: [[0, 0, 0], [1, 1, 0]] }, label: '' },
+      } as never,
+      undefined as never,
+    );
     vi.advanceTimersToNextFrame();
   });
   return uid;
@@ -154,6 +191,57 @@ describe('useAnnotations', () => {
     expect(at.result.current?.map((e) => e.annotationUID)).toEqual([atUid]);
     expect(star.result.current?.map((e) => e.annotationUID)).toEqual([starUid]);
     expect(all.result.current?.map((e) => e.annotationUID)).toEqual([atUid, starUid, length]);
+  });
+
+  test('without a frame of reference, the annotations on the viewport stack', () => {
+    const stackA = { imageIds: ['cr:a0', 'cr:a1'] };
+    enableForLess('a', stackA);
+    enableForLess('b', { imageIds: ['cr:b0'] });
+    // No frame of reference and no stack to stand in for it.
+    registry.set('plain', { viewport: { element: document.createElement('div') } });
+    const a = renderHook(() => useAnnotations('a'));
+    const b = renderHook(() => useAnnotations('b'));
+    const plain = renderHook(() => useAnnotations('plain'));
+    const a0 = drawOn('cr:a0');
+    const a1 = drawOn('cr:a1');
+    const b0 = drawOn('cr:b0');
+    draw('Length'); // on FRAME: not on a viewport without one
+    expect(a.result.current?.map((e) => e.annotationUID)).toEqual([a0, a1]);
+    expect(b.result.current?.map((e) => e.annotationUID)).toEqual([b0]);
+    expect(plain.result.current).toEqual([]);
+  });
+
+  test('without a frame of reference, a new stack rebuilds the list, even in the same array', () => {
+    const stack = { imageIds: ['cr:a0'] };
+    const element = enableForLess('a', stack);
+    const a0 = drawOn('cr:a0');
+    const b0 = drawOn('cr:b0');
+    const { result } = renderHook(() => useAnnotations('a'));
+    expect(result.current?.map((e) => e.annotationUID)).toEqual([a0]);
+    const before = result.current;
+
+    // A scroll: the same stack, nothing pending, the same array.
+    act(() => {
+      element.dispatchEvent(new CustomEvent(Enums.Events.PRE_STACK_NEW_IMAGE));
+      vi.advanceTimersToNextFrame();
+    });
+    expect(result.current).toBe(before);
+
+    // setStack with a new array: seen at the first scroll event it fires.
+    stack.imageIds = ['cr:b0'];
+    act(() => {
+      element.dispatchEvent(new CustomEvent(Enums.Events.PRE_STACK_NEW_IMAGE));
+      vi.advanceTimersToNextFrame();
+    });
+    expect(result.current?.map((e) => e.annotationUID)).toEqual([b0]);
+
+    // setStack with the same array refilled in place: VIEWPORT_NEW_IMAGE_SET.
+    stack.imageIds.splice(0, 1, 'cr:a0');
+    act(() => {
+      element.dispatchEvent(new CustomEvent(Enums.Events.VIEWPORT_NEW_IMAGE_SET));
+      vi.advanceTimersToNextFrame();
+    });
+    expect(result.current?.map((e) => e.annotationUID)).toEqual([a0]);
   });
 
   test('lock, visibility and selection are fields; a flag change replaces only that entry', () => {

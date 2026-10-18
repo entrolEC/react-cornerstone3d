@@ -3,6 +3,7 @@ import {
   Enums,
   RenderingEngine,
   imageLoader,
+  getEnabledElementByViewportId,
   init as csInit,
   metaData,
   utilities as csUtils,
@@ -28,6 +29,16 @@ import {
   smokeImageLoader,
 } from '../testing/smokeStack';
 
+// `cr:*` images: the smoke image with no frame of reference, as a CR, DX,
+// US or SC image's metadata reports it.
+function forLessMetaDataProvider(type: string, imageId: string) {
+  if (!imageId.startsWith('cr:')) return undefined;
+  const base = fakeMetaDataProvider(type, imageIds[0]);
+  if (type !== 'imagePlaneModule' || !base) return base;
+  const { frameOfReferenceUID: _, ...rest } = base as { frameOfReferenceUID?: string };
+  return rest;
+}
+
 // Smoke tests against the real Engine and the real tools package: which
 // events `@cornerstonejs/tools` fires, when, and with what payloads. The
 // jsdom suites own the hook logic.
@@ -36,7 +47,9 @@ beforeAll(async () => {
   await csInit();
   csToolsInit();
   imageLoader.registerImageLoader('smoke', smokeImageLoader);
+  imageLoader.registerImageLoader('cr', smokeImageLoader);
   metaData.addProvider(fakeMetaDataProvider);
+  metaData.addProvider(forLessMetaDataProvider);
   addTool(StackScrollTool);
   addTool(WindowLevelTool);
   addTool(LengthTool);
@@ -172,4 +185,50 @@ test('annotations: a contour restored by undo holds Float32Array views; the hook
   const polyline = (result.current![0].data as { contour: { polyline: number[][] } }).contour.polyline;
   expect(polyline[0]).toEqual([1, 1, 0]);
   expect(Array.isArray(polyline[0]) && Object.isFrozen(polyline[0])).toBe(true);
+});
+
+test('annotations: images without a frame of reference list the ones on the viewport stack', async () => {
+  engine = new RenderingEngine('tools-engine');
+  for (const viewportId of ['a', 'b']) {
+    engine.enableElement({ viewportId, type: Enums.ViewportType.STACK, element: makeElement() });
+  }
+  const a = engine.getViewport('a') as Types.IStackViewport;
+  const b = engine.getViewport('b') as Types.IStackViewport;
+  await a.setStack(['cr:a0', 'cr:a1', 'cr:a2'], 0);
+  await b.setStack(['cr:b0'], 0);
+  expect(getEnabledElementByViewportId('a')!.FrameOfReferenceUID).toBeUndefined();
+  const group = ToolGroupManager.createToolGroup('tg')!;
+  group.addTool(LengthTool.toolName);
+  group.addViewport('a', engine.id);
+  group.addViewport('b', engine.id);
+  group.setToolPassive(LengthTool.toolName);
+  const hookA = renderHook(() => useAnnotations('a'));
+  const hookB = renderHook(() => useAnnotations('b'));
+  const uids = () => annotation.state.getAllAnnotations().map((x) => x.annotationUID);
+
+  // CS3D's own path: metadata from getViewReference, added on the element.
+  const draw = (viewport: Types.IStackViewport) => {
+    LengthTool.createAndAddAnnotation(viewport as never, {
+      data: { handles: { points: [[0, 0, 0], [10, 10, 0]] }, label: '' },
+    } as never);
+    return uids()[uids().length - 1]!;
+  };
+  const a0 = draw(a);
+  await a.setImageIdIndex(2);
+  const a2 = draw(a);
+  const b0 = draw(b);
+  await waitFor(() => expect(hookA.result.current?.map((x) => x.annotationUID)).toEqual([a0, a2]));
+  expect(hookB.result.current?.map((x) => x.annotationUID)).toEqual([b0]);
+
+  // A scroll keeps the list: it is per stack, not per image. (Settle first:
+  // the tools package's first render of a Length fires MODIFIED with stats.)
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+  await settle();
+  const before = hookA.result.current;
+  await a.setImageIdIndex(1);
+  await settle();
+  expect(hookA.result.current).toBe(before);
+
+  await a.setStack(['cr:b0'], 0);
+  await waitFor(() => expect(hookA.result.current?.map((x) => x.annotationUID)).toEqual([b0]));
 });
